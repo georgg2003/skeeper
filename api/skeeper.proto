@@ -1,0 +1,74 @@
+edition = "2023";
+
+package skeeper;
+
+option go_package = "github.com/georgg2003/skeeper/api";
+
+import "google/protobuf/timestamp.proto";
+
+message Entry {
+    int64 id = 1;
+    int64 user_id = 2;
+    bytes dek = 3; // data encryption key
+    string type = 4; // Произвольный тип данных, определяется клиентом
+    bytes payload = 5; // Шифрованные данные
+    string meta = 6;   // JSON
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
+    int64 version = 9;
+}
+
+message ListEntriesRequest {}
+
+message ListEntriesResponse {
+    Entry data = 1;
+}
+
+message GetEntriesRequest {
+    repeated string ids = 1;
+}
+
+message GetEntriesResponse {
+    Entry data = 1;
+}
+
+message SyncEntriesRequest {
+    Entry data = 1;
+}
+
+message SyncEntriesResponse {
+    Entry data = 1;
+}
+
+message FileInfo {
+    int64 entry_id = 1;
+    string filename = 2;
+    string checksum = 3;
+}
+
+message UploadFileRequest {
+    oneof data {
+        FileInfo info = 1; // Первым сообщением шлем метаданные
+        bytes chunk = 2;   // Остальными — само содержимое
+    }
+}
+
+message UploadFileResponse {
+    int64 id = 1;
+}
+
+message GetFileRequest {
+    int64 id = 1;
+}
+
+message GetFileResponse {
+    bytes chunk = 1;
+}
+
+service SkeeperService {
+    rpc ListEntries(ListEntriesRequest) returns (stream ListEntriesResponse);
+    rpc GetEntries(GetEntriesRequest) returns (stream GetEntriesResponse);
+    rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse);
+    rpc GetFile(GetFileRequest) returns (stream GetFileResponse);
+    rpc SyncEntries(stream SyncEntriesRequest) returns (stream SyncEntriesResponse);
+}
