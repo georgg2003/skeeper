@@ -9,6 +9,7 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type autherServer struct {
@@ -43,15 +44,55 @@ func (s autherServer) CreateUser(ctx context.Context, req *api.CreateUserRequest
 }
 
 func (s autherServer) Login(ctx context.Context, req *api.LoginRequest) (*api.LoginResponse, error) {
-	//s.uc.CheckUser()
+	email := req.GetEmail()
+	password := req.GetPassword()
 
-	return nil, nil
+	resp, err := s.uc.LoginUser(ctx, models.UserCredentials{
+		Email:    email,
+		Password: password,
+	})
+
+	if err != nil {
+		// TODO add logs
+		return nil, status.Error(codes.Internal, "failed to login user")
+	}
+
+	return api.LoginResponse_builder{
+		User: api.User_builder{
+			Email: &resp.User.Email,
+			Id:    &resp.User.ID,
+		}.Build(),
+		RefreshToken: api.Token_builder{
+			Data:      &resp.RefreshToken.Data,
+			ExpiresAt: timestamppb.New(resp.RefreshToken.ExpiresAt),
+		}.Build(),
+		AccessToken: api.Token_builder{
+			Data:      &resp.AccessToken.Data,
+			ExpiresAt: timestamppb.New(resp.AccessToken.ExpiresAt),
+		}.Build(),
+	}.Build(), nil
 }
 
-func (s autherServer) Token(ctx context.Context, req *api.TokenRequest) (*api.TokenResponse, error) {
-	//s.uc.GetToken()
+func (s autherServer) ExchangeToken(ctx context.Context, req *api.ExchangeTokenRequest) (*api.ExchangeTokenResponse, error) {
+	refreshToken := req.GetRefreshToken()
 
-	return nil, nil
+	resp, err := s.uc.ExchangeToken(ctx, refreshToken)
+
+	if err != nil {
+		// TODO add logs
+		return nil, status.Error(codes.Internal, "failed to login user")
+	}
+
+	return api.ExchangeTokenResponse_builder{
+		RefreshToken: api.Token_builder{
+			Data:      &resp.RefreshToken.Data,
+			ExpiresAt: timestamppb.New(resp.RefreshToken.ExpiresAt),
+		}.Build(),
+		AccessToken: api.Token_builder{
+			Data:      &resp.AccessToken.Data,
+			ExpiresAt: timestamppb.New(resp.AccessToken.ExpiresAt),
+		}.Build(),
+	}.Build(), nil
 }
 
 func New(uc usecase.UseCase) api.AutherServer {

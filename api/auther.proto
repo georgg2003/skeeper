@@ -36,11 +36,11 @@ message LoginResponse {
   User user = 3;
 }
 
-message TokenRequest {
+message ExchangeTokenRequest {
   string refresh_token = 1;
 }
 
-message TokenResponse {
+message ExchangeTokenResponse {
   Token refresh_token = 1;
   Token access_token = 2;
 }
@@ -48,5 +48,5 @@ message TokenResponse {
 service Auther {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
-  rpc Token(TokenRequest) returns (TokenResponse);
+  rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse);
 }

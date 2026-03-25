@@ -640,7 +640,7 @@ func (b0 LoginResponse_builder) Build() *LoginResponse {
 	return m0
 }
 
-type TokenRequest struct {
+type ExchangeTokenRequest struct {
 	state                   protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_RefreshToken *string                `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken"`
 	XXX_raceDetectHookData  protoimpl.RaceDetectHookData
@@ -649,20 +649,20 @@ type TokenRequest struct {
 	sizeCache               protoimpl.SizeCache
 }
 
-func (x *TokenRequest) Reset() {
-	*x = TokenRequest{}
+func (x *ExchangeTokenRequest) Reset() {
+	*x = ExchangeTokenRequest{}
 	mi := &file_api_auther_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TokenRequest) String() string {
+func (x *ExchangeTokenRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TokenRequest) ProtoMessage() {}
+func (*ExchangeTokenRequest) ProtoMessage() {}
 
-func (x *TokenRequest) ProtoReflect() protoreflect.Message {
+func (x *ExchangeTokenRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_auther_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -674,7 +674,7 @@ func (x *TokenRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *TokenRequest) GetRefreshToken() string {
+func (x *ExchangeTokenRequest) GetRefreshToken() string {
 	if x != nil {
 		if x.xxx_hidden_RefreshToken != nil {
 			return *x.xxx_hidden_RefreshToken
@@ -684,31 +684,31 @@ func (x *TokenRequest) GetRefreshToken() string {
 	return ""
 }
 
-func (x *TokenRequest) SetRefreshToken(v string) {
+func (x *ExchangeTokenRequest) SetRefreshToken(v string) {
 	x.xxx_hidden_RefreshToken = &v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
 }
 
-func (x *TokenRequest) HasRefreshToken() bool {
+func (x *ExchangeTokenRequest) HasRefreshToken() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
-func (x *TokenRequest) ClearRefreshToken() {
+func (x *ExchangeTokenRequest) ClearRefreshToken() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_RefreshToken = nil
 }
 
-type TokenRequest_builder struct {
+type ExchangeTokenRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	RefreshToken *string
 }
 
-func (b0 TokenRequest_builder) Build() *TokenRequest {
-	m0 := &TokenRequest{}
+func (b0 ExchangeTokenRequest_builder) Build() *ExchangeTokenRequest {
+	m0 := &ExchangeTokenRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.RefreshToken != nil {
@@ -718,7 +718,7 @@ func (b0 TokenRequest_builder) Build() *TokenRequest {
 	return m0
 }
 
-type TokenResponse struct {
+type ExchangeTokenResponse struct {
 	state                   protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_RefreshToken *Token                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken"`
 	xxx_hidden_AccessToken  *Token                 `protobuf:"bytes,2,opt,name=access_token,json=accessToken"`
@@ -726,20 +726,20 @@ type TokenResponse struct {
 	sizeCache               protoimpl.SizeCache
 }
 
-func (x *TokenResponse) Reset() {
-	*x = TokenResponse{}
+func (x *ExchangeTokenResponse) Reset() {
+	*x = ExchangeTokenResponse{}
 	mi := &file_api_auther_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TokenResponse) String() string {
+func (x *ExchangeTokenResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TokenResponse) ProtoMessage() {}
+func (*ExchangeTokenResponse) ProtoMessage() {}
 
-func (x *TokenResponse) ProtoReflect() protoreflect.Message {
+func (x *ExchangeTokenResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_api_auther_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -751,59 +751,59 @@ func (x *TokenResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *TokenResponse) GetRefreshToken() *Token {
+func (x *ExchangeTokenResponse) GetRefreshToken() *Token {
 	if x != nil {
 		return x.xxx_hidden_RefreshToken
 	}
 	return nil
 }
 
-func (x *TokenResponse) GetAccessToken() *Token {
+func (x *ExchangeTokenResponse) GetAccessToken() *Token {
 	if x != nil {
 		return x.xxx_hidden_AccessToken
 	}
 	return nil
 }
 
-func (x *TokenResponse) SetRefreshToken(v *Token) {
+func (x *ExchangeTokenResponse) SetRefreshToken(v *Token) {
 	x.xxx_hidden_RefreshToken = v
 }
 
-func (x *TokenResponse) SetAccessToken(v *Token) {
+func (x *ExchangeTokenResponse) SetAccessToken(v *Token) {
 	x.xxx_hidden_AccessToken = v
 }
 
-func (x *TokenResponse) HasRefreshToken() bool {
+func (x *ExchangeTokenResponse) HasRefreshToken() bool {
 	if x == nil {
 		return false
 	}
 	return x.xxx_hidden_RefreshToken != nil
 }
 
-func (x *TokenResponse) HasAccessToken() bool {
+func (x *ExchangeTokenResponse) HasAccessToken() bool {
 	if x == nil {
 		return false
 	}
 	return x.xxx_hidden_AccessToken != nil
 }
 
-func (x *TokenResponse) ClearRefreshToken() {
+func (x *ExchangeTokenResponse) ClearRefreshToken() {
 	x.xxx_hidden_RefreshToken = nil
 }
 
-func (x *TokenResponse) ClearAccessToken() {
+func (x *ExchangeTokenResponse) ClearAccessToken() {
 	x.xxx_hidden_AccessToken = nil
 }
 
-type TokenResponse_builder struct {
+type ExchangeTokenResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	RefreshToken *Token
 	AccessToken  *Token
 }
 
-func (b0 TokenResponse_builder) Build() *TokenResponse {
-	m0 := &TokenResponse{}
+func (b0 ExchangeTokenResponse_builder) Build() *ExchangeTokenResponse {
+	m0 := &ExchangeTokenResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_RefreshToken = b.RefreshToken
@@ -834,17 +834,17 @@ const file_api_auther_proto_rawDesc = "" +
 	"\rLoginResponse\x122\n" +
 	"\rrefresh_token\x18\x01 \x01(\v2\r.auther.TokenR\frefreshToken\x120\n" +
 	"\faccess_token\x18\x02 \x01(\v2\r.auther.TokenR\vaccessToken\x12 \n" +
-	"\x04user\x18\x03 \x01(\v2\f.auther.UserR\x04user\"3\n" +
-	"\fTokenRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"u\n" +
-	"\rTokenResponse\x122\n" +
+	"\x04user\x18\x03 \x01(\v2\f.auther.UserR\x04user\";\n" +
+	"\x14ExchangeTokenRequest\x12#\n" +
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"}\n" +
+	"\x15ExchangeTokenResponse\x122\n" +
 	"\rrefresh_token\x18\x01 \x01(\v2\r.auther.TokenR\frefreshToken\x120\n" +
-	"\faccess_token\x18\x02 \x01(\v2\r.auther.TokenR\vaccessToken2\xb9\x01\n" +
+	"\faccess_token\x18\x02 \x01(\v2\r.auther.TokenR\vaccessToken2\xd1\x01\n" +
 	"\x06Auther\x12C\n" +
 	"\n" +
 	"CreateUser\x12\x19.auther.CreateUserRequest\x1a\x1a.auther.CreateUserResponse\x124\n" +
-	"\x05Login\x12\x14.auther.LoginRequest\x1a\x15.auther.LoginResponse\x124\n" +
-	"\x05Token\x12\x14.auther.TokenRequest\x1a\x15.auther.TokenResponseB*Z(github.com/georgg2003/skeeper/auther/apib\beditionsp\xe8\a"
+	"\x05Login\x12\x14.auther.LoginRequest\x1a\x15.auther.LoginResponse\x12L\n" +
+	"\rExchangeToken\x12\x1c.auther.ExchangeTokenRequest\x1a\x1d.auther.ExchangeTokenResponseB*Z(github.com/georgg2003/skeeper/auther/apib\beditionsp\xe8\a"
 
 var file_api_auther_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_api_auther_proto_goTypes = []any{
@@ -854,8 +854,8 @@ var file_api_auther_proto_goTypes = []any{
 	(*LoginRequest)(nil),          // 3: auther.LoginRequest
 	(*Token)(nil),                 // 4: auther.Token
 	(*LoginResponse)(nil),         // 5: auther.LoginResponse
-	(*TokenRequest)(nil),          // 6: auther.TokenRequest
-	(*TokenResponse)(nil),         // 7: auther.TokenResponse
+	(*ExchangeTokenRequest)(nil),  // 6: auther.ExchangeTokenRequest
+	(*ExchangeTokenResponse)(nil), // 7: auther.ExchangeTokenResponse
 	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_api_auther_proto_depIdxs = []int32{
@@ -864,14 +864,14 @@ var file_api_auther_proto_depIdxs = []int32{
 	4,  // 2: auther.LoginResponse.refresh_token:type_name -> auther.Token
 	4,  // 3: auther.LoginResponse.access_token:type_name -> auther.Token
 	0,  // 4: auther.LoginResponse.user:type_name -> auther.User
-	4,  // 5: auther.TokenResponse.refresh_token:type_name -> auther.Token
-	4,  // 6: auther.TokenResponse.access_token:type_name -> auther.Token
+	4,  // 5: auther.ExchangeTokenResponse.refresh_token:type_name -> auther.Token
+	4,  // 6: auther.ExchangeTokenResponse.access_token:type_name -> auther.Token
 	1,  // 7: auther.Auther.CreateUser:input_type -> auther.CreateUserRequest
 	3,  // 8: auther.Auther.Login:input_type -> auther.LoginRequest
-	6,  // 9: auther.Auther.Token:input_type -> auther.TokenRequest
+	6,  // 9: auther.Auther.ExchangeToken:input_type -> auther.ExchangeTokenRequest
 	2,  // 10: auther.Auther.CreateUser:output_type -> auther.CreateUserResponse
 	5,  // 11: auther.Auther.Login:output_type -> auther.LoginResponse
-	7,  // 12: auther.Auther.Token:output_type -> auther.TokenResponse
+	7,  // 12: auther.Auther.ExchangeToken:output_type -> auther.ExchangeTokenResponse
 	10, // [10:13] is the sub-list for method output_type
 	7,  // [7:10] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name

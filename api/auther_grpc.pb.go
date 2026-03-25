@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Auther_CreateUser_FullMethodName = "/auther.Auther/CreateUser"
-	Auther_Login_FullMethodName      = "/auther.Auther/Login"
-	Auther_Token_FullMethodName      = "/auther.Auther/Token"
+	Auther_CreateUser_FullMethodName    = "/auther.Auther/CreateUser"
+	Auther_Login_FullMethodName         = "/auther.Auther/Login"
+	Auther_ExchangeToken_FullMethodName = "/auther.Auther/ExchangeToken"
 )
 
 // AutherClient is the client API for Auther service.
@@ -30,7 +30,7 @@ const (
 type AutherClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	Token(ctx context.Context, in *TokenRequest, opts ...grpc.CallOption) (*TokenResponse, error)
+	ExchangeToken(ctx context.Context, in *ExchangeTokenRequest, opts ...grpc.CallOption) (*ExchangeTokenResponse, error)
 }
 
 type autherClient struct {
@@ -61,10 +61,10 @@ func (c *autherClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc
 	return out, nil
 }
 
-func (c *autherClient) Token(ctx context.Context, in *TokenRequest, opts ...grpc.CallOption) (*TokenResponse, error) {
+func (c *autherClient) ExchangeToken(ctx context.Context, in *ExchangeTokenRequest, opts ...grpc.CallOption) (*ExchangeTokenResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TokenResponse)
-	err := c.cc.Invoke(ctx, Auther_Token_FullMethodName, in, out, cOpts...)
+	out := new(ExchangeTokenResponse)
+	err := c.cc.Invoke(ctx, Auther_ExchangeToken_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (c *autherClient) Token(ctx context.Context, in *TokenRequest, opts ...grpc
 type AutherServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	Token(context.Context, *TokenRequest) (*TokenResponse, error)
+	ExchangeToken(context.Context, *ExchangeTokenRequest) (*ExchangeTokenResponse, error)
 	mustEmbedUnimplementedAutherServer()
 }
 
@@ -94,8 +94,8 @@ func (UnimplementedAutherServer) CreateUser(context.Context, *CreateUserRequest)
 func (UnimplementedAutherServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAutherServer) Token(context.Context, *TokenRequest) (*TokenResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Token not implemented")
+func (UnimplementedAutherServer) ExchangeToken(context.Context, *ExchangeTokenRequest) (*ExchangeTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExchangeToken not implemented")
 }
 func (UnimplementedAutherServer) mustEmbedUnimplementedAutherServer() {}
 func (UnimplementedAutherServer) testEmbeddedByValue()                {}
@@ -154,20 +154,20 @@ func _Auther_Login_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auther_Token_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TokenRequest)
+func _Auther_ExchangeToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExchangeTokenRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AutherServer).Token(ctx, in)
+		return srv.(AutherServer).ExchangeToken(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Auther_Token_FullMethodName,
+		FullMethod: Auther_ExchangeToken_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutherServer).Token(ctx, req.(*TokenRequest))
+		return srv.(AutherServer).ExchangeToken(ctx, req.(*ExchangeTokenRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -188,8 +188,8 @@ var Auther_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Auther_Login_Handler,
 		},
 		{
-			MethodName: "Token",
-			Handler:    _Auther_Token_Handler,
+			MethodName: "ExchangeToken",
+			Handler:    _Auther_ExchangeToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
