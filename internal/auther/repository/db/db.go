@@ -17,4 +17,5 @@ type Repository interface {
 	DeleteRefreshTokenAndReturnUser(context.Context, string) (int64, error)
 	SelectUserByEmail(context.Context, string) (models.UserInfo, error)
 	InsertRefreshToken(ctx context.Context, userID int64, rt models.RefreshTokenHashed) error
+	Close()
 }

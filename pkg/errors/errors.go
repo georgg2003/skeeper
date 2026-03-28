@@ -67,6 +67,10 @@ func Wrap(err error, msg string) error {
 	return fmt.Errorf("%s: %w", msg, err)
 }
 
+func Wrapf(err error, msg string, args ...any) error {
+	return fmt.Errorf("%s: %w", fmt.Sprintf(msg, args...), err)
+}
+
 func WithLocation(err error) error {
 	if err == nil {
 		return nil

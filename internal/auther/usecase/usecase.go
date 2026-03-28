@@ -87,6 +87,14 @@ func (uc useCase) RotateToken(ctx context.Context, refreshToken string) (jwthelp
 	return uc.insertTokenSet(ctx, userID)
 }
 
-func New(l *slog.Logger, jwtHelper jwthelper.JWTHelper) UseCase {
-	return &useCase{l: l, jwtHelper: jwtHelper}
+func New(
+	l *slog.Logger,
+	repo db.Repository,
+	jwtHelper jwthelper.JWTHelper,
+) UseCase {
+	return &useCase{
+		l:          l,
+		repository: repo,
+		jwtHelper:  jwtHelper,
+	}
 }
