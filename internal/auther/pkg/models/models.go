@@ -1,10 +1,11 @@
 package models
 
 import (
+	"encoding/hex"
 	"net/mail"
-	"time"
 
 	"github.com/georgg2003/skeeper/pkg/errors"
+	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,8 +34,17 @@ func (creds *UserCredentials) Validate() error {
 	return errors.Join(creds.validateEmail(), creds.validatePassword())
 }
 
-func (creds *UserCredentials) HashPassword() {
-	bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+func (creds *UserCredentials) HashPassword() (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash), nil
+}
+
+type DBUserCredentials struct {
+	Email        string
+	PasswordHash string
 }
 
 type UserInfo struct {
@@ -43,17 +53,12 @@ type UserInfo struct {
 	PasswordHash string
 }
 
-type Token struct {
-	Data      string
-	ExpiresAt time.Time
-}
-
-type TokenSet struct {
-	AccessToken  Token
-	RefreshToken Token
+type RefreshTokenHashed struct {
+	jwthelper.Token
+	Hash string
 }
 
 type LoginReponse struct {
-	TokenSet
-	User UserInfo
+	TokenPair jwthelper.TokenPair
+	User      UserInfo
 }

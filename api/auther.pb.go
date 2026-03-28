@@ -421,7 +421,7 @@ func (b0 LoginRequest_builder) Build() *LoginRequest {
 
 type Token struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data        *string                `protobuf:"bytes,1,opt,name=data"`
+	xxx_hidden_Token       *string                `protobuf:"bytes,1,opt,name=token"`
 	xxx_hidden_ExpiresAt   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
@@ -454,10 +454,10 @@ func (x *Token) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *Token) GetData() string {
+func (x *Token) GetToken() string {
 	if x != nil {
-		if x.xxx_hidden_Data != nil {
-			return *x.xxx_hidden_Data
+		if x.xxx_hidden_Token != nil {
+			return *x.xxx_hidden_Token
 		}
 		return ""
 	}
@@ -471,8 +471,8 @@ func (x *Token) GetExpiresAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Token) SetData(v string) {
-	x.xxx_hidden_Data = &v
+func (x *Token) SetToken(v string) {
+	x.xxx_hidden_Token = &v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
 }
 
@@ -480,7 +480,7 @@ func (x *Token) SetExpiresAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_ExpiresAt = v
 }
 
-func (x *Token) HasData() bool {
+func (x *Token) HasToken() bool {
 	if x == nil {
 		return false
 	}
@@ -494,9 +494,9 @@ func (x *Token) HasExpiresAt() bool {
 	return x.xxx_hidden_ExpiresAt != nil
 }
 
-func (x *Token) ClearData() {
+func (x *Token) ClearToken() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Data = nil
+	x.xxx_hidden_Token = nil
 }
 
 func (x *Token) ClearExpiresAt() {
@@ -506,7 +506,7 @@ func (x *Token) ClearExpiresAt() {
 type Token_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Data      *string
+	Token     *string
 	ExpiresAt *timestamppb.Timestamp
 }
 
@@ -514,9 +514,9 @@ func (b0 Token_builder) Build() *Token {
 	m0 := &Token{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Data != nil {
+	if b.Token != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_Data = b.Data
+		x.xxx_hidden_Token = b.Token
 	}
 	x.xxx_hidden_ExpiresAt = b.ExpiresAt
 	return m0
@@ -826,9 +826,9 @@ const file_api_auther_proto_rawDesc = "" +
 	"\x04user\x18\x01 \x01(\v2\f.auther.UserR\x04user\"@\n" +
 	"\fLoginRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"V\n" +
-	"\x05Token\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\tR\x04data\x129\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"X\n" +
+	"\x05Token\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x129\n" +
 	"\n" +
 	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\x97\x01\n" +
 	"\rLoginResponse\x122\n" +

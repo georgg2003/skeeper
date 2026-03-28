@@ -3,11 +3,10 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"github.com/georgg2003/skeeper/internal/auther/pkg/config"
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	"github.com/georgg2003/skeeper/internal/auther/repository/db"
-	"github.com/georgg2003/skeeper/internal/pkg/config"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,12 +17,12 @@ type repository struct {
 	pool *pgxpool.Pool
 }
 
-func (r *repository) CreateUser(ctx context.Context, creds models.UserCredentials) (models.UserInfo, error) {
+func (r *repository) InsertUser(ctx context.Context, creds models.DBUserCredentials) (models.UserInfo, error) {
 	var userID int64
 	err := r.pool.QueryRow(
 		ctx,
-		`INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id`,
-		creds.Email, creds.Password,
+		`INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id`,
+		creds.Email, creds.PasswordHash,
 	).Scan(&userID)
 
 	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" {
@@ -40,37 +39,41 @@ func (r *repository) CreateUser(ctx context.Context, creds models.UserCredential
 	}, nil
 }
 
-func (r *repository) DeleteRefreshToken(
+func (r *repository) DeleteRefreshTokenAndReturnUser(
 	ctx context.Context,
-	refreshToken string,
-) (time.Time, error) {
-	var expiresAt time.Time
+	refreshTokenHash string,
+) (int64, error) {
+	var userID int64
 
 	err := r.pool.QueryRow(
 		ctx,
-		`DELETE FROM tokens WHERE refresh_token = $1 RETURNING expires_at`,
-		refreshToken,
-	).Scan(&expiresAt)
+		`DELETE FROM tokens WHERE hash = $1 AND expires_at > now() RETURNIN user_id`,
+		refreshTokenHash,
+	).Scan(&userID)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return time.Time{}, db.ErrInvalidToken
+		return -1, db.ErrInvalidToken
 	}
 
 	if err != nil {
-		return time.Time{}, errors.Wrap(err, "failed to delete token")
+		return -1, errors.Wrap(err, "failed to delete token")
 	}
 
-	return expiresAt, nil
+	return userID, nil
 }
 
-func (r *repository) InsertRefreshToken(ctx context.Context, userID int64, refreshToken models.Token) error {
-	if _, err := r.pool.Exec(ctx, `
-			INSERT INTO tokens (user_id, refresh_token, expires_at) 
-      VALUES ($1, $2, $3)
-		`,
+func (r *repository) InsertRefreshToken(
+	ctx context.Context,
+	userID int64,
+	refreshToken models.RefreshTokenHashed,
+) error {
+	if _, err := r.pool.Exec(
+		ctx, `
+			INSERT INTO tokens (user_id, hash, expires_at) 
+    	VALUES ($1, $2, $3)`,
 		userID,
-		refreshToken.Data,
-		refreshToken.ExpiresAt,
+		refreshToken.Hash,
+		refreshToken.Token.ExpiresAt,
 	); err != nil {
 		return errors.Wrap(err, "failed to insert new refresh token")
 	}

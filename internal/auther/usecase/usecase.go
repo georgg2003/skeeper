@@ -2,11 +2,13 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/georgg2003/skeeper/internal/auther/pkg/jwthelper"
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	"github.com/georgg2003/skeeper/internal/auther/repository/db"
 	"github.com/georgg2003/skeeper/pkg/errors"
+	"github.com/georgg2003/skeeper/pkg/jwthelper"
+	"github.com/georgg2003/skeeper/pkg/utils"
 )
 
 var ErrUserNotExist = errors.New("user not exists")
@@ -16,12 +18,13 @@ var ErrInvalidToken = errors.New("refresh token is invalid")
 type UseCase interface {
 	CreateUser(context.Context, models.UserCredentials) (models.UserInfo, error)
 	LoginUser(context.Context, models.UserCredentials) (models.LoginReponse, error)
-	ExchangeToken(context.Context, string) (models.TokenSet, error)
+	RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error)
 }
 
 type useCase struct {
 	repository db.Repository
 	jwtHelper  jwthelper.JWTHelper
+	l          *slog.Logger
 }
 
 func (uc useCase) CreateUser(ctx context.Context, creds models.UserCredentials) (models.UserInfo, error) {
@@ -29,18 +32,33 @@ func (uc useCase) CreateUser(ctx context.Context, creds models.UserCredentials) 
 		return models.UserInfo{}, errors.Wrap(err, "user credentials are invalid")
 	}
 
-	creds.HashPassword()
+	hash, err := creds.HashPassword()
+	if err != nil {
+		return models.UserInfo{}, errors.Wrap(err, "failed to hash password")
+	}
 
-	return uc.repository.CreateUser(ctx, creds)
+	return uc.repository.InsertUser(ctx, models.DBUserCredentials{
+		Email:        creds.Email,
+		PasswordHash: hash,
+	})
 }
 
-func (uc useCase) insertTokenSet(ctx context.Context, userID int64) (models.TokenSet, error) {
-	// generate pair of keys
-	tokenSet := models.TokenSet{}
-
-	if err := uc.repository.InsertTokenSet(ctx, userID, tokenSet); err != nil {
-		return tokenSet, errors.Wrap(err, "failed to insert token set")
+func (uc useCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.TokenPair, error) {
+	tokenPair, err := uc.jwtHelper.NewTokenPair(userID)
+	if err != nil {
+		return tokenPair, errors.Wrap(err, "failed to create a new token pair")
 	}
+
+	rt := models.RefreshTokenHashed{
+		Token: tokenPair.RefreshToken,
+		Hash:  utils.HashToken(tokenPair.RefreshToken.Token),
+	}
+
+	if err := uc.repository.InsertRefreshToken(ctx, userID, rt); err != nil {
+		return jwthelper.TokenPair{}, errors.Wrap(err, "failed to insert refresh token")
+	}
+
+	return tokenPair, err
 }
 
 func (uc useCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginReponse, error) {
@@ -49,36 +67,26 @@ func (uc useCase) LoginUser(ctx context.Context, creds models.UserCredentials) (
 		return models.LoginReponse{}, ErrUserNotExist
 	}
 
-	tokenSet, err := uc.insertTokenSet(ctx, user.ID)
+	tokenPair, err := uc.insertTokenSet(ctx, user.ID)
 	if err != nil {
 		return models.LoginReponse{}, err
 	}
 
 	return models.LoginReponse{
-		User:     user,
-		TokenSet: tokenSet,
+		User:      user,
+		TokenPair: tokenPair,
 	}, nil
 }
 
-func (uc useCase) ExchangeToken(ctx context.Context, refreshToken string) (models.TokenSet, error) {
-	accessToken, err := uc.repository.ExchangeToken(ctx, refreshToken)
+func (uc useCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
+	userID, err := uc.repository.DeleteRefreshTokenAndReturnUser(ctx, utils.HashToken(refreshToken))
 	if errors.As(err, db.ErrInvalidToken) {
-		return models.TokenSet{}, ErrInvalidToken
+		return jwthelper.TokenPair{}, ErrInvalidToken
 	}
 
-	// TODO get userID from accessToken JWT or from database
-	var userID int64
-	newTokenSet, err := uc.insertTokenSet(ctx, userID)
-	if err != nil {
-		return models.TokenSet{}, err
-	}
-
-	return models.TokenSet{
-		AccessToken:  accessToken,
-		RefreshToken: newTokenSet.RefreshToken,
-	}, err
+	return uc.insertTokenSet(ctx, userID)
 }
 
-func New(jwtHelper jwthelper.JWTHelper) UseCase {
-	return &useCase{jwtHelper: jwtHelper}
+func New(l *slog.Logger, jwtHelper jwthelper.JWTHelper) UseCase {
+	return &useCase{l: l, jwtHelper: jwtHelper}
 }

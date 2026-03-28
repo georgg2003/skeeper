@@ -6,40 +6,13 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"runtime"
 )
+
+// Proxy
 
 func New(msg string) error {
 	return errors.New(msg)
-}
-
-type typedError struct {
-	errType string
-	text    string
-}
-
-func (err *typedError) Error() string {
-	return fmt.Sprintf("[%s] %s", err.errType, err.text)
-}
-
-func NewTypedError(typ string, text string) error {
-	return &typedError{errType: typ, text: text}
-}
-
-type ValidationError struct {
-	field string
-	text  string
-}
-
-func (err *ValidationError) Error() string {
-	return fmt.Sprintf("%s is not valid: %s", err.field, err.text)
-}
-
-func NewValidationError(field string, text string) error {
-	return &ValidationError{field: field, text: text}
-}
-
-func Wrap(err error, msg string) error {
-	return fmt.Errorf("%s: %w", msg, err)
 }
 
 func Is(err error, target error) bool {
@@ -56,4 +29,48 @@ func AsType[E error](err error) (E, bool) {
 
 func Join(errs ...error) error {
 	return errors.Join(errs...)
+}
+
+// Custom errors
+
+type TypedError struct {
+	Type string
+	Err  error
+}
+
+func (e *TypedError) Error() string {
+	return fmt.Sprintf("[%s] %v", e.Type, e.Err)
+}
+
+func (e *TypedError) Unwrap() error { return e.Err }
+
+func NewTypedError(typ string, err error) error {
+	return &TypedError{Type: typ, Err: err}
+}
+
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (err *ValidationError) Error() string {
+	return fmt.Sprintf("%s is not valid: %s", err.Field, err.Message)
+}
+
+func NewValidationError(field string, text string) error {
+	return &ValidationError{Field: field, Message: text}
+}
+
+// Methods
+
+func Wrap(err error, msg string) error {
+	return fmt.Errorf("%s: %w", msg, err)
+}
+
+func WithLocation(err error) error {
+	if err == nil {
+		return nil
+	}
+	_, file, line, _ := runtime.Caller(1)
+	return fmt.Errorf("%w (at %s:%d)", err, file, line)
 }

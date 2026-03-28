@@ -13,14 +13,23 @@ import (
 	"github.com/google/uuid"
 )
 
+type Token struct {
+	Token     string
+	ExpiresAt time.Time
+}
+
+type TokenPair struct {
+	AccessToken  Token
+	RefreshToken Token
+}
+
 type TokenClaims struct {
 	jwt.RegisteredClaims
 	UserID int64
 }
 
-//go:generate TODO add mockgen generation
 type JWTHelper interface {
-	NewTokenPair(userID int64) (string, string, time.Time, error)
+	NewTokenPair(userID int64) (TokenPair, error)
 	ValidateToken(encodedToken string) (int64, error)
 }
 
@@ -48,21 +57,30 @@ func generateRandomString() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (h *helper) NewTokenPair(userID int64) (string, string, time.Time, error) {
-	accessExpiry := time.Now().Add(time.Minute * 15)
-	aClaims := newClaims(userID, accessExpiry)
+func (h *helper) NewTokenPair(userID int64) (TokenPair, error) {
+	accessExpiresAt := time.Now().Add(time.Minute * 15)
+	aClaims := newClaims(userID, accessExpiresAt)
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, aClaims).SignedString(h.privateKey)
 	if err != nil {
-		return "", "", time.Time{}, err
+		return TokenPair{}, err
 	}
 
-	refreshExpiry := time.Now().Add(time.Hour * 24 * 30)
+	refreshExpiresAt := time.Now().Add(time.Hour * 24 * 30)
 	refreshToken, err := generateRandomString()
 	if err != nil {
-		return "", "", time.Time{}, errors.Wrap(err, "failed to generate refresh token")
+		return TokenPair{}, errors.Wrap(err, "failed to generate refresh token")
 	}
 
-	return accessToken, refreshToken, refreshExpiry, err
+	return TokenPair{
+		AccessToken: Token{
+			Token:     accessToken,
+			ExpiresAt: accessExpiresAt,
+		},
+		RefreshToken: Token{
+			Token:     refreshToken,
+			ExpiresAt: refreshExpiresAt,
+		},
+	}, err
 }
 
 func (h *helper) ValidateToken(encodedToken string) (int64, error) {

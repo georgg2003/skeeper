@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
@@ -16,6 +17,7 @@ type autherServer struct {
 	api.UnimplementedAutherServer
 
 	uc usecase.UseCase
+	l  *slog.Logger
 }
 
 func (s autherServer) CreateUser(ctx context.Context, req *api.CreateUserRequest) (*api.CreateUserResponse, error) {
@@ -31,7 +33,7 @@ func (s autherServer) CreateUser(ctx context.Context, req *api.CreateUserRequest
 		return nil, status.Error(codes.InvalidArgument, valErr.Error())
 	}
 	if err != nil {
-		// TODO add logs
+		s.l.ErrorContext(ctx, "failed to create user", "err", err)
 		return nil, status.Error(codes.Internal, "failed to create user")
 	}
 
@@ -53,7 +55,7 @@ func (s autherServer) Login(ctx context.Context, req *api.LoginRequest) (*api.Lo
 	})
 
 	if err != nil {
-		// TODO add logs
+		s.l.ErrorContext(ctx, "failed to login user", "err", err)
 		return nil, status.Error(codes.Internal, "failed to login user")
 	}
 
@@ -63,12 +65,12 @@ func (s autherServer) Login(ctx context.Context, req *api.LoginRequest) (*api.Lo
 			Id:    &resp.User.ID,
 		}.Build(),
 		RefreshToken: api.Token_builder{
-			Data:      &resp.RefreshToken.Data,
-			ExpiresAt: timestamppb.New(resp.RefreshToken.ExpiresAt),
+			Token:     &resp.TokenPair.RefreshToken.Token,
+			ExpiresAt: timestamppb.New(resp.TokenPair.RefreshToken.ExpiresAt),
 		}.Build(),
 		AccessToken: api.Token_builder{
-			Data:      &resp.AccessToken.Data,
-			ExpiresAt: timestamppb.New(resp.AccessToken.ExpiresAt),
+			Token:     &resp.TokenPair.AccessToken.Token,
+			ExpiresAt: timestamppb.New(resp.TokenPair.AccessToken.ExpiresAt),
 		}.Build(),
 	}.Build(), nil
 }
@@ -76,25 +78,29 @@ func (s autherServer) Login(ctx context.Context, req *api.LoginRequest) (*api.Lo
 func (s autherServer) ExchangeToken(ctx context.Context, req *api.ExchangeTokenRequest) (*api.ExchangeTokenResponse, error) {
 	refreshToken := req.GetRefreshToken()
 
-	resp, err := s.uc.ExchangeToken(ctx, refreshToken)
+	resp, err := s.uc.RotateToken(ctx, refreshToken)
+
+	if errors.Is(err, usecase.ErrInvalidToken) {
+		return nil, status.Error(codes.Unauthenticated, "invalid token")
+	}
 
 	if err != nil {
-		// TODO add logs
-		return nil, status.Error(codes.Internal, "failed to login user")
+		s.l.ErrorContext(ctx, "failed to exchange token", "err", err)
+		return nil, status.Error(codes.Internal, "failed to exchange token")
 	}
 
 	return api.ExchangeTokenResponse_builder{
 		RefreshToken: api.Token_builder{
-			Data:      &resp.RefreshToken.Data,
+			Token:     &resp.RefreshToken.Token,
 			ExpiresAt: timestamppb.New(resp.RefreshToken.ExpiresAt),
 		}.Build(),
 		AccessToken: api.Token_builder{
-			Data:      &resp.AccessToken.Data,
+			Token:     &resp.AccessToken.Token,
 			ExpiresAt: timestamppb.New(resp.AccessToken.ExpiresAt),
 		}.Build(),
 	}.Build(), nil
 }
 
-func New(uc usecase.UseCase) api.AutherServer {
-	return &autherServer{uc: uc}
+func New(l *slog.Logger, uc usecase.UseCase) api.AutherServer {
+	return &autherServer{l: l, uc: uc}
 }
