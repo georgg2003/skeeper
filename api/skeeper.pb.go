@@ -1290,8 +1290,8 @@ const file_api_skeeper_proto_rawDesc = "" +
 	"\x0eGetFileRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"'\n" +
 	"\x0fGetFileResponse\x12\x14\n" +
-	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\xfc\x02\n" +
-	"\x0eSkeeperService\x12J\n" +
+	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\xf5\x02\n" +
+	"\aSkeeper\x12J\n" +
 	"\vListEntries\x12\x1b.skeeper.ListEntriesRequest\x1a\x1c.skeeper.ListEntriesResponse0\x01\x12G\n" +
 	"\n" +
 	"GetEntries\x12\x1a.skeeper.GetEntriesRequest\x1a\x1b.skeeper.GetEntriesResponse0\x01\x12G\n" +
@@ -1324,16 +1324,16 @@ var file_api_skeeper_proto_depIdxs = []int32{
 	0,  // 4: skeeper.SyncEntriesRequest.data:type_name -> skeeper.Entry
 	0,  // 5: skeeper.SyncEntriesResponse.data:type_name -> skeeper.Entry
 	7,  // 6: skeeper.UploadFileRequest.info:type_name -> skeeper.FileInfo
-	1,  // 7: skeeper.SkeeperService.ListEntries:input_type -> skeeper.ListEntriesRequest
-	3,  // 8: skeeper.SkeeperService.GetEntries:input_type -> skeeper.GetEntriesRequest
-	8,  // 9: skeeper.SkeeperService.UploadFile:input_type -> skeeper.UploadFileRequest
-	10, // 10: skeeper.SkeeperService.GetFile:input_type -> skeeper.GetFileRequest
-	5,  // 11: skeeper.SkeeperService.SyncEntries:input_type -> skeeper.SyncEntriesRequest
-	2,  // 12: skeeper.SkeeperService.ListEntries:output_type -> skeeper.ListEntriesResponse
-	4,  // 13: skeeper.SkeeperService.GetEntries:output_type -> skeeper.GetEntriesResponse
-	9,  // 14: skeeper.SkeeperService.UploadFile:output_type -> skeeper.UploadFileResponse
-	11, // 15: skeeper.SkeeperService.GetFile:output_type -> skeeper.GetFileResponse
-	6,  // 16: skeeper.SkeeperService.SyncEntries:output_type -> skeeper.SyncEntriesResponse
+	1,  // 7: skeeper.Skeeper.ListEntries:input_type -> skeeper.ListEntriesRequest
+	3,  // 8: skeeper.Skeeper.GetEntries:input_type -> skeeper.GetEntriesRequest
+	8,  // 9: skeeper.Skeeper.UploadFile:input_type -> skeeper.UploadFileRequest
+	10, // 10: skeeper.Skeeper.GetFile:input_type -> skeeper.GetFileRequest
+	5,  // 11: skeeper.Skeeper.SyncEntries:input_type -> skeeper.SyncEntriesRequest
+	2,  // 12: skeeper.Skeeper.ListEntries:output_type -> skeeper.ListEntriesResponse
+	4,  // 13: skeeper.Skeeper.GetEntries:output_type -> skeeper.GetEntriesResponse
+	9,  // 14: skeeper.Skeeper.UploadFile:output_type -> skeeper.UploadFileResponse
+	11, // 15: skeeper.Skeeper.GetFile:output_type -> skeeper.GetFileResponse
+	6,  // 16: skeeper.Skeeper.SyncEntries:output_type -> skeeper.SyncEntriesResponse
 	12, // [12:17] is the sub-list for method output_type
 	7,  // [7:12] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name

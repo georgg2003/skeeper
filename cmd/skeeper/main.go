@@ -1,1 +1,60 @@
-package skeeper
+package auther
+
+import (
+	"context"
+	"os"
+	"os/signal"
+
+	"google.golang.org/grpc"
+
+	"github.com/georgg2003/skeeper/api"
+	"github.com/georgg2003/skeeper/internal/pkg/log"
+	"github.com/georgg2003/skeeper/internal/pkg/server"
+	"github.com/georgg2003/skeeper/internal/skeeper/delivery"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/config"
+	"github.com/georgg2003/skeeper/internal/skeeper/repository/db/postgres"
+	"github.com/georgg2003/skeeper/internal/skeeper/usecase"
+	"github.com/georgg2003/skeeper/pkg/jwthelper"
+)
+
+func main() {
+	l := log.New()
+
+	cfg, err := config.New()
+	if err != nil {
+		l.Error("failed to init config", "err", err)
+		os.Exit(1)
+	}
+
+	jwtHelper, err := jwthelper.NewFromFiles(cfg.JWT)
+	if err != nil {
+		l.Error("failed to init jwt helper", "err", err)
+		os.Exit(1)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	repo, err := postgres.New(ctx, cfg.Postgres)
+	if err != nil {
+		l.Error("failed to init repo", "err", err)
+		os.Exit(1)
+	}
+	defer repo.Close()
+
+	uc := usecase.New(l, repo, jwtHelper)
+	service := delivery.New(l, uc)
+
+	srv := server.New(
+		cfg.Service,
+		l,
+		func(s *grpc.Server) {
+			api.RegisterSkeeperServer(s, service)
+		},
+	)
+
+	if err = srv.Serve(ctx); err != nil {
+		l.Error("failed with error", "err", err)
+		os.Exit(1)
+	}
+}

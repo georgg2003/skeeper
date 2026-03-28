@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/georgg2003/skeeper/pkg/errors"
@@ -113,4 +114,21 @@ func New(privByte, pubByte []byte) (JWTHelper, error) {
 		privateKey: privKey,
 		publicKey:  pubKey,
 	}, nil
+}
+
+type JWTConfig struct {
+	PrivateKeyFile string `mapstructure:"private_key_file"`
+	PublicKeyFile  string `mapstructure:"public_key_file"`
+}
+
+func NewFromFiles(cfg JWTConfig) (JWTHelper, error) {
+	privBytes, err := os.ReadFile(cfg.PrivateKeyFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read private key file")
+	}
+	pubBytes, err := os.ReadFile(cfg.PublicKeyFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read public key file")
+	}
+	return New(privBytes, pubBytes)
 }

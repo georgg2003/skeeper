@@ -65,7 +65,7 @@ message GetFileResponse {
     bytes chunk = 1;
 }
 
-service SkeeperService {
+service Skeeper {
     rpc ListEntries(ListEntriesRequest) returns (stream ListEntriesResponse);
     rpc GetEntries(GetEntriesRequest) returns (stream GetEntriesResponse);
     rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse);

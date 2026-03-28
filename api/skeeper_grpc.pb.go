@@ -19,17 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SkeeperService_ListEntries_FullMethodName = "/skeeper.SkeeperService/ListEntries"
-	SkeeperService_GetEntries_FullMethodName  = "/skeeper.SkeeperService/GetEntries"
-	SkeeperService_UploadFile_FullMethodName  = "/skeeper.SkeeperService/UploadFile"
-	SkeeperService_GetFile_FullMethodName     = "/skeeper.SkeeperService/GetFile"
-	SkeeperService_SyncEntries_FullMethodName = "/skeeper.SkeeperService/SyncEntries"
+	Skeeper_ListEntries_FullMethodName = "/skeeper.Skeeper/ListEntries"
+	Skeeper_GetEntries_FullMethodName  = "/skeeper.Skeeper/GetEntries"
+	Skeeper_UploadFile_FullMethodName  = "/skeeper.Skeeper/UploadFile"
+	Skeeper_GetFile_FullMethodName     = "/skeeper.Skeeper/GetFile"
+	Skeeper_SyncEntries_FullMethodName = "/skeeper.Skeeper/SyncEntries"
 )
 
-// SkeeperServiceClient is the client API for SkeeperService service.
+// SkeeperClient is the client API for Skeeper service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type SkeeperServiceClient interface {
+type SkeeperClient interface {
 	ListEntries(ctx context.Context, in *ListEntriesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ListEntriesResponse], error)
 	GetEntries(ctx context.Context, in *GetEntriesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetEntriesResponse], error)
 	UploadFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadFileRequest, UploadFileResponse], error)
@@ -37,17 +37,17 @@ type SkeeperServiceClient interface {
 	SyncEntries(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SyncEntriesRequest, SyncEntriesResponse], error)
 }
 
-type skeeperServiceClient struct {
+type skeeperClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewSkeeperServiceClient(cc grpc.ClientConnInterface) SkeeperServiceClient {
-	return &skeeperServiceClient{cc}
+func NewSkeeperClient(cc grpc.ClientConnInterface) SkeeperClient {
+	return &skeeperClient{cc}
 }
 
-func (c *skeeperServiceClient) ListEntries(ctx context.Context, in *ListEntriesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ListEntriesResponse], error) {
+func (c *skeeperClient) ListEntries(ctx context.Context, in *ListEntriesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ListEntriesResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SkeeperService_ServiceDesc.Streams[0], SkeeperService_ListEntries_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Skeeper_ServiceDesc.Streams[0], Skeeper_ListEntries_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,11 +62,11 @@ func (c *skeeperServiceClient) ListEntries(ctx context.Context, in *ListEntriesR
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_ListEntriesClient = grpc.ServerStreamingClient[ListEntriesResponse]
+type Skeeper_ListEntriesClient = grpc.ServerStreamingClient[ListEntriesResponse]
 
-func (c *skeeperServiceClient) GetEntries(ctx context.Context, in *GetEntriesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetEntriesResponse], error) {
+func (c *skeeperClient) GetEntries(ctx context.Context, in *GetEntriesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetEntriesResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SkeeperService_ServiceDesc.Streams[1], SkeeperService_GetEntries_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Skeeper_ServiceDesc.Streams[1], Skeeper_GetEntries_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +81,11 @@ func (c *skeeperServiceClient) GetEntries(ctx context.Context, in *GetEntriesReq
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_GetEntriesClient = grpc.ServerStreamingClient[GetEntriesResponse]
+type Skeeper_GetEntriesClient = grpc.ServerStreamingClient[GetEntriesResponse]
 
-func (c *skeeperServiceClient) UploadFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadFileRequest, UploadFileResponse], error) {
+func (c *skeeperClient) UploadFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadFileRequest, UploadFileResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SkeeperService_ServiceDesc.Streams[2], SkeeperService_UploadFile_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Skeeper_ServiceDesc.Streams[2], Skeeper_UploadFile_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +94,11 @@ func (c *skeeperServiceClient) UploadFile(ctx context.Context, opts ...grpc.Call
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_UploadFileClient = grpc.ClientStreamingClient[UploadFileRequest, UploadFileResponse]
+type Skeeper_UploadFileClient = grpc.ClientStreamingClient[UploadFileRequest, UploadFileResponse]
 
-func (c *skeeperServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetFileResponse], error) {
+func (c *skeeperClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetFileResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SkeeperService_ServiceDesc.Streams[3], SkeeperService_GetFile_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Skeeper_ServiceDesc.Streams[3], Skeeper_GetFile_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -113,11 +113,11 @@ func (c *skeeperServiceClient) GetFile(ctx context.Context, in *GetFileRequest, 
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_GetFileClient = grpc.ServerStreamingClient[GetFileResponse]
+type Skeeper_GetFileClient = grpc.ServerStreamingClient[GetFileResponse]
 
-func (c *skeeperServiceClient) SyncEntries(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SyncEntriesRequest, SyncEntriesResponse], error) {
+func (c *skeeperClient) SyncEntries(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SyncEntriesRequest, SyncEntriesResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &SkeeperService_ServiceDesc.Streams[4], SkeeperService_SyncEntries_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Skeeper_ServiceDesc.Streams[4], Skeeper_SyncEntries_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -126,141 +126,141 @@ func (c *skeeperServiceClient) SyncEntries(ctx context.Context, opts ...grpc.Cal
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_SyncEntriesClient = grpc.BidiStreamingClient[SyncEntriesRequest, SyncEntriesResponse]
+type Skeeper_SyncEntriesClient = grpc.BidiStreamingClient[SyncEntriesRequest, SyncEntriesResponse]
 
-// SkeeperServiceServer is the server API for SkeeperService service.
-// All implementations must embed UnimplementedSkeeperServiceServer
+// SkeeperServer is the server API for Skeeper service.
+// All implementations must embed UnimplementedSkeeperServer
 // for forward compatibility.
-type SkeeperServiceServer interface {
+type SkeeperServer interface {
 	ListEntries(*ListEntriesRequest, grpc.ServerStreamingServer[ListEntriesResponse]) error
 	GetEntries(*GetEntriesRequest, grpc.ServerStreamingServer[GetEntriesResponse]) error
 	UploadFile(grpc.ClientStreamingServer[UploadFileRequest, UploadFileResponse]) error
 	GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error
 	SyncEntries(grpc.BidiStreamingServer[SyncEntriesRequest, SyncEntriesResponse]) error
-	mustEmbedUnimplementedSkeeperServiceServer()
+	mustEmbedUnimplementedSkeeperServer()
 }
 
-// UnimplementedSkeeperServiceServer must be embedded to have
+// UnimplementedSkeeperServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedSkeeperServiceServer struct{}
+type UnimplementedSkeeperServer struct{}
 
-func (UnimplementedSkeeperServiceServer) ListEntries(*ListEntriesRequest, grpc.ServerStreamingServer[ListEntriesResponse]) error {
+func (UnimplementedSkeeperServer) ListEntries(*ListEntriesRequest, grpc.ServerStreamingServer[ListEntriesResponse]) error {
 	return status.Error(codes.Unimplemented, "method ListEntries not implemented")
 }
-func (UnimplementedSkeeperServiceServer) GetEntries(*GetEntriesRequest, grpc.ServerStreamingServer[GetEntriesResponse]) error {
+func (UnimplementedSkeeperServer) GetEntries(*GetEntriesRequest, grpc.ServerStreamingServer[GetEntriesResponse]) error {
 	return status.Error(codes.Unimplemented, "method GetEntries not implemented")
 }
-func (UnimplementedSkeeperServiceServer) UploadFile(grpc.ClientStreamingServer[UploadFileRequest, UploadFileResponse]) error {
+func (UnimplementedSkeeperServer) UploadFile(grpc.ClientStreamingServer[UploadFileRequest, UploadFileResponse]) error {
 	return status.Error(codes.Unimplemented, "method UploadFile not implemented")
 }
-func (UnimplementedSkeeperServiceServer) GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error {
+func (UnimplementedSkeeperServer) GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error {
 	return status.Error(codes.Unimplemented, "method GetFile not implemented")
 }
-func (UnimplementedSkeeperServiceServer) SyncEntries(grpc.BidiStreamingServer[SyncEntriesRequest, SyncEntriesResponse]) error {
+func (UnimplementedSkeeperServer) SyncEntries(grpc.BidiStreamingServer[SyncEntriesRequest, SyncEntriesResponse]) error {
 	return status.Error(codes.Unimplemented, "method SyncEntries not implemented")
 }
-func (UnimplementedSkeeperServiceServer) mustEmbedUnimplementedSkeeperServiceServer() {}
-func (UnimplementedSkeeperServiceServer) testEmbeddedByValue()                        {}
+func (UnimplementedSkeeperServer) mustEmbedUnimplementedSkeeperServer() {}
+func (UnimplementedSkeeperServer) testEmbeddedByValue()                 {}
 
-// UnsafeSkeeperServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to SkeeperServiceServer will
+// UnsafeSkeeperServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SkeeperServer will
 // result in compilation errors.
-type UnsafeSkeeperServiceServer interface {
-	mustEmbedUnimplementedSkeeperServiceServer()
+type UnsafeSkeeperServer interface {
+	mustEmbedUnimplementedSkeeperServer()
 }
 
-func RegisterSkeeperServiceServer(s grpc.ServiceRegistrar, srv SkeeperServiceServer) {
-	// If the following call panics, it indicates UnimplementedSkeeperServiceServer was
+func RegisterSkeeperServer(s grpc.ServiceRegistrar, srv SkeeperServer) {
+	// If the following call panics, it indicates UnimplementedSkeeperServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&SkeeperService_ServiceDesc, srv)
+	s.RegisterService(&Skeeper_ServiceDesc, srv)
 }
 
-func _SkeeperService_ListEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Skeeper_ListEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ListEntriesRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(SkeeperServiceServer).ListEntries(m, &grpc.GenericServerStream[ListEntriesRequest, ListEntriesResponse]{ServerStream: stream})
+	return srv.(SkeeperServer).ListEntries(m, &grpc.GenericServerStream[ListEntriesRequest, ListEntriesResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_ListEntriesServer = grpc.ServerStreamingServer[ListEntriesResponse]
+type Skeeper_ListEntriesServer = grpc.ServerStreamingServer[ListEntriesResponse]
 
-func _SkeeperService_GetEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Skeeper_GetEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(GetEntriesRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(SkeeperServiceServer).GetEntries(m, &grpc.GenericServerStream[GetEntriesRequest, GetEntriesResponse]{ServerStream: stream})
+	return srv.(SkeeperServer).GetEntries(m, &grpc.GenericServerStream[GetEntriesRequest, GetEntriesResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_GetEntriesServer = grpc.ServerStreamingServer[GetEntriesResponse]
+type Skeeper_GetEntriesServer = grpc.ServerStreamingServer[GetEntriesResponse]
 
-func _SkeeperService_UploadFile_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SkeeperServiceServer).UploadFile(&grpc.GenericServerStream[UploadFileRequest, UploadFileResponse]{ServerStream: stream})
+func _Skeeper_UploadFile_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SkeeperServer).UploadFile(&grpc.GenericServerStream[UploadFileRequest, UploadFileResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_UploadFileServer = grpc.ClientStreamingServer[UploadFileRequest, UploadFileResponse]
+type Skeeper_UploadFileServer = grpc.ClientStreamingServer[UploadFileRequest, UploadFileResponse]
 
-func _SkeeperService_GetFile_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Skeeper_GetFile_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(GetFileRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(SkeeperServiceServer).GetFile(m, &grpc.GenericServerStream[GetFileRequest, GetFileResponse]{ServerStream: stream})
+	return srv.(SkeeperServer).GetFile(m, &grpc.GenericServerStream[GetFileRequest, GetFileResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_GetFileServer = grpc.ServerStreamingServer[GetFileResponse]
+type Skeeper_GetFileServer = grpc.ServerStreamingServer[GetFileResponse]
 
-func _SkeeperService_SyncEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SkeeperServiceServer).SyncEntries(&grpc.GenericServerStream[SyncEntriesRequest, SyncEntriesResponse]{ServerStream: stream})
+func _Skeeper_SyncEntries_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SkeeperServer).SyncEntries(&grpc.GenericServerStream[SyncEntriesRequest, SyncEntriesResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type SkeeperService_SyncEntriesServer = grpc.BidiStreamingServer[SyncEntriesRequest, SyncEntriesResponse]
+type Skeeper_SyncEntriesServer = grpc.BidiStreamingServer[SyncEntriesRequest, SyncEntriesResponse]
 
-// SkeeperService_ServiceDesc is the grpc.ServiceDesc for SkeeperService service.
+// Skeeper_ServiceDesc is the grpc.ServiceDesc for Skeeper service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var SkeeperService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "skeeper.SkeeperService",
-	HandlerType: (*SkeeperServiceServer)(nil),
+var Skeeper_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "skeeper.Skeeper",
+	HandlerType: (*SkeeperServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ListEntries",
-			Handler:       _SkeeperService_ListEntries_Handler,
+			Handler:       _Skeeper_ListEntries_Handler,
 			ServerStreams: true,
 		},
 		{
 			StreamName:    "GetEntries",
-			Handler:       _SkeeperService_GetEntries_Handler,
+			Handler:       _Skeeper_GetEntries_Handler,
 			ServerStreams: true,
 		},
 		{
 			StreamName:    "UploadFile",
-			Handler:       _SkeeperService_UploadFile_Handler,
+			Handler:       _Skeeper_UploadFile_Handler,
 			ClientStreams: true,
 		},
 		{
 			StreamName:    "GetFile",
-			Handler:       _SkeeperService_GetFile_Handler,
+			Handler:       _Skeeper_GetFile_Handler,
 			ServerStreams: true,
 		},
 		{
 			StreamName:    "SyncEntries",
-			Handler:       _SkeeperService_SyncEntries_Handler,
+			Handler:       _Skeeper_SyncEntries_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
