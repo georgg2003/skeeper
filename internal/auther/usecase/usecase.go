@@ -25,7 +25,7 @@ type Repository interface {
 
 type UseCase struct {
 	repository Repository
-	jwtHelper  jwthelper.JWTHelper
+	jwtHelper  *jwthelper.JWTHelper
 	l          *slog.Logger
 }
 
@@ -92,7 +92,7 @@ func (uc UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthelp
 func New(
 	l *slog.Logger,
 	repo Repository,
-	jwtHelper jwthelper.JWTHelper,
+	jwtHelper *jwthelper.JWTHelper,
 ) *UseCase {
 	return &UseCase{
 		l:          l,

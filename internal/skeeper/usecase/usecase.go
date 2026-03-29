@@ -21,7 +21,7 @@ type Repository interface {
 
 type UseCase struct {
 	repo      Repository
-	jwtHelper jwthelper.JWTHelper
+	jwtHelper *jwthelper.JWTHelper
 	l         *slog.Logger
 }
 
@@ -53,7 +53,7 @@ func (uc *UseCase) Sync(
 func New(
 	l *slog.Logger,
 	repo Repository,
-	jwtHelper jwthelper.JWTHelper,
+	jwtHelper *jwthelper.JWTHelper,
 ) *UseCase {
 	return &UseCase{
 		l:         l,

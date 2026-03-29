@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func authorize(ctx context.Context, jwt jwthelper.JWTHelper) (context.Context, error) {
+func authorize(ctx context.Context, jwt *jwthelper.JWTHelper) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "metadata is not provided")
@@ -46,7 +46,7 @@ func (w *wrappedStream) Context() context.Context {
 	return w.ctx
 }
 
-func NewAuthInterceptor(jwt jwthelper.JWTHelper) grpc.UnaryServerInterceptor {
+func NewAuthInterceptor(jwt *jwthelper.JWTHelper) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
@@ -62,7 +62,7 @@ func NewAuthInterceptor(jwt jwthelper.JWTHelper) grpc.UnaryServerInterceptor {
 	}
 }
 
-func NewStreamAuthInterceptor(jwt jwthelper.JWTHelper) grpc.StreamServerInterceptor {
+func NewStreamAuthInterceptor(jwt *jwthelper.JWTHelper) grpc.StreamServerInterceptor {
 	return func(
 		srv any,
 		ss grpc.ServerStream,

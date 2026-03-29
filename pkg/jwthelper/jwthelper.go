@@ -29,14 +29,12 @@ type TokenClaims struct {
 	UserID int64
 }
 
-type JWTHelper interface {
-	NewTokenPair(userID int64) (TokenPair, error)
-	ValidateToken(encodedToken string) (TokenClaims, error)
-}
-
-type helper struct {
+type JWTHelper struct {
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
+
+	atLifetime time.Duration
+	rtLifetime time.Duration
 }
 
 func newClaims(userID int64, expiresAt time.Time) TokenClaims {
@@ -58,15 +56,15 @@ func generateRandomString() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (h *helper) NewTokenPair(userID int64) (TokenPair, error) {
-	accessExpiresAt := time.Now().Add(time.Minute * 15)
+func (h *JWTHelper) NewTokenPair(userID int64) (TokenPair, error) {
+	accessExpiresAt := time.Now().Add(h.atLifetime)
 	aClaims := newClaims(userID, accessExpiresAt)
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, aClaims).SignedString(h.privateKey)
 	if err != nil {
 		return TokenPair{}, err
 	}
 
-	refreshExpiresAt := time.Now().Add(time.Hour * 24 * 30)
+	refreshExpiresAt := time.Now().Add(h.rtLifetime)
 	refreshToken, err := generateRandomString()
 	if err != nil {
 		return TokenPair{}, errors.Wrap(err, "failed to generate refresh token")
@@ -84,7 +82,7 @@ func (h *helper) NewTokenPair(userID int64) (TokenPair, error) {
 	}, err
 }
 
-func (h *helper) ValidateToken(encodedToken string) (TokenClaims, error) {
+func (h *JWTHelper) ValidateToken(encodedToken string) (TokenClaims, error) {
 	claims := TokenClaims{}
 
 	token, err := jwt.ParseWithClaims(encodedToken, &claims, func(token *jwt.Token) (interface{}, error) {
@@ -101,7 +99,12 @@ func (h *helper) ValidateToken(encodedToken string) (TokenClaims, error) {
 	return claims, nil
 }
 
-func New(privByte, pubByte []byte) (JWTHelper, error) {
+func New(
+	privByte,
+	pubByte []byte,
+	atLifetime time.Duration,
+	rtLifetime time.Duration,
+) (*JWTHelper, error) {
 	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(privByte)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rsa private key")
@@ -110,18 +113,28 @@ func New(privByte, pubByte []byte) (JWTHelper, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rsa public key")
 	}
-	return &helper{
+	if atLifetime <= 0 {
+		atLifetime = time.Minute * 15
+	}
+	if rtLifetime <= 0 {
+		rtLifetime = time.Hour * 24
+	}
+	return &JWTHelper{
 		privateKey: privKey,
 		publicKey:  pubKey,
+		atLifetime: atLifetime,
+		rtLifetime: rtLifetime,
 	}, nil
 }
 
 type JWTConfig struct {
-	PrivateKeyFile string `mapstructure:"private_key_file"`
-	PublicKeyFile  string `mapstructure:"public_key_file"`
+	PrivateKeyFile       string        `mapstructure:"private_key_file"`
+	PublicKeyFile        string        `mapstructure:"public_key_file"`
+	AccessTokenLifetime  time.Duration `mapstructure:"access_token_lifetime"`
+	RefreshTokenLifetime time.Duration `mapstructure:"refresh_token_lifetime"`
 }
 
-func NewFromFiles(cfg JWTConfig) (JWTHelper, error) {
+func NewFromConfig(cfg JWTConfig) (*JWTHelper, error) {
 	privBytes, err := os.ReadFile(cfg.PrivateKeyFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read private key file")
@@ -130,5 +143,5 @@ func NewFromFiles(cfg JWTConfig) (JWTHelper, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read public key file")
 	}
-	return New(privBytes, pubBytes)
+	return New(privBytes, pubBytes, cfg.AccessTokenLifetime, cfg.RefreshTokenLifetime)
 }
