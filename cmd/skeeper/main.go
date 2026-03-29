@@ -12,6 +12,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/pkg/server"
 	"github.com/georgg2003/skeeper/internal/skeeper/delivery"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/config"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/interceptors"
 	"github.com/georgg2003/skeeper/internal/skeeper/repository/db/postgres"
 	"github.com/georgg2003/skeeper/internal/skeeper/usecase"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
@@ -51,6 +52,12 @@ func main() {
 		func(s *grpc.Server) {
 			api.RegisterSkeeperServer(s, service)
 		},
+		grpc.ChainUnaryInterceptor(
+			interceptors.NewAuthInterceptor(jwtHelper),
+		),
+		grpc.ChainStreamInterceptor(
+			interceptors.NewStreamAuthInterceptor(jwtHelper),
+		),
 	)
 
 	if err = srv.Serve(ctx); err != nil {

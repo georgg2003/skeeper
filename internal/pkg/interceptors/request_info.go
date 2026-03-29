@@ -10,31 +10,6 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
-func RequestInfoInterceptor() grpc.UnaryServerInterceptor {
-	return func(
-		ctx context.Context,
-		req any,
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (any, error) {
-		newCtx := fillRequestInfo(ctx, info.FullMethod)
-		return handler(newCtx, req)
-	}
-}
-
-func StreamRequestInfoInterceptor() grpc.StreamServerInterceptor {
-	return func(
-		srv any,
-		ss grpc.ServerStream,
-		info *grpc.StreamServerInfo,
-		handler grpc.StreamHandler,
-	) error {
-		newCtx := fillRequestInfo(ss.Context(), info.FullMethod)
-		wrapped := &wrappedStream{ServerStream: ss, ctx: newCtx}
-		return handler(srv, wrapped)
-	}
-}
-
 func getMetadataValue(md metadata.MD, keys ...string) string {
 	for _, key := range keys {
 		if values := md.Get(key); len(values) > 0 {
@@ -76,4 +51,29 @@ type wrappedStream struct {
 
 func (w *wrappedStream) Context() context.Context {
 	return w.ctx
+}
+
+func NewRequestInfoInterceptor() grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		newCtx := fillRequestInfo(ctx, info.FullMethod)
+		return handler(newCtx, req)
+	}
+}
+
+func NewStreamRequestInfoInterceptor() grpc.StreamServerInterceptor {
+	return func(
+		srv any,
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		newCtx := fillRequestInfo(ss.Context(), info.FullMethod)
+		wrapped := &wrappedStream{ServerStream: ss, ctx: newCtx}
+		return handler(srv, wrapped)
+	}
 }

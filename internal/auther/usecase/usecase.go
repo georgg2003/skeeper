@@ -14,20 +14,22 @@ import (
 var ErrUserNotExist = errors.New("user not exists")
 var ErrInvalidToken = errors.New("refresh token is invalid")
 
-//go:generate mockgen TODO
-type UseCase interface {
-	CreateUser(context.Context, models.UserCredentials) (models.UserInfo, error)
-	LoginUser(context.Context, models.UserCredentials) (models.LoginReponse, error)
-	RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error)
+//go:generate TODO
+type Repository interface {
+	InsertUser(context.Context, models.DBUserCredentials) (models.UserInfo, error)
+	DeleteRefreshTokenAndReturnUser(context.Context, string) (int64, error)
+	SelectUserByEmail(context.Context, string) (models.UserInfo, error)
+	InsertRefreshToken(ctx context.Context, userID int64, rt models.RefreshTokenHashed) error
+	Close()
 }
 
-type useCase struct {
-	repository db.Repository
+type UseCase struct {
+	repository Repository
 	jwtHelper  jwthelper.JWTHelper
 	l          *slog.Logger
 }
 
-func (uc useCase) CreateUser(ctx context.Context, creds models.UserCredentials) (models.UserInfo, error) {
+func (uc UseCase) CreateUser(ctx context.Context, creds models.UserCredentials) (models.UserInfo, error) {
 	if err := creds.Validate(); err != nil {
 		return models.UserInfo{}, errors.Wrap(err, "user credentials are invalid")
 	}
@@ -43,7 +45,7 @@ func (uc useCase) CreateUser(ctx context.Context, creds models.UserCredentials) 
 	})
 }
 
-func (uc useCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.TokenPair, error) {
+func (uc UseCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.TokenPair, error) {
 	tokenPair, err := uc.jwtHelper.NewTokenPair(userID)
 	if err != nil {
 		return tokenPair, errors.Wrap(err, "failed to create a new token pair")
@@ -61,7 +63,7 @@ func (uc useCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.T
 	return tokenPair, err
 }
 
-func (uc useCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginReponse, error) {
+func (uc UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginReponse, error) {
 	user, err := uc.repository.SelectUserByEmail(ctx, creds.Email)
 	if errors.As(err, db.ErrUserNotExist) {
 		return models.LoginReponse{}, ErrUserNotExist
@@ -78,7 +80,7 @@ func (uc useCase) LoginUser(ctx context.Context, creds models.UserCredentials) (
 	}, nil
 }
 
-func (uc useCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
+func (uc UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
 	userID, err := uc.repository.DeleteRefreshTokenAndReturnUser(ctx, utils.HashToken(refreshToken))
 	if errors.As(err, db.ErrInvalidToken) {
 		return jwthelper.TokenPair{}, ErrInvalidToken
@@ -89,10 +91,10 @@ func (uc useCase) RotateToken(ctx context.Context, refreshToken string) (jwthelp
 
 func New(
 	l *slog.Logger,
-	repo db.Repository,
+	repo Repository,
 	jwtHelper jwthelper.JWTHelper,
-) UseCase {
-	return &useCase{
+) *UseCase {
+	return &UseCase{
 		l:          l,
 		repository: repo,
 		jwtHelper:  jwtHelper,

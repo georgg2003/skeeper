@@ -8,15 +8,23 @@ import (
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	usecase "github.com/georgg2003/skeeper/internal/auther/usecase"
 	"github.com/georgg2003/skeeper/pkg/errors"
+	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+//go:generate mockgen TODO
+type UseCase interface {
+	CreateUser(context.Context, models.UserCredentials) (models.UserInfo, error)
+	LoginUser(context.Context, models.UserCredentials) (models.LoginReponse, error)
+	RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error)
+}
+
 type autherServer struct {
 	api.UnimplementedAutherServer
 
-	uc usecase.UseCase
+	uc UseCase
 	l  *slog.Logger
 }
 
@@ -101,6 +109,6 @@ func (s autherServer) ExchangeToken(ctx context.Context, req *api.ExchangeTokenR
 	}.Build(), nil
 }
 
-func New(l *slog.Logger, uc usecase.UseCase) api.AutherServer {
+func New(l *slog.Logger, uc UseCase) api.AutherServer {
 	return &autherServer{l: l, uc: uc}
 }

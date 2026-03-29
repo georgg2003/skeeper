@@ -22,20 +22,17 @@ const (
 )
 
 type Entry struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          int64                  `protobuf:"varint,1,opt,name=id"`
-	xxx_hidden_UserId      int64                  `protobuf:"varint,2,opt,name=user_id,json=userId"`
-	xxx_hidden_Dek         []byte                 `protobuf:"bytes,3,opt,name=dek"`
-	xxx_hidden_Type        *string                `protobuf:"bytes,4,opt,name=type"`
-	xxx_hidden_Payload     []byte                 `protobuf:"bytes,5,opt,name=payload"`
-	xxx_hidden_Meta        *string                `protobuf:"bytes,6,opt,name=meta"`
-	xxx_hidden_CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt"`
-	xxx_hidden_UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt"`
-	xxx_hidden_Version     int64                  `protobuf:"varint,9,opt,name=version"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Uuid         string                 `protobuf:"bytes,1,opt,name=uuid,proto3"`
+	xxx_hidden_Type         string                 `protobuf:"bytes,2,opt,name=type,proto3"`
+	xxx_hidden_EncryptedDek []byte                 `protobuf:"bytes,3,opt,name=encrypted_dek,json=encryptedDek,proto3"`
+	xxx_hidden_Payload      []byte                 `protobuf:"bytes,4,opt,name=payload,proto3"`
+	xxx_hidden_Meta         []byte                 `protobuf:"bytes,5,opt,name=meta,proto3"`
+	xxx_hidden_Version      int64                  `protobuf:"varint,6,opt,name=version,proto3"`
+	xxx_hidden_IsDeleted    bool                   `protobuf:"varint,7,opt,name=is_deleted,json=isDeleted,proto3"`
+	xxx_hidden_UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *Entry) Reset() {
@@ -63,35 +60,25 @@ func (x *Entry) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *Entry) GetId() int64 {
+func (x *Entry) GetUuid() string {
 	if x != nil {
-		return x.xxx_hidden_Id
+		return x.xxx_hidden_Uuid
 	}
-	return 0
-}
-
-func (x *Entry) GetUserId() int64 {
-	if x != nil {
-		return x.xxx_hidden_UserId
-	}
-	return 0
-}
-
-func (x *Entry) GetDek() []byte {
-	if x != nil {
-		return x.xxx_hidden_Dek
-	}
-	return nil
+	return ""
 }
 
 func (x *Entry) GetType() string {
 	if x != nil {
-		if x.xxx_hidden_Type != nil {
-			return *x.xxx_hidden_Type
-		}
-		return ""
+		return x.xxx_hidden_Type
 	}
 	return ""
+}
+
+func (x *Entry) GetEncryptedDek() []byte {
+	if x != nil {
+		return x.xxx_hidden_EncryptedDek
+	}
+	return nil
 }
 
 func (x *Entry) GetPayload() []byte {
@@ -101,26 +88,9 @@ func (x *Entry) GetPayload() []byte {
 	return nil
 }
 
-func (x *Entry) GetMeta() string {
+func (x *Entry) GetMeta() []byte {
 	if x != nil {
-		if x.xxx_hidden_Meta != nil {
-			return *x.xxx_hidden_Meta
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *Entry) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_CreatedAt
-	}
-	return nil
-}
-
-func (x *Entry) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_UpdatedAt
+		return x.xxx_hidden_Meta
 	}
 	return nil
 }
@@ -132,27 +102,33 @@ func (x *Entry) GetVersion() int64 {
 	return 0
 }
 
-func (x *Entry) SetId(v int64) {
-	x.xxx_hidden_Id = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 9)
-}
-
-func (x *Entry) SetUserId(v int64) {
-	x.xxx_hidden_UserId = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 9)
-}
-
-func (x *Entry) SetDek(v []byte) {
-	if v == nil {
-		v = []byte{}
+func (x *Entry) GetIsDeleted() bool {
+	if x != nil {
+		return x.xxx_hidden_IsDeleted
 	}
-	x.xxx_hidden_Dek = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
+	return false
+}
+
+func (x *Entry) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_UpdatedAt
+	}
+	return nil
+}
+
+func (x *Entry) SetUuid(v string) {
+	x.xxx_hidden_Uuid = v
 }
 
 func (x *Entry) SetType(v string) {
-	x.xxx_hidden_Type = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 9)
+	x.xxx_hidden_Type = v
+}
+
+func (x *Entry) SetEncryptedDek(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_EncryptedDek = v
 }
 
 func (x *Entry) SetPayload(v []byte) {
@@ -160,74 +136,25 @@ func (x *Entry) SetPayload(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_Payload = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
 }
 
-func (x *Entry) SetMeta(v string) {
-	x.xxx_hidden_Meta = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 9)
-}
-
-func (x *Entry) SetCreatedAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_CreatedAt = v
-}
-
-func (x *Entry) SetUpdatedAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_UpdatedAt = v
+func (x *Entry) SetMeta(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Meta = v
 }
 
 func (x *Entry) SetVersion(v int64) {
 	x.xxx_hidden_Version = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 9)
 }
 
-func (x *Entry) HasId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+func (x *Entry) SetIsDeleted(v bool) {
+	x.xxx_hidden_IsDeleted = v
 }
 
-func (x *Entry) HasUserId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *Entry) HasDek() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *Entry) HasType() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *Entry) HasPayload() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *Entry) HasMeta() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
-}
-
-func (x *Entry) HasCreatedAt() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_CreatedAt != nil
+func (x *Entry) SetUpdatedAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_UpdatedAt = v
 }
 
 func (x *Entry) HasUpdatedAt() bool {
@@ -237,127 +164,60 @@ func (x *Entry) HasUpdatedAt() bool {
 	return x.xxx_hidden_UpdatedAt != nil
 }
 
-func (x *Entry) HasVersion() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 8)
-}
-
-func (x *Entry) ClearId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Id = 0
-}
-
-func (x *Entry) ClearUserId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_UserId = 0
-}
-
-func (x *Entry) ClearDek() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_Dek = nil
-}
-
-func (x *Entry) ClearType() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_Type = nil
-}
-
-func (x *Entry) ClearPayload() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_Payload = nil
-}
-
-func (x *Entry) ClearMeta() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
-	x.xxx_hidden_Meta = nil
-}
-
-func (x *Entry) ClearCreatedAt() {
-	x.xxx_hidden_CreatedAt = nil
-}
-
 func (x *Entry) ClearUpdatedAt() {
 	x.xxx_hidden_UpdatedAt = nil
-}
-
-func (x *Entry) ClearVersion() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 8)
-	x.xxx_hidden_Version = 0
 }
 
 type Entry_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id        *int64
-	UserId    *int64
-	Dek       []byte
-	Type      *string
-	Payload   []byte
-	Meta      *string
-	CreatedAt *timestamppb.Timestamp
-	UpdatedAt *timestamppb.Timestamp
-	Version   *int64
+	Uuid         string
+	Type         string
+	EncryptedDek []byte
+	Payload      []byte
+	Meta         []byte
+	Version      int64
+	IsDeleted    bool
+	UpdatedAt    *timestamppb.Timestamp
 }
 
 func (b0 Entry_builder) Build() *Entry {
 	m0 := &Entry{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 9)
-		x.xxx_hidden_Id = *b.Id
-	}
-	if b.UserId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 9)
-		x.xxx_hidden_UserId = *b.UserId
-	}
-	if b.Dek != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
-		x.xxx_hidden_Dek = b.Dek
-	}
-	if b.Type != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 9)
-		x.xxx_hidden_Type = b.Type
-	}
-	if b.Payload != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
-		x.xxx_hidden_Payload = b.Payload
-	}
-	if b.Meta != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
-		x.xxx_hidden_Meta = b.Meta
-	}
-	x.xxx_hidden_CreatedAt = b.CreatedAt
+	x.xxx_hidden_Uuid = b.Uuid
+	x.xxx_hidden_Type = b.Type
+	x.xxx_hidden_EncryptedDek = b.EncryptedDek
+	x.xxx_hidden_Payload = b.Payload
+	x.xxx_hidden_Meta = b.Meta
+	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_IsDeleted = b.IsDeleted
 	x.xxx_hidden_UpdatedAt = b.UpdatedAt
-	if b.Version != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 9)
-		x.xxx_hidden_Version = *b.Version
-	}
 	return m0
 }
 
-type ListEntriesRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type SyncRequest struct {
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Updates    *[]*Entry              `protobuf:"bytes,1,rep,name=updates,proto3"`
+	xxx_hidden_LastSyncAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=last_sync_at,json=lastSyncAt,proto3"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
-func (x *ListEntriesRequest) Reset() {
-	*x = ListEntriesRequest{}
+func (x *SyncRequest) Reset() {
+	*x = SyncRequest{}
 	mi := &file_api_skeeper_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListEntriesRequest) String() string {
+func (x *SyncRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListEntriesRequest) ProtoMessage() {}
+func (*SyncRequest) ProtoMessage() {}
 
-func (x *ListEntriesRequest) ProtoReflect() protoreflect.Message {
+func (x *SyncRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_skeeper_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -369,39 +229,79 @@ func (x *ListEntriesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-type ListEntriesRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
+func (x *SyncRequest) GetUpdates() []*Entry {
+	if x != nil {
+		if x.xxx_hidden_Updates != nil {
+			return *x.xxx_hidden_Updates
+		}
+	}
+	return nil
 }
 
-func (b0 ListEntriesRequest_builder) Build() *ListEntriesRequest {
-	m0 := &ListEntriesRequest{}
+func (x *SyncRequest) GetLastSyncAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_LastSyncAt
+	}
+	return nil
+}
+
+func (x *SyncRequest) SetUpdates(v []*Entry) {
+	x.xxx_hidden_Updates = &v
+}
+
+func (x *SyncRequest) SetLastSyncAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_LastSyncAt = v
+}
+
+func (x *SyncRequest) HasLastSyncAt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_LastSyncAt != nil
+}
+
+func (x *SyncRequest) ClearLastSyncAt() {
+	x.xxx_hidden_LastSyncAt = nil
+}
+
+type SyncRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Updates    []*Entry
+	LastSyncAt *timestamppb.Timestamp
+}
+
+func (b0 SyncRequest_builder) Build() *SyncRequest {
+	m0 := &SyncRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_Updates = &b.Updates
+	x.xxx_hidden_LastSyncAt = b.LastSyncAt
 	return m0
 }
 
-type ListEntriesResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data *Entry                 `protobuf:"bytes,1,opt,name=data"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+type SyncResponse struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Updates       *[]*Entry              `protobuf:"bytes,1,rep,name=updates,proto3"`
+	xxx_hidden_CurrentSyncAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=current_sync_at,json=currentSyncAt,proto3"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
-func (x *ListEntriesResponse) Reset() {
-	*x = ListEntriesResponse{}
+func (x *SyncResponse) Reset() {
+	*x = SyncResponse{}
 	mi := &file_api_skeeper_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListEntriesResponse) String() string {
+func (x *SyncResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListEntriesResponse) ProtoMessage() {}
+func (*SyncResponse) ProtoMessage() {}
 
-func (x *ListEntriesResponse) ProtoReflect() protoreflect.Message {
+func (x *SyncResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_api_skeeper_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -413,63 +313,81 @@ func (x *ListEntriesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *ListEntriesResponse) GetData() *Entry {
+func (x *SyncResponse) GetUpdates() []*Entry {
 	if x != nil {
-		return x.xxx_hidden_Data
+		if x.xxx_hidden_Updates != nil {
+			return *x.xxx_hidden_Updates
+		}
 	}
 	return nil
 }
 
-func (x *ListEntriesResponse) SetData(v *Entry) {
-	x.xxx_hidden_Data = v
+func (x *SyncResponse) GetCurrentSyncAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_CurrentSyncAt
+	}
+	return nil
 }
 
-func (x *ListEntriesResponse) HasData() bool {
+func (x *SyncResponse) SetUpdates(v []*Entry) {
+	x.xxx_hidden_Updates = &v
+}
+
+func (x *SyncResponse) SetCurrentSyncAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_CurrentSyncAt = v
+}
+
+func (x *SyncResponse) HasCurrentSyncAt() bool {
 	if x == nil {
 		return false
 	}
-	return x.xxx_hidden_Data != nil
+	return x.xxx_hidden_CurrentSyncAt != nil
 }
 
-func (x *ListEntriesResponse) ClearData() {
-	x.xxx_hidden_Data = nil
+func (x *SyncResponse) ClearCurrentSyncAt() {
+	x.xxx_hidden_CurrentSyncAt = nil
 }
 
-type ListEntriesResponse_builder struct {
+type SyncResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Data *Entry
+	Updates       []*Entry
+	CurrentSyncAt *timestamppb.Timestamp
 }
 
-func (b0 ListEntriesResponse_builder) Build() *ListEntriesResponse {
-	m0 := &ListEntriesResponse{}
+func (b0 SyncResponse_builder) Build() *SyncResponse {
+	m0 := &SyncResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Data = b.Data
+	x.xxx_hidden_Updates = &b.Updates
+	x.xxx_hidden_CurrentSyncAt = b.CurrentSyncAt
 	return m0
 }
 
-type GetEntriesRequest struct {
-	state          protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Ids []string               `protobuf:"bytes,1,rep,name=ids"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type FileMetadata struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_EntryId  string                 `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3"`
+	xxx_hidden_Filename string                 `protobuf:"bytes,2,opt,name=filename,proto3"`
+	xxx_hidden_Size     int64                  `protobuf:"varint,3,opt,name=size,proto3"`
+	xxx_hidden_Checksum string                 `protobuf:"bytes,4,opt,name=checksum,proto3"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
-func (x *GetEntriesRequest) Reset() {
-	*x = GetEntriesRequest{}
+func (x *FileMetadata) Reset() {
+	*x = FileMetadata{}
 	mi := &file_api_skeeper_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetEntriesRequest) String() string {
+func (x *FileMetadata) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetEntriesRequest) ProtoMessage() {}
+func (*FileMetadata) ProtoMessage() {}
 
-func (x *GetEntriesRequest) ProtoReflect() protoreflect.Message {
+func (x *FileMetadata) ProtoReflect() protoreflect.Message {
 	mi := &file_api_skeeper_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -481,373 +399,67 @@ func (x *GetEntriesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *GetEntriesRequest) GetIds() []string {
-	if x != nil {
-		return x.xxx_hidden_Ids
-	}
-	return nil
-}
-
-func (x *GetEntriesRequest) SetIds(v []string) {
-	x.xxx_hidden_Ids = v
-}
-
-type GetEntriesRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Ids []string
-}
-
-func (b0 GetEntriesRequest_builder) Build() *GetEntriesRequest {
-	m0 := &GetEntriesRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Ids = b.Ids
-	return m0
-}
-
-type GetEntriesResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data *Entry                 `protobuf:"bytes,1,opt,name=data"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *GetEntriesResponse) Reset() {
-	*x = GetEntriesResponse{}
-	mi := &file_api_skeeper_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetEntriesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetEntriesResponse) ProtoMessage() {}
-
-func (x *GetEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetEntriesResponse) GetData() *Entry {
-	if x != nil {
-		return x.xxx_hidden_Data
-	}
-	return nil
-}
-
-func (x *GetEntriesResponse) SetData(v *Entry) {
-	x.xxx_hidden_Data = v
-}
-
-func (x *GetEntriesResponse) HasData() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Data != nil
-}
-
-func (x *GetEntriesResponse) ClearData() {
-	x.xxx_hidden_Data = nil
-}
-
-type GetEntriesResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Data *Entry
-}
-
-func (b0 GetEntriesResponse_builder) Build() *GetEntriesResponse {
-	m0 := &GetEntriesResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Data = b.Data
-	return m0
-}
-
-type SyncEntriesRequest struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data *Entry                 `protobuf:"bytes,1,opt,name=data"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *SyncEntriesRequest) Reset() {
-	*x = SyncEntriesRequest{}
-	mi := &file_api_skeeper_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SyncEntriesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SyncEntriesRequest) ProtoMessage() {}
-
-func (x *SyncEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *SyncEntriesRequest) GetData() *Entry {
-	if x != nil {
-		return x.xxx_hidden_Data
-	}
-	return nil
-}
-
-func (x *SyncEntriesRequest) SetData(v *Entry) {
-	x.xxx_hidden_Data = v
-}
-
-func (x *SyncEntriesRequest) HasData() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Data != nil
-}
-
-func (x *SyncEntriesRequest) ClearData() {
-	x.xxx_hidden_Data = nil
-}
-
-type SyncEntriesRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Data *Entry
-}
-
-func (b0 SyncEntriesRequest_builder) Build() *SyncEntriesRequest {
-	m0 := &SyncEntriesRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Data = b.Data
-	return m0
-}
-
-type SyncEntriesResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data *Entry                 `protobuf:"bytes,1,opt,name=data"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *SyncEntriesResponse) Reset() {
-	*x = SyncEntriesResponse{}
-	mi := &file_api_skeeper_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SyncEntriesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SyncEntriesResponse) ProtoMessage() {}
-
-func (x *SyncEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *SyncEntriesResponse) GetData() *Entry {
-	if x != nil {
-		return x.xxx_hidden_Data
-	}
-	return nil
-}
-
-func (x *SyncEntriesResponse) SetData(v *Entry) {
-	x.xxx_hidden_Data = v
-}
-
-func (x *SyncEntriesResponse) HasData() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Data != nil
-}
-
-func (x *SyncEntriesResponse) ClearData() {
-	x.xxx_hidden_Data = nil
-}
-
-type SyncEntriesResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Data *Entry
-}
-
-func (b0 SyncEntriesResponse_builder) Build() *SyncEntriesResponse {
-	m0 := &SyncEntriesResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Data = b.Data
-	return m0
-}
-
-type FileInfo struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_EntryId     int64                  `protobuf:"varint,1,opt,name=entry_id,json=entryId"`
-	xxx_hidden_Filename    *string                `protobuf:"bytes,2,opt,name=filename"`
-	xxx_hidden_Checksum    *string                `protobuf:"bytes,3,opt,name=checksum"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *FileInfo) Reset() {
-	*x = FileInfo{}
-	mi := &file_api_skeeper_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FileInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FileInfo) ProtoMessage() {}
-
-func (x *FileInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *FileInfo) GetEntryId() int64 {
+func (x *FileMetadata) GetEntryId() string {
 	if x != nil {
 		return x.xxx_hidden_EntryId
+	}
+	return ""
+}
+
+func (x *FileMetadata) GetFilename() string {
+	if x != nil {
+		return x.xxx_hidden_Filename
+	}
+	return ""
+}
+
+func (x *FileMetadata) GetSize() int64 {
+	if x != nil {
+		return x.xxx_hidden_Size
 	}
 	return 0
 }
 
-func (x *FileInfo) GetFilename() string {
+func (x *FileMetadata) GetChecksum() string {
 	if x != nil {
-		if x.xxx_hidden_Filename != nil {
-			return *x.xxx_hidden_Filename
-		}
-		return ""
+		return x.xxx_hidden_Checksum
 	}
 	return ""
 }
 
-func (x *FileInfo) GetChecksum() string {
-	if x != nil {
-		if x.xxx_hidden_Checksum != nil {
-			return *x.xxx_hidden_Checksum
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *FileInfo) SetEntryId(v int64) {
+func (x *FileMetadata) SetEntryId(v string) {
 	x.xxx_hidden_EntryId = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 3)
 }
 
-func (x *FileInfo) SetFilename(v string) {
-	x.xxx_hidden_Filename = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
+func (x *FileMetadata) SetFilename(v string) {
+	x.xxx_hidden_Filename = v
 }
 
-func (x *FileInfo) SetChecksum(v string) {
-	x.xxx_hidden_Checksum = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
+func (x *FileMetadata) SetSize(v int64) {
+	x.xxx_hidden_Size = v
 }
 
-func (x *FileInfo) HasEntryId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+func (x *FileMetadata) SetChecksum(v string) {
+	x.xxx_hidden_Checksum = v
 }
 
-func (x *FileInfo) HasFilename() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *FileInfo) HasChecksum() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *FileInfo) ClearEntryId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_EntryId = 0
-}
-
-func (x *FileInfo) ClearFilename() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Filename = nil
-}
-
-func (x *FileInfo) ClearChecksum() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_Checksum = nil
-}
-
-type FileInfo_builder struct {
+type FileMetadata_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	EntryId  *int64
-	Filename *string
-	Checksum *string
+	EntryId  string
+	Filename string
+	Size     int64
+	Checksum string
 }
 
-func (b0 FileInfo_builder) Build() *FileInfo {
-	m0 := &FileInfo{}
+func (b0 FileMetadata_builder) Build() *FileMetadata {
+	m0 := &FileMetadata{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.EntryId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 3)
-		x.xxx_hidden_EntryId = *b.EntryId
-	}
-	if b.Filename != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
-		x.xxx_hidden_Filename = b.Filename
-	}
-	if b.Checksum != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
-		x.xxx_hidden_Checksum = b.Checksum
-	}
+	x.xxx_hidden_EntryId = b.EntryId
+	x.xxx_hidden_Filename = b.Filename
+	x.xxx_hidden_Size = b.Size
+	x.xxx_hidden_Checksum = b.Checksum
 	return m0
 }
 
@@ -860,7 +472,7 @@ type UploadFileRequest struct {
 
 func (x *UploadFileRequest) Reset() {
 	*x = UploadFileRequest{}
-	mi := &file_api_skeeper_proto_msgTypes[8]
+	mi := &file_api_skeeper_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -872,7 +484,7 @@ func (x *UploadFileRequest) String() string {
 func (*UploadFileRequest) ProtoMessage() {}
 
 func (x *UploadFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[8]
+	mi := &file_api_skeeper_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -883,7 +495,7 @@ func (x *UploadFileRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *UploadFileRequest) GetInfo() *FileInfo {
+func (x *UploadFileRequest) GetInfo() *FileMetadata {
 	if x != nil {
 		if x, ok := x.xxx_hidden_Data.(*uploadFileRequest_Info); ok {
 			return x.Info
@@ -901,7 +513,7 @@ func (x *UploadFileRequest) GetChunk() []byte {
 	return nil
 }
 
-func (x *UploadFileRequest) SetInfo(v *FileInfo) {
+func (x *UploadFileRequest) SetInfo(v *FileMetadata) {
 	if v == nil {
 		x.xxx_hidden_Data = nil
 		return
@@ -977,7 +589,7 @@ type UploadFileRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	// Fields of oneof xxx_hidden_Data:
-	Info  *FileInfo
+	Info  *FileMetadata
 	Chunk []byte
 	// -- end of xxx_hidden_Data
 }
@@ -998,7 +610,7 @@ func (b0 UploadFileRequest_builder) Build() *UploadFileRequest {
 type case_UploadFileRequest_Data protoreflect.FieldNumber
 
 func (x case_UploadFileRequest_Data) String() string {
-	md := file_api_skeeper_proto_msgTypes[8].Descriptor()
+	md := file_api_skeeper_proto_msgTypes[4].Descriptor()
 	if x == 0 {
 		return "not set"
 	}
@@ -1010,41 +622,39 @@ type isUploadFileRequest_Data interface {
 }
 
 type uploadFileRequest_Info struct {
-	Info *FileInfo `protobuf:"bytes,1,opt,name=info,oneof"` // Первым сообщением шлем метаданные
+	Info *FileMetadata `protobuf:"bytes,1,opt,name=info,proto3,oneof"`
 }
 
 type uploadFileRequest_Chunk struct {
-	Chunk []byte `protobuf:"bytes,2,opt,name=chunk,oneof"` // Остальными — само содержимое
+	Chunk []byte `protobuf:"bytes,2,opt,name=chunk,proto3,oneof"`
 }
 
 func (*uploadFileRequest_Info) isUploadFileRequest_Data() {}
 
 func (*uploadFileRequest_Chunk) isUploadFileRequest_Data() {}
 
-type UploadFileResponse struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          int64                  `protobuf:"varint,1,opt,name=id"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+type DownloadFileRequest struct {
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_EntryId string                 `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
-func (x *UploadFileResponse) Reset() {
-	*x = UploadFileResponse{}
-	mi := &file_api_skeeper_proto_msgTypes[9]
+func (x *DownloadFileRequest) Reset() {
+	*x = DownloadFileRequest{}
+	mi := &file_api_skeeper_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UploadFileResponse) String() string {
+func (x *DownloadFileRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UploadFileResponse) ProtoMessage() {}
+func (*DownloadFileRequest) ProtoMessage() {}
 
-func (x *UploadFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[9]
+func (x *DownloadFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_skeeper_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1055,71 +665,53 @@ func (x *UploadFileResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *UploadFileResponse) GetId() int64 {
+func (x *DownloadFileRequest) GetEntryId() string {
 	if x != nil {
-		return x.xxx_hidden_Id
+		return x.xxx_hidden_EntryId
 	}
-	return 0
+	return ""
 }
 
-func (x *UploadFileResponse) SetId(v int64) {
-	x.xxx_hidden_Id = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+func (x *DownloadFileRequest) SetEntryId(v string) {
+	x.xxx_hidden_EntryId = v
 }
 
-func (x *UploadFileResponse) HasId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *UploadFileResponse) ClearId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Id = 0
-}
-
-type UploadFileResponse_builder struct {
+type DownloadFileRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id *int64
+	EntryId string
 }
 
-func (b0 UploadFileResponse_builder) Build() *UploadFileResponse {
-	m0 := &UploadFileResponse{}
+func (b0 DownloadFileRequest_builder) Build() *DownloadFileRequest {
+	m0 := &DownloadFileRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
-		x.xxx_hidden_Id = *b.Id
-	}
+	x.xxx_hidden_EntryId = b.EntryId
 	return m0
 }
 
-type GetFileRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          int64                  `protobuf:"varint,1,opt,name=id"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+type FileChunk struct {
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Chunk []byte                 `protobuf:"bytes,1,opt,name=chunk,proto3"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
-func (x *GetFileRequest) Reset() {
-	*x = GetFileRequest{}
-	mi := &file_api_skeeper_proto_msgTypes[10]
+func (x *FileChunk) Reset() {
+	*x = FileChunk{}
+	mi := &file_api_skeeper_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetFileRequest) String() string {
+func (x *FileChunk) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetFileRequest) ProtoMessage() {}
+func (*FileChunk) ProtoMessage() {}
 
-func (x *GetFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[10]
+func (x *FileChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_api_skeeper_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1130,122 +722,31 @@ func (x *GetFileRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *GetFileRequest) GetId() int64 {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return 0
-}
-
-func (x *GetFileRequest) SetId(v int64) {
-	x.xxx_hidden_Id = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
-}
-
-func (x *GetFileRequest) HasId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *GetFileRequest) ClearId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Id = 0
-}
-
-type GetFileRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id *int64
-}
-
-func (b0 GetFileRequest_builder) Build() *GetFileRequest {
-	m0 := &GetFileRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
-		x.xxx_hidden_Id = *b.Id
-	}
-	return m0
-}
-
-type GetFileResponse struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Chunk       []byte                 `protobuf:"bytes,1,opt,name=chunk"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *GetFileResponse) Reset() {
-	*x = GetFileResponse{}
-	mi := &file_api_skeeper_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetFileResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetFileResponse) ProtoMessage() {}
-
-func (x *GetFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetFileResponse) GetChunk() []byte {
+func (x *FileChunk) GetChunk() []byte {
 	if x != nil {
 		return x.xxx_hidden_Chunk
 	}
 	return nil
 }
 
-func (x *GetFileResponse) SetChunk(v []byte) {
+func (x *FileChunk) SetChunk(v []byte) {
 	if v == nil {
 		v = []byte{}
 	}
 	x.xxx_hidden_Chunk = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
 }
 
-func (x *GetFileResponse) HasChunk() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *GetFileResponse) ClearChunk() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Chunk = nil
-}
-
-type GetFileResponse_builder struct {
+type FileChunk_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Chunk []byte
 }
 
-func (b0 GetFileResponse_builder) Build() *GetFileResponse {
-	m0 := &GetFileResponse{}
+func (b0 FileChunk_builder) Build() *FileChunk {
+	m0 := &FileChunk{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Chunk != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
-		x.xxx_hidden_Chunk = b.Chunk
-	}
+	x.xxx_hidden_Chunk = b.Chunk
 	return m0
 }
 
@@ -1253,92 +754,66 @@ var File_api_skeeper_proto protoreflect.FileDescriptor
 
 const file_api_skeeper_proto_rawDesc = "" +
 	"\n" +
-	"\x11api/skeeper.proto\x12\askeeper\x1a\x1fgoogle/protobuf/timestamp.proto\"\x94\x02\n" +
-	"\x05Entry\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x10\n" +
-	"\x03dek\x18\x03 \x01(\fR\x03dek\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\x12\x18\n" +
-	"\apayload\x18\x05 \x01(\fR\apayload\x12\x12\n" +
-	"\x04meta\x18\x06 \x01(\tR\x04meta\x129\n" +
+	"\x11api/skeeper.proto\x12\askeeper\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf6\x01\n" +
+	"\x05Entry\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12#\n" +
+	"\rencrypted_dek\x18\x03 \x01(\fR\fencryptedDek\x12\x18\n" +
+	"\apayload\x18\x04 \x01(\fR\apayload\x12\x12\n" +
+	"\x04meta\x18\x05 \x01(\fR\x04meta\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\x03R\aversion\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"is_deleted\x18\a \x01(\bR\tisDeleted\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
-	"\aversion\x18\t \x01(\x03R\aversion\"\x14\n" +
-	"\x12ListEntriesRequest\"9\n" +
-	"\x13ListEntriesResponse\x12\"\n" +
-	"\x04data\x18\x01 \x01(\v2\x0e.skeeper.EntryR\x04data\"%\n" +
-	"\x11GetEntriesRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"8\n" +
-	"\x12GetEntriesResponse\x12\"\n" +
-	"\x04data\x18\x01 \x01(\v2\x0e.skeeper.EntryR\x04data\"8\n" +
-	"\x12SyncEntriesRequest\x12\"\n" +
-	"\x04data\x18\x01 \x01(\v2\x0e.skeeper.EntryR\x04data\"9\n" +
-	"\x13SyncEntriesResponse\x12\"\n" +
-	"\x04data\x18\x01 \x01(\v2\x0e.skeeper.EntryR\x04data\"]\n" +
-	"\bFileInfo\x12\x19\n" +
-	"\bentry_id\x18\x01 \x01(\x03R\aentryId\x12\x1a\n" +
-	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1a\n" +
-	"\bchecksum\x18\x03 \x01(\tR\bchecksum\"\\\n" +
-	"\x11UploadFileRequest\x12'\n" +
-	"\x04info\x18\x01 \x01(\v2\x11.skeeper.FileInfoH\x00R\x04info\x12\x16\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"u\n" +
+	"\vSyncRequest\x12(\n" +
+	"\aupdates\x18\x01 \x03(\v2\x0e.skeeper.EntryR\aupdates\x12<\n" +
+	"\flast_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"lastSyncAt\"|\n" +
+	"\fSyncResponse\x12(\n" +
+	"\aupdates\x18\x01 \x03(\v2\x0e.skeeper.EntryR\aupdates\x12B\n" +
+	"\x0fcurrent_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\rcurrentSyncAt\"u\n" +
+	"\fFileMetadata\x12\x19\n" +
+	"\bentry_id\x18\x01 \x01(\tR\aentryId\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x12\n" +
+	"\x04size\x18\x03 \x01(\x03R\x04size\x12\x1a\n" +
+	"\bchecksum\x18\x04 \x01(\tR\bchecksum\"`\n" +
+	"\x11UploadFileRequest\x12+\n" +
+	"\x04info\x18\x01 \x01(\v2\x15.skeeper.FileMetadataH\x00R\x04info\x12\x16\n" +
 	"\x05chunk\x18\x02 \x01(\fH\x00R\x05chunkB\x06\n" +
-	"\x04data\"$\n" +
-	"\x12UploadFileResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\" \n" +
-	"\x0eGetFileRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"'\n" +
-	"\x0fGetFileResponse\x12\x14\n" +
-	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\xf5\x02\n" +
-	"\aSkeeper\x12J\n" +
-	"\vListEntries\x12\x1b.skeeper.ListEntriesRequest\x1a\x1c.skeeper.ListEntriesResponse0\x01\x12G\n" +
-	"\n" +
-	"GetEntries\x12\x1a.skeeper.GetEntriesRequest\x1a\x1b.skeeper.GetEntriesResponse0\x01\x12G\n" +
-	"\n" +
-	"UploadFile\x12\x1a.skeeper.UploadFileRequest\x1a\x1b.skeeper.UploadFileResponse(\x01\x12>\n" +
-	"\aGetFile\x12\x17.skeeper.GetFileRequest\x1a\x18.skeeper.GetFileResponse0\x01\x12L\n" +
-	"\vSyncEntries\x12\x1b.skeeper.SyncEntriesRequest\x1a\x1c.skeeper.SyncEntriesResponse(\x010\x01B#Z!github.com/georgg2003/skeeper/apib\beditionsp\xe8\a"
+	"\x04data\"0\n" +
+	"\x13DownloadFileRequest\x12\x19\n" +
+	"\bentry_id\x18\x01 \x01(\tR\aentryId\"!\n" +
+	"\tFileChunk\x12\x14\n" +
+	"\x05chunk\x18\x01 \x01(\fR\x05chunk2>\n" +
+	"\aSkeeper\x123\n" +
+	"\x04Sync\x12\x14.skeeper.SyncRequest\x1a\x15.skeeper.SyncResponseB#Z!github.com/georgg2003/skeeper/apib\x06proto3"
 
-var file_api_skeeper_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_api_skeeper_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_api_skeeper_proto_goTypes = []any{
 	(*Entry)(nil),                 // 0: skeeper.Entry
-	(*ListEntriesRequest)(nil),    // 1: skeeper.ListEntriesRequest
-	(*ListEntriesResponse)(nil),   // 2: skeeper.ListEntriesResponse
-	(*GetEntriesRequest)(nil),     // 3: skeeper.GetEntriesRequest
-	(*GetEntriesResponse)(nil),    // 4: skeeper.GetEntriesResponse
-	(*SyncEntriesRequest)(nil),    // 5: skeeper.SyncEntriesRequest
-	(*SyncEntriesResponse)(nil),   // 6: skeeper.SyncEntriesResponse
-	(*FileInfo)(nil),              // 7: skeeper.FileInfo
-	(*UploadFileRequest)(nil),     // 8: skeeper.UploadFileRequest
-	(*UploadFileResponse)(nil),    // 9: skeeper.UploadFileResponse
-	(*GetFileRequest)(nil),        // 10: skeeper.GetFileRequest
-	(*GetFileResponse)(nil),       // 11: skeeper.GetFileResponse
-	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
+	(*SyncRequest)(nil),           // 1: skeeper.SyncRequest
+	(*SyncResponse)(nil),          // 2: skeeper.SyncResponse
+	(*FileMetadata)(nil),          // 3: skeeper.FileMetadata
+	(*UploadFileRequest)(nil),     // 4: skeeper.UploadFileRequest
+	(*DownloadFileRequest)(nil),   // 5: skeeper.DownloadFileRequest
+	(*FileChunk)(nil),             // 6: skeeper.FileChunk
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
 }
 var file_api_skeeper_proto_depIdxs = []int32{
-	12, // 0: skeeper.Entry.created_at:type_name -> google.protobuf.Timestamp
-	12, // 1: skeeper.Entry.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 2: skeeper.ListEntriesResponse.data:type_name -> skeeper.Entry
-	0,  // 3: skeeper.GetEntriesResponse.data:type_name -> skeeper.Entry
-	0,  // 4: skeeper.SyncEntriesRequest.data:type_name -> skeeper.Entry
-	0,  // 5: skeeper.SyncEntriesResponse.data:type_name -> skeeper.Entry
-	7,  // 6: skeeper.UploadFileRequest.info:type_name -> skeeper.FileInfo
-	1,  // 7: skeeper.Skeeper.ListEntries:input_type -> skeeper.ListEntriesRequest
-	3,  // 8: skeeper.Skeeper.GetEntries:input_type -> skeeper.GetEntriesRequest
-	8,  // 9: skeeper.Skeeper.UploadFile:input_type -> skeeper.UploadFileRequest
-	10, // 10: skeeper.Skeeper.GetFile:input_type -> skeeper.GetFileRequest
-	5,  // 11: skeeper.Skeeper.SyncEntries:input_type -> skeeper.SyncEntriesRequest
-	2,  // 12: skeeper.Skeeper.ListEntries:output_type -> skeeper.ListEntriesResponse
-	4,  // 13: skeeper.Skeeper.GetEntries:output_type -> skeeper.GetEntriesResponse
-	9,  // 14: skeeper.Skeeper.UploadFile:output_type -> skeeper.UploadFileResponse
-	11, // 15: skeeper.Skeeper.GetFile:output_type -> skeeper.GetFileResponse
-	6,  // 16: skeeper.Skeeper.SyncEntries:output_type -> skeeper.SyncEntriesResponse
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	7, // 0: skeeper.Entry.updated_at:type_name -> google.protobuf.Timestamp
+	0, // 1: skeeper.SyncRequest.updates:type_name -> skeeper.Entry
+	7, // 2: skeeper.SyncRequest.last_sync_at:type_name -> google.protobuf.Timestamp
+	0, // 3: skeeper.SyncResponse.updates:type_name -> skeeper.Entry
+	7, // 4: skeeper.SyncResponse.current_sync_at:type_name -> google.protobuf.Timestamp
+	3, // 5: skeeper.UploadFileRequest.info:type_name -> skeeper.FileMetadata
+	1, // 6: skeeper.Skeeper.Sync:input_type -> skeeper.SyncRequest
+	2, // 7: skeeper.Skeeper.Sync:output_type -> skeeper.SyncResponse
+	7, // [7:8] is the sub-list for method output_type
+	6, // [6:7] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_api_skeeper_proto_init() }
@@ -1346,7 +821,7 @@ func file_api_skeeper_proto_init() {
 	if File_api_skeeper_proto != nil {
 		return
 	}
-	file_api_skeeper_proto_msgTypes[8].OneofWrappers = []any{
+	file_api_skeeper_proto_msgTypes[4].OneofWrappers = []any{
 		(*uploadFileRequest_Info)(nil),
 		(*uploadFileRequest_Chunk)(nil),
 	}
@@ -1356,7 +831,7 @@ func file_api_skeeper_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_skeeper_proto_rawDesc), len(file_api_skeeper_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

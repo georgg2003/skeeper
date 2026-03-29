@@ -12,11 +12,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type repository struct {
+type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func (r *repository) InsertUser(ctx context.Context, creds models.DBUserCredentials) (models.UserInfo, error) {
+func (r *Repository) InsertUser(ctx context.Context, creds models.DBUserCredentials) (models.UserInfo, error) {
 	var userID int64
 	err := r.pool.QueryRow(
 		ctx,
@@ -38,7 +38,7 @@ func (r *repository) InsertUser(ctx context.Context, creds models.DBUserCredenti
 	}, nil
 }
 
-func (r *repository) DeleteRefreshTokenAndReturnUser(
+func (r *Repository) DeleteRefreshTokenAndReturnUser(
 	ctx context.Context,
 	refreshTokenHash string,
 ) (int64, error) {
@@ -61,7 +61,7 @@ func (r *repository) DeleteRefreshTokenAndReturnUser(
 	return userID, nil
 }
 
-func (r *repository) InsertRefreshToken(
+func (r *Repository) InsertRefreshToken(
 	ctx context.Context,
 	userID int64,
 	refreshToken models.RefreshTokenHashed,
@@ -80,7 +80,7 @@ func (r *repository) InsertRefreshToken(
 	return nil
 }
 
-func (r *repository) SelectUserByEmail(ctx context.Context, email string) (info models.UserInfo, err error) {
+func (r *Repository) SelectUserByEmail(ctx context.Context, email string) (info models.UserInfo, err error) {
 	err = r.pool.QueryRow(
 		ctx,
 		"SELECT id, email, password_hash FROM users WHERE email = $1",
@@ -98,7 +98,7 @@ func (r *repository) SelectUserByEmail(ctx context.Context, email string) (info 
 	return info, err
 }
 
-func (r *repository) Close() {
+func (r *Repository) Close() {
 	r.pool.Close()
 }
 
@@ -110,7 +110,7 @@ type PostgresConfig struct {
 	Database string `mapstructure:"database"`
 }
 
-func New(ctx context.Context, cfg PostgresConfig) (db.Repository, error) {
+func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 	pool, err := pgxpool.New(ctx, connStr)
 
@@ -118,5 +118,5 @@ func New(ctx context.Context, cfg PostgresConfig) (db.Repository, error) {
 		return nil, err
 	}
 
-	return &repository{pool: pool}, err
+	return &Repository{pool: pool}, err
 }

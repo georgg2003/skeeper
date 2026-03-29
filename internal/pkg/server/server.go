@@ -88,10 +88,10 @@ func New(
 ) *Server {
 	defaultOpts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
-			interceptors.RequestInfoInterceptor(),
+			interceptors.NewRequestInfoInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
-			interceptors.StreamRequestInfoInterceptor(),
+			interceptors.NewStreamRequestInfoInterceptor(),
 		),
 	}
 

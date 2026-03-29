@@ -31,7 +31,7 @@ type TokenClaims struct {
 
 type JWTHelper interface {
 	NewTokenPair(userID int64) (TokenPair, error)
-	ValidateToken(encodedToken string) (int64, error)
+	ValidateToken(encodedToken string) (TokenClaims, error)
 }
 
 type helper struct {
@@ -84,7 +84,7 @@ func (h *helper) NewTokenPair(userID int64) (TokenPair, error) {
 	}, err
 }
 
-func (h *helper) ValidateToken(encodedToken string) (int64, error) {
+func (h *helper) ValidateToken(encodedToken string) (TokenClaims, error) {
 	claims := TokenClaims{}
 
 	token, err := jwt.ParseWithClaims(encodedToken, &claims, func(token *jwt.Token) (interface{}, error) {
@@ -95,10 +95,10 @@ func (h *helper) ValidateToken(encodedToken string) (int64, error) {
 	})
 
 	if err != nil || !token.Valid {
-		return 0, errors.New("invalid token")
+		return claims, errors.New("invalid token")
 	}
 
-	return claims.UserID, nil
+	return claims, nil
 }
 
 func New(privByte, pubByte []byte) (JWTHelper, error) {
