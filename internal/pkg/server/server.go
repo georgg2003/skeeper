@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/georgg2003/skeeper/internal/pkg/interceptors"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -85,7 +86,18 @@ func New(
 	modifyServer ServerModifyFunc,
 	opt ...grpc.ServerOption,
 ) *Server {
-	server := grpc.NewServer(opt...)
+	defaultOpts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			interceptors.RequestInfoInterceptor(),
+		),
+		grpc.ChainStreamInterceptor(
+			interceptors.StreamRequestInfoInterceptor(),
+		),
+	}
+
+	opts := append(defaultOpts, opt...)
+
+	server := grpc.NewServer(opts...)
 	modifyServer(server)
 	reflection.Register(server)
 
