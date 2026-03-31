@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
-	"github.com/georgg2003/skeeper/internal/auther/repository/db"
+	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"github.com/georgg2003/skeeper/pkg/utils"
@@ -65,7 +65,7 @@ func (uc UseCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.T
 
 func (uc UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginReponse, error) {
 	user, err := uc.repository.SelectUserByEmail(ctx, creds.Email)
-	if errors.As(err, db.ErrUserNotExist) {
+	if errors.As(err, postgres.ErrUserNotExist) {
 		return models.LoginReponse{}, ErrUserNotExist
 	}
 
@@ -82,7 +82,7 @@ func (uc UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (
 
 func (uc UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
 	userID, err := uc.repository.DeleteRefreshTokenAndReturnUser(ctx, utils.HashToken(refreshToken))
-	if errors.As(err, db.ErrInvalidToken) {
+	if errors.As(err, postgres.ErrInvalidToken) {
 		return jwthelper.TokenPair{}, ErrInvalidToken
 	}
 

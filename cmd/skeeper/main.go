@@ -13,7 +13,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/skeeper/delivery"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/config"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/interceptors"
-	"github.com/georgg2003/skeeper/internal/skeeper/repository/db/postgres"
+	"github.com/georgg2003/skeeper/internal/skeeper/repository/postgres"
 	"github.com/georgg2003/skeeper/internal/skeeper/usecase"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
@@ -27,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	jwtHelper, err := jwthelper.NewFromFiles(cfg.JWT)
+	jwtHelper, err := jwthelper.NewFromConfig(cfg.JWT)
 	if err != nil {
 		l.Error("failed to init jwt helper", "err", err)
 		os.Exit(1)

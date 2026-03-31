@@ -5,7 +5,7 @@ import (
 
 	"github.com/georgg2003/skeeper/internal/pkg/config"
 	"github.com/georgg2003/skeeper/internal/pkg/server"
-	"github.com/georgg2003/skeeper/internal/skeeper/repository/db/postgres"
+	"github.com/georgg2003/skeeper/internal/skeeper/repository/postgres"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 

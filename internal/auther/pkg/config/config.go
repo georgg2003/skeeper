@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 
-	"github.com/georgg2003/skeeper/internal/auther/repository/db/postgres"
+	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/internal/pkg/config"
 	"github.com/georgg2003/skeeper/internal/pkg/server"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
