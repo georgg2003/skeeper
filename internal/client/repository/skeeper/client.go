@@ -14,8 +14,7 @@ type TokenProvider interface {
 
 type SkeeperClient struct {
 	conn *grpc.ClientConn
-	// Тут будет твой сгенерированный клиент из proto
-	api api.SkeeperClient
+	api  api.SkeeperClient
 }
 
 func newAuthInterceptor(provider TokenProvider) grpc.UnaryClientInterceptor {
@@ -40,7 +39,7 @@ func newAuthInterceptor(provider TokenProvider) grpc.UnaryClientInterceptor {
 func NewSkeeperClient(addr string, provider TokenProvider) (*SkeeperClient, error) {
 	conn, err := grpc.NewClient(
 		addr,
-		grpc.WithInsecure(), // Для начала, потом добавим TLS (Public Key)
+		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(newAuthInterceptor(provider)),
 	)
 	if err != nil {

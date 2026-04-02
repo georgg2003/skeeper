@@ -18,3 +18,9 @@ type Entry struct {
 
 	IsDirty bool
 }
+
+type Session struct {
+	AccessToken  string
+	RefreshToken string
+	ExpiresAt    time.Time
+}
