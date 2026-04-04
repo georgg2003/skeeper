@@ -5,6 +5,7 @@ package postgres_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,5 +121,73 @@ func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
 	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash)
 	if !errors.Is(err, postgres.ErrInvalidToken) {
 		t.Fatalf("second delete: %v", err)
+	}
+}
+
+func TestIntegration_InsertUser_ContextCanceled(t *testing.T) {
+	setup := context.Background()
+	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
+	canceled, cancel := context.WithCancel(setup)
+	cancel()
+	_, err := repo.InsertUser(canceled, models.DBUserCredentials{
+		Email:        "ins-" + uuid.NewString() + "@example.com",
+		PasswordHash: []byte("h"),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestIntegration_SelectUserByEmail_ContextCanceled(t *testing.T) {
+	setup := context.Background()
+	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
+	email := "sel-" + uuid.NewString() + "@example.com"
+	if _, err := repo.InsertUser(setup, models.DBUserCredentials{Email: email, PasswordHash: []byte("x")}); err != nil {
+		t.Fatal(err)
+	}
+	canceled, cancel := context.WithCancel(setup)
+	cancel()
+	_, err := repo.SelectUserByEmail(canceled, email)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "failed to select user") {
+		t.Fatalf("unexpected: %v", err)
+	}
+}
+
+func TestIntegration_InsertRefreshToken_ContextCanceled(t *testing.T) {
+	setup := context.Background()
+	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
+	email := "rt-" + uuid.NewString() + "@example.com"
+	user, err := repo.InsertUser(setup, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	canceled, cancel := context.WithCancel(setup)
+	cancel()
+	err = repo.InsertRefreshToken(canceled, user.ID, models.RefreshTokenHashed{
+		Token: jwthelper.Token{Token: "t", ExpiresAt: time.Now().Add(time.Hour)},
+		Hash:  "deadbeef",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "failed to insert new refresh token") {
+		t.Fatalf("unexpected: %v", err)
+	}
+}
+
+func TestIntegration_DeleteRefreshTokenAndReturnUser_ContextCanceled(t *testing.T) {
+	setup := context.Background()
+	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
+	canceled, cancel := context.WithCancel(setup)
+	cancel()
+	_, err := repo.DeleteRefreshTokenAndReturnUser(canceled, "any-hash")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "failed to delete token") {
+		t.Fatalf("unexpected: %v", err)
 	}
 }

@@ -3,6 +3,7 @@ package postgres_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -448,6 +449,88 @@ func TestIntegration_VaultCryptoPutGet(t *testing.T) {
 	otherSalt[0] ^= 0xff
 	if err := repo.PutVaultCrypto(ctx, userID, otherSalt, ver); !errors.Is(err, vaulterror.ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
+	}
+}
+
+func TestIntegration_PutVaultCrypto_InvalidPayloadSizes(t *testing.T) {
+	ctx := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	salt16 := make([]byte, 16)
+	ver32 := make([]byte, 32)
+
+	err := repo.PutVaultCrypto(ctx, 1, make([]byte, 15), ver32)
+	if err == nil || !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("short salt: %v", err)
+	}
+	err = repo.PutVaultCrypto(ctx, 1, salt16, make([]byte, 31))
+	if err == nil || !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("short verifier: %v", err)
+	}
+}
+
+func TestIntegration_GetVaultCrypto_ContextCanceled(t *testing.T) {
+	ctx := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	_, _, err := repo.GetVaultCrypto(canceled, 1)
+	if err == nil || errors.Is(err, vaulterror.ErrNotFound) {
+		t.Fatalf("expected non-NotFound error, got %v", err)
+	}
+}
+
+func TestIntegration_PutVaultCrypto_ContextCanceled(t *testing.T) {
+	base := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		base,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	salt := make([]byte, 16)
+	ver := make([]byte, 32)
+	for i := range salt {
+		salt[i] = byte(i)
+	}
+	canceled, cancel := context.WithCancel(base)
+	cancel()
+	err := repo.PutVaultCrypto(canceled, 88801, salt, ver)
+	if err == nil {
+		t.Fatal("expected error on canceled insert path")
+	}
+}
+
+func TestIntegration_PutVaultCrypto_QueryCanceledOnIdempotentCheck(t *testing.T) {
+	ctx := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	const userID int64 = 88802
+	salt := make([]byte, 16)
+	ver := make([]byte, 32)
+	for i := range salt {
+		salt[i] = byte(i + 3)
+	}
+	for i := range ver {
+		ver[i] = byte(i)
+	}
+	if err := repo.PutVaultCrypto(ctx, userID, salt, ver); err != nil {
+		t.Fatal(err)
+	}
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	err := repo.PutVaultCrypto(canceled, userID, salt, ver)
+	if err == nil {
+		t.Fatal("expected error when SELECT is canceled")
 	}
 }
 

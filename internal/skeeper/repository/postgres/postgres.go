@@ -5,15 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	ippostgres "github.com/georgg2003/skeeper/internal/pkg/postgres"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/vaulterror"
 )
@@ -163,42 +161,15 @@ func (r *Repository) Close() {
 	r.pool.Close()
 }
 
-type PostgresConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     uint16 `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Database string `mapstructure:"database"`
-	SSLMode  string `mapstructure:"ssl_mode"`
-}
-
-func (c PostgresConfig) poolConfig() (*pgxpool.Config, error) {
-	ssl := c.SSLMode
-	if ssl == "" {
-		ssl = "disable"
-	}
-	u := &url.URL{
-		Scheme: "postgres",
-		User:   url.UserPassword(c.User, c.Password),
-		Host:   net.JoinHostPort(c.Host, strconv.FormatUint(uint64(c.Port), 10)),
-		Path:   "/" + url.PathEscape(c.Database),
-	}
-	q := url.Values{}
-	q.Set("sslmode", ssl)
-	u.RawQuery = q.Encode()
-	return pgxpool.ParseConfig(u.String())
-}
+// PostgresConfig is the shared connection shape for YAML/env (see internal/pkg/postgres).
+type PostgresConfig = ippostgres.Config
 
 func NewFromPool(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
 func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
-	pc, err := pgxpool.ParseConfig(connStr)
-	if err != nil {
-		return nil, err
-	}
-	pool, err := pgxpool.NewWithConfig(ctx, pc)
+	pool, err := ippostgres.NewPoolFromConnString(ctx, connStr)
 	if err != nil {
 		return nil, err
 	}
@@ -206,11 +177,7 @@ func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
 }
 
 func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
-	pc, err := cfg.poolConfig()
-	if err != nil {
-		return nil, fmt.Errorf("postgres pool config: %w", err)
-	}
-	pool, err := pgxpool.NewWithConfig(ctx, pc)
+	pool, err := ippostgres.NewPool(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
