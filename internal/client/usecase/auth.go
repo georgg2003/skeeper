@@ -84,6 +84,10 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 		return session.AccessToken, nil
 	}
 
+	if !session.RefreshExpiresAt.IsZero() && time.Until(session.RefreshExpiresAt) <= 0 {
+		return "", errors.New("refresh token expired, please login again")
+	}
+
 	uc.l.Info("access token expired or near expiry, refreshing...")
 
 	newSession, err := uc.remote.Refresh(ctx, session.RefreshToken)

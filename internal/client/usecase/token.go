@@ -29,7 +29,11 @@ func (uc *TokenUseCase) GetValidToken(ctx context.Context) (string, error) {
 		return session.AccessToken, nil
 	}
 
-	uc.l.InfoContext(ctx, "access token expired, refreshig...")
+	if !session.RefreshExpiresAt.IsZero() && time.Until(session.RefreshExpiresAt) <= 0 {
+		return "", errors.New("refresh token expired, please login again")
+	}
+
+	uc.l.InfoContext(ctx, "access token expired, refreshing...")
 	newSession, err := uc.authClient.Refresh(ctx, session.RefreshToken)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to refresh session")

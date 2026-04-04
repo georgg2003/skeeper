@@ -41,14 +41,14 @@ func (c *AutherClient) Login(ctx context.Context, email, password string) (*mode
 	}
 	at := resp.GetAccessToken()
 	rt := resp.GetRefreshToken()
-	if at == nil || rt == nil || at.GetExpiresAt() == nil {
+	if at == nil || rt == nil || at.GetExpiresAt() == nil || rt.GetExpiresAt() == nil {
 		return nil, errors.New("invalid login response: missing tokens")
 	}
 	return &models.Session{
-		AccessToken: at.GetToken(),
-		// TODO add access token expiry
-		RefreshToken: rt.GetToken(),
-		ExpiresAt:    at.GetExpiresAt().AsTime(),
+		AccessToken:      at.GetToken(),
+		RefreshToken:     rt.GetToken(),
+		ExpiresAt:        at.GetExpiresAt().AsTime(),
+		RefreshExpiresAt: rt.GetExpiresAt().AsTime(),
 	}, nil
 }
 
@@ -62,13 +62,14 @@ func (c *AutherClient) Refresh(ctx context.Context, refreshToken string) (*model
 	}
 	at := resp.GetAccessToken()
 	rt := resp.GetRefreshToken()
-	if at == nil || rt == nil || at.GetExpiresAt() == nil {
+	if at == nil || rt == nil || at.GetExpiresAt() == nil || rt.GetExpiresAt() == nil {
 		return nil, errors.New("invalid exchange response: missing tokens")
 	}
 	return &models.Session{
-		AccessToken:  at.GetToken(),
-		RefreshToken: rt.GetToken(),
-		ExpiresAt:    at.GetExpiresAt().AsTime(),
+		AccessToken:      at.GetToken(),
+		RefreshToken:     rt.GetToken(),
+		ExpiresAt:        at.GetExpiresAt().AsTime(),
+		RefreshExpiresAt: rt.GetExpiresAt().AsTime(),
 	}, nil
 }
 

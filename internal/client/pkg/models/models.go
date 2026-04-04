@@ -31,9 +31,10 @@ type Entry struct {
 
 // Session holds JWT material returned by Auther.
 type Session struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresAt    time.Time
+	AccessToken      string
+	RefreshToken     string
+	ExpiresAt        time.Time // access token expiry
+	RefreshExpiresAt time.Time // refresh token expiry
 }
 
 // User is a minimal account projection (used after registration).
