@@ -9,7 +9,6 @@ import (
 	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/errors"
-	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
 var ErrInvalidToken = errors.New("refresh token is invalid")
@@ -24,16 +23,18 @@ type Repository interface {
 }
 
 type UseCase struct {
-	repo      Repository
-	jwtHelper *jwthelper.JWTHelper
-	l         *slog.Logger
+	repo Repository
+	l    *slog.Logger
 }
 
 func (uc *UseCase) Sync(
 	ctx context.Context,
 	req models.SyncRequest,
 ) (models.SyncResponse, error) {
-	userID := contextlib.MustGetUserID(ctx)
+	userID, ok := contextlib.GetUserID(ctx)
+	if !ok {
+		return models.SyncResponse{}, ErrUnauthenticated
+	}
 
 	if len(req.Updates) > 0 {
 		err := uc.repo.UpsertEntries(ctx, userID, req.Updates)
@@ -56,7 +57,10 @@ func (uc *UseCase) Sync(
 
 // GetVaultCrypto returns the Argon2 salt and master-key verifier for the authenticated user.
 func (uc *UseCase) GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier []byte, err error) {
-	userID := contextlib.MustGetUserID(ctx)
+	userID, ok := contextlib.GetUserID(ctx)
+	if !ok {
+		return nil, nil, ErrUnauthenticated
+	}
 	return uc.repo.GetVaultCrypto(ctx, userID)
 }
 
@@ -68,18 +72,19 @@ func (uc *UseCase) PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier [
 	if len(masterVerifier) != 32 {
 		return errors.NewValidationError("master_verifier", "must be exactly 32 bytes (SHA-256 of derived master key)")
 	}
-	userID := contextlib.MustGetUserID(ctx)
+	userID, ok := contextlib.GetUserID(ctx)
+	if !ok {
+		return ErrUnauthenticated
+	}
 	return uc.repo.PutVaultCrypto(ctx, userID, kdfSalt, masterVerifier)
 }
 
 func New(
 	l *slog.Logger,
 	repo Repository,
-	jwtHelper *jwthelper.JWTHelper,
 ) *UseCase {
 	return &UseCase{
-		l:         l,
-		repo:      repo,
-		jwtHelper: jwtHelper,
+		l:    l,
+		repo: repo,
 	}
 }

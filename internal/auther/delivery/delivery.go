@@ -65,6 +65,9 @@ func (s autherServer) Login(ctx context.Context, req *api.LoginRequest) (*api.Lo
 		Password: password,
 	})
 
+	if valErr, ok := errors.AsType[*errors.ValidationError](err); ok {
+		return nil, status.Error(codes.InvalidArgument, valErr.Error())
+	}
 	if err != nil {
 		s.l.ErrorContext(ctx, "failed to login user", "err", err)
 		return nil, status.Error(codes.Internal, "failed to login user")

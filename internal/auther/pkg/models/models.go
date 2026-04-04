@@ -25,7 +25,7 @@ func (creds *UserCredentials) validateEmail() error {
 
 func (creds *UserCredentials) validatePassword() error {
 	if creds.Password == "" {
-		return errors.NewValidationError("email", "password must not be empty")
+		return errors.NewValidationError("password", "password must not be empty")
 	}
 	return nil
 }

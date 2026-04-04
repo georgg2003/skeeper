@@ -60,10 +60,14 @@ func (uc UseCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.T
 		return jwthelper.TokenPair{}, errors.Wrap(err, "failed to insert refresh token")
 	}
 
-	return tokenPair, err
+	return tokenPair, nil
 }
 
 func (uc UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginReponse, error) {
+	if err := creds.Validate(); err != nil {
+		return models.LoginReponse{}, errors.Wrap(err, "user credentials are invalid")
+	}
+
 	user, err := uc.repository.SelectUserByEmail(ctx, creds.Email)
 	if errors.Is(err, postgres.ErrUserNotExist) {
 		return models.LoginReponse{}, ErrUserNotExist

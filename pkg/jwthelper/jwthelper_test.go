@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 )
 
 func rsaTestKeys(t *testing.T) (privPEM, pubPEM []byte) {
@@ -94,5 +96,30 @@ func TestValidateToken_Invalid(t *testing.T) {
 	_, err = h.ValidateToken("not-a-jwt")
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestValidateToken_RejectsNonRS256(t *testing.T) {
+	privPEM, pubPEM := rsaTestKeys(t)
+	h, err := New(privPEM, pubPEM, time.Minute, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	priv, err := jwt.ParseRSAPrivateKeyFromPEM(privPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims := TokenClaims{
+		UserID: 7,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+	rs512Token, err := jwt.NewWithClaims(jwt.SigningMethodRS512, claims).SignedString(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.ValidateToken(rs512Token); err == nil {
+		t.Fatal("expected RS512 token to be rejected")
 	}
 }

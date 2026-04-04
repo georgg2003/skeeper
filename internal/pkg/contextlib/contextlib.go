@@ -17,14 +17,6 @@ func GetUserID(ctx context.Context) (int64, bool) {
 	return userID, ok
 }
 
-func MustGetUserID(ctx context.Context) int64 {
-	userID, ok := GetUserID(ctx)
-	if !ok {
-		panic("failed to get user id from context")
-	}
-	return userID
-}
-
 type RequestInfo struct {
 	RequestID string
 	Host      string

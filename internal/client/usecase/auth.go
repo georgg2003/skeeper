@@ -113,7 +113,8 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	}
 
 	if err := uc.local.SaveSession(ctx, *newSession); err != nil {
-		uc.l.WarnContext(ctx, "could not save refreshed session to local db", "err", err)
+		uc.l.ErrorContext(ctx, "could not save refreshed session to local db", "err", err)
+		return "", errors.Wrap(err, "save refreshed session")
 	}
 
 	uc.l.DebugContext(ctx, "token successfully refreshed")

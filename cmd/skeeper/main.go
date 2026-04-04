@@ -43,10 +43,10 @@ func main() {
 	}
 	defer repo.Close()
 
-	uc := usecase.New(l, repo, jwtHelper)
+	uc := usecase.New(l, repo)
 	service := delivery.New(l, uc)
 
-	srv := server.New(
+	srv, err := server.New(
 		cfg.Service,
 		l,
 		func(s *grpc.Server) {
@@ -59,6 +59,10 @@ func main() {
 			interceptors.NewStreamAuthInterceptor(jwtHelper),
 		),
 	)
+	if err != nil {
+		l.Error("failed to init grpc server", "err", err)
+		os.Exit(1)
+	}
 
 	if err = srv.Serve(ctx); err != nil {
 		l.Error("failed with error", "err", err)

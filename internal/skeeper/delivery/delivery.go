@@ -13,6 +13,7 @@ import (
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/vaulterror"
+	skeeperusecase "github.com/georgg2003/skeeper/internal/skeeper/usecase"
 	pkgerrors "github.com/georgg2003/skeeper/pkg/errors"
 )
 
@@ -43,6 +44,9 @@ func (s *skeeperServer) Sync(
 		return nil, status.Error(codes.Internal, "failed to sync")
 	}
 	res, err := s.uc.Sync(ctx, syncReq)
+	if errors.Is(err, skeeperusecase.ErrUnauthenticated) {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
 	if err != nil {
 		s.l.ErrorContext(ctx, "failed to sync", "err", err)
 		return nil, status.Error(codes.Internal, "failed to sync")
@@ -55,6 +59,9 @@ func (s *skeeperServer) GetVaultCrypto(
 	_ *api.GetVaultCryptoRequest,
 ) (*api.GetVaultCryptoResponse, error) {
 	salt, verifier, err := s.uc.GetVaultCrypto(ctx)
+	if errors.Is(err, skeeperusecase.ErrUnauthenticated) {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
 	if errors.Is(err, vaulterror.ErrNotFound) {
 		return nil, status.Error(codes.NotFound, "vault crypto not found")
 	}
@@ -79,6 +86,9 @@ func (s *skeeperServer) PutVaultCrypto(
 		return nil, status.Error(codes.InvalidArgument, "missing vault")
 	}
 	err := s.uc.PutVaultCrypto(ctx, v.GetKdfSalt(), v.GetMasterVerifier())
+	if errors.Is(err, skeeperusecase.ErrUnauthenticated) {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
 	if valErr, ok := pkgerrors.AsType[*pkgerrors.ValidationError](err); ok {
 		return nil, status.Error(codes.InvalidArgument, valErr.Error())
 	}

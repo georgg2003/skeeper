@@ -159,7 +159,10 @@ func (uc *SecretUseCase) SetPassword(ctx context.Context, meta EntryMetadata, pa
 		return fmt.Errorf("encrypt dek: %w", err)
 	}
 
-	id := uuid.New()
+	id, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("new entry id: %w", err)
+	}
 	entry := models.Entry{
 		UUID:         id,
 		Type:         models.EntryTypePassword,
@@ -234,8 +237,12 @@ func (uc *SecretUseCase) setBlob(ctx context.Context, typ string, meta EntryMeta
 		return fmt.Errorf("encrypt dek: %w", err)
 	}
 
+	id, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("new entry id: %w", err)
+	}
 	entry := models.Entry{
-		UUID:         uuid.New(),
+		UUID:         id,
 		Type:         typ,
 		Payload:      encryptedPayload,
 		EncryptedDek: encryptedDEK,

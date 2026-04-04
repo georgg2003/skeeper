@@ -75,14 +75,16 @@ func (c *AutherClient) Refresh(ctx context.Context, refreshToken string) (*model
 }
 
 // NewAutherClient dials the Auther gRPC endpoint (address like "host:port").
-func NewAutherClient(addr string) (*AutherClient, error) {
+// dialOpts must include transport credentials (e.g. from grpcclient.DialOptions).
+func NewAutherClient(addr string, dialOpts ...grpc.DialOption) (*AutherClient, error) {
 	if addr == "" {
 		return nil, fmt.Errorf("auther address is required")
 	}
-	conn, err := grpc.NewClient(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	opts := append([]grpc.DialOption(nil), dialOpts...)
+	if len(opts) == 0 {
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	}
+	conn, err := grpc.NewClient(addr, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -113,15 +113,17 @@ func protoToClientEntry(pe *api.Entry) (models.Entry, error) {
 }
 
 // NewSkeeperClient dials Skeeper with a token-attaching unary interceptor.
-func NewSkeeperClient(addr string, provider TokenProvider) (*SkeeperClient, error) {
+// dialOpts must include transport credentials (e.g. from grpcclient.DialOptions).
+func NewSkeeperClient(addr string, provider TokenProvider, dialOpts ...grpc.DialOption) (*SkeeperClient, error) {
 	if addr == "" {
 		return nil, fmt.Errorf("skeeper address is required")
 	}
-	conn, err := grpc.NewClient(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(newAuthInterceptor(provider)),
-	)
+	opts := append([]grpc.DialOption(nil), dialOpts...)
+	if len(opts) == 0 {
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	}
+	opts = append(opts, grpc.WithUnaryInterceptor(newAuthInterceptor(provider)))
+	conn, err := grpc.NewClient(addr, opts...)
 	if err != nil {
 		return nil, err
 	}

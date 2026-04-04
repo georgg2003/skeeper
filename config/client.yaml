@@ -3,3 +3,6 @@
 auther_addr: "127.0.0.1:50051"
 skeeper_addr: "127.0.0.1:50052"
 data_dir: "~/.skeepercli"
+grpc_tls:
+  enabled: false
+  ca_file: "config/keys/grpc_server.crt"

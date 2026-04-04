@@ -15,6 +15,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/repository/db"
 	skeeperremote "github.com/georgg2003/skeeper/internal/client/repository/skeeper"
 	"github.com/georgg2003/skeeper/internal/client/usecase"
+	"github.com/georgg2003/skeeper/internal/pkg/grpcclient"
 )
 
 var (
@@ -86,7 +87,16 @@ func bootstrap(cmd *cobra.Command) error {
 		return fmt.Errorf("migrations: %w", err)
 	}
 
-	autherCLI, err := auther.NewAutherClient(autherAddr)
+	dialOpts, err := grpcclient.DialOptions(grpcclient.TLSConfig{
+		Enabled: fileCfg.GRPCTLS.Enabled,
+		CAFile:  fileCfg.GRPCTLS.CAFile,
+	})
+	if err != nil {
+		_ = dbRepo.Close()
+		return fmt.Errorf("grpc dial options: %w", err)
+	}
+
+	autherCLI, err := auther.NewAutherClient(autherAddr, dialOpts...)
 	if err != nil {
 		_ = dbRepo.Close()
 		return fmt.Errorf("auther client: %w", err)
@@ -94,7 +104,7 @@ func bootstrap(cmd *cobra.Command) error {
 
 	authUC := usecase.NewAuthUseCase(dbRepo, autherCLI, l)
 
-	skeeperCLI, err := skeeperremote.NewSkeeperClient(skeeperAddr, authUC)
+	skeeperCLI, err := skeeperremote.NewSkeeperClient(skeeperAddr, authUC, dialOpts...)
 	if err != nil {
 		_ = dbRepo.Close()
 		return fmt.Errorf("skeeper client: %w", err)

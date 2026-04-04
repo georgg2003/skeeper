@@ -5,6 +5,10 @@
 service:
   listen_addr: "0.0.0.0:50051"
   graceful_timeout: 30s
+  tls:
+    enabled: false
+    cert_file: "config/keys/grpc_server.crt"
+    key_file: "config/keys/grpc_server.key"
 
 postgres:
   host: "127.0.0.1"

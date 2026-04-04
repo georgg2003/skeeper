@@ -450,3 +450,50 @@ func TestIntegration_VaultCryptoPutGet(t *testing.T) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
 }
+
+// TestIntegration_Upsert_SameUUID_DifferentUsersCannotOverwrite verifies (user_id, uuid) PK isolation:
+// user B cannot clobber user A's row by reusing the same UUID with a higher version.
+func TestIntegration_Upsert_SameUUID_DifferentUsersCannotOverwrite(t *testing.T) {
+	ctx := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	const userA int64 = 201
+	const userB int64 = 202
+	ts := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
+	sharedID := uuid.New()
+
+	eA := models.Entry{
+		UUID: sharedID, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
+		Meta: []byte{3}, Version: 1, UpdatedAt: ts, IsDeleted: false,
+	}
+	if err := repo.UpsertEntries(ctx, userA, []models.Entry{eA}); err != nil {
+		t.Fatal(err)
+	}
+
+	eB := models.Entry{
+		UUID: sharedID, Type: "TEXT", EncryptedDek: []byte{9}, Payload: []byte{9},
+		Meta: []byte{9}, Version: 99, UpdatedAt: ts.Add(time.Hour), IsDeleted: false,
+	}
+	if err := repo.UpsertEntries(ctx, userB, []models.Entry{eB}); err != nil {
+		t.Fatal(err)
+	}
+
+	gotA, err := repo.GetUpdatedAfter(ctx, userA, ts.Add(-time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gotA) != 1 || gotA[0].Version != 1 || gotA[0].Payload[0] != 2 {
+		t.Fatalf("user A row corrupted: %+v", gotA)
+	}
+
+	gotB, err := repo.GetUpdatedAfter(ctx, userB, ts.Add(-time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gotB) != 1 || gotB[0].Version != 99 || gotB[0].Payload[0] != 9 {
+		t.Fatalf("user B row: %+v", gotB)
+	}
+}

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"testing"
@@ -111,16 +112,29 @@ func TestUseCase_Sync(t *testing.T) {
 			userID:  1,
 			wantErr: true,
 		},
+		{
+			name:    "missing_user_in_context",
+			repo:    &stubRepo{},
+			req:     models.SyncRequest{Updates: []models.Entry{{UUID: id, Version: 1}}},
+			userID:  0,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			uc := New(testSyncLogger(), tt.repo, nil)
-			ctx := contextlib.SetUserID(context.Background(), tt.userID)
+			uc := New(testSyncLogger(), tt.repo)
+			ctx := context.Background()
+			if tt.name != "missing_user_in_context" {
+				ctx = contextlib.SetUserID(ctx, tt.userID)
+			}
 			out, err := uc.Sync(ctx, tt.req)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
+				}
+				if tt.name == "missing_user_in_context" && !errors.Is(err, ErrUnauthenticated) {
+					t.Fatalf("expected ErrUnauthenticated, got %v", err)
 				}
 				return
 			}

@@ -11,16 +11,11 @@ func TestUserIDRoundTrip(t *testing.T) {
 	if !ok || id != 42 {
 		t.Fatalf("got %d ok=%v", id, ok)
 	}
-	if MustGetUserID(ctx) != 42 {
-		t.Fatal("must get")
-	}
 }
 
-func TestMustGetUserID_Panic(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic")
-		}
-	}()
-	_ = MustGetUserID(context.Background())
+func TestGetUserID_Missing(t *testing.T) {
+	_, ok := GetUserID(context.Background())
+	if ok {
+		t.Fatal("expected no user id")
+	}
 }

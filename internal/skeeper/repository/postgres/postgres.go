@@ -5,6 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,7 +50,7 @@ func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []
 	query := `
 		INSERT INTO entries (uuid, user_id, type, encrypted_dek, payload, meta, version, is_deleted, updated_at)
 		SELECT * FROM UNNEST($1::uuid[], $2::int8[], $3::varchar[], $4::bytea[], $5::bytea[], $6::bytea[], $7::int8[], $8::boolean[], $9::timestamptz[])
-		ON CONFLICT (uuid) DO UPDATE SET
+		ON CONFLICT (user_id, uuid) DO UPDATE SET
 			type = EXCLUDED.type,
 			encrypted_dek = EXCLUDED.encrypted_dek,
 			payload = EXCLUDED.payload,
@@ -55,7 +58,7 @@ func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []
 			version = EXCLUDED.version,
 			is_deleted = EXCLUDED.is_deleted,
 			updated_at = EXCLUDED.updated_at
-		WHERE entries.version < EXCLUDED.version;
+		WHERE entries.user_id = EXCLUDED.user_id AND entries.version < EXCLUDED.version;
 	`
 
 	userIDs := make([]int64, len(entries))
@@ -166,6 +169,24 @@ type PostgresConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	Database string `mapstructure:"database"`
+	SSLMode  string `mapstructure:"ssl_mode"`
+}
+
+func (c PostgresConfig) poolConfig() (*pgxpool.Config, error) {
+	ssl := c.SSLMode
+	if ssl == "" {
+		ssl = "disable"
+	}
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(c.User, c.Password),
+		Host:   net.JoinHostPort(c.Host, strconv.FormatUint(uint64(c.Port), 10)),
+		Path:   "/" + url.PathEscape(c.Database),
+	}
+	q := url.Values{}
+	q.Set("sslmode", ssl)
+	u.RawQuery = q.Encode()
+	return pgxpool.ParseConfig(u.String())
 }
 
 func NewFromPool(pool *pgxpool.Pool) *Repository {
@@ -173,7 +194,11 @@ func NewFromPool(pool *pgxpool.Pool) *Repository {
 }
 
 func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
-	pool, err := pgxpool.New(ctx, connStr)
+	pc, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, pc)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +206,13 @@ func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
 }
 
 func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
-	return NewFromString(ctx, connStr)
+	pc, err := cfg.poolConfig()
+	if err != nil {
+		return nil, fmt.Errorf("postgres pool config: %w", err)
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, pc)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromPool(pool), nil
 }

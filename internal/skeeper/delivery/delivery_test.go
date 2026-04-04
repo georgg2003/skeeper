@@ -15,7 +15,9 @@ import (
 
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
-	"github.com/georgg2003/skeeper/pkg/errors"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/vaulterror"
+	skeeperusecase "github.com/georgg2003/skeeper/internal/skeeper/usecase"
+	pkgerrors "github.com/georgg2003/skeeper/pkg/errors"
 )
 
 func testLogger() *slog.Logger {
@@ -49,12 +51,31 @@ func TestSkeeperServer_Sync(t *testing.T) {
 			wantCode: codes.InvalidArgument,
 		},
 		{
+			name: "unauthenticated",
+			setup: func(m *MockUseCase) {
+				mockUC := m
+				mockUC.EXPECT().
+					Sync(gomock.Any(), gomock.AssignableToTypeOf(models.SyncRequest{})).
+					Return(models.SyncResponse{}, skeeperusecase.ErrUnauthenticated)
+			},
+			req: api.SyncRequest_builder{
+				Updates: []*api.Entry{
+					api.Entry_builder{
+						Uuid:      entryID.String(),
+						Type:      "PASSWORD",
+						UpdatedAt: timestamppb.New(time.Now()),
+					}.Build(),
+				},
+			}.Build(),
+			wantCode: codes.Unauthenticated,
+		},
+		{
 			name: "usecase_error_internal",
 			setup: func(m *MockUseCase) {
 				mockUC := m
 				mockUC.EXPECT().
 					Sync(gomock.Any(), gomock.AssignableToTypeOf(models.SyncRequest{})).
-					Return(models.SyncResponse{}, errors.New("db unavailable"))
+					Return(models.SyncResponse{}, pkgerrors.New("db unavailable"))
 			},
 			req: api.SyncRequest_builder{
 				Updates: []*api.Entry{
@@ -119,6 +140,139 @@ func TestSkeeperServer_Sync(t *testing.T) {
 			}
 			st, ok := status.FromError(err)
 			if !ok || st.Code() != tt.wantCode {
+				t.Fatalf("got %v", err)
+			}
+		})
+	}
+}
+
+func TestSkeeperServer_GetVaultCrypto(t *testing.T) {
+	salt := []byte{1, 2, 3}
+	ver := make([]byte, 32)
+
+	tests := []struct {
+		name     string
+		setup    func(m *MockUseCase)
+		wantCode codes.Code
+		wantOK   bool
+	}{
+		{
+			name: "not_found",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().GetVaultCrypto(gomock.Any()).Return(nil, nil, vaulterror.ErrNotFound)
+			},
+			wantCode: codes.NotFound,
+		},
+		{
+			name: "unauthenticated",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().GetVaultCrypto(gomock.Any()).Return(nil, nil, skeeperusecase.ErrUnauthenticated)
+			},
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "success",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().GetVaultCrypto(gomock.Any()).Return(salt, ver, nil)
+			},
+			wantOK: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUC := NewMockUseCase(ctrl)
+			tt.setup(mockUC)
+			srv := New(testLogger(), mockUC)
+			resp, err := srv.GetVaultCrypto(context.Background(), api.GetVaultCryptoRequest_builder{}.Build())
+			if tt.wantOK {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(resp.GetVault().GetKdfSalt()) != string(salt) {
+					t.Fatal("salt mismatch")
+				}
+				return
+			}
+			st, _ := status.FromError(err)
+			if st.Code() != tt.wantCode {
+				t.Fatalf("got %v", err)
+			}
+		})
+	}
+}
+
+func TestSkeeperServer_PutVaultCrypto(t *testing.T) {
+	salt := make([]byte, 16)
+	ver := make([]byte, 32)
+	for i := range salt {
+		salt[i] = byte(i)
+	}
+	for i := range ver {
+		ver[i] = byte(i + 1)
+	}
+
+	tests := []struct {
+		name     string
+		setup    func(m *MockUseCase)
+		req      *api.PutVaultCryptoRequest
+		wantCode codes.Code
+		wantOK   bool
+	}{
+		{
+			name:     "missing_vault",
+			setup:    func(m *MockUseCase) {},
+			req:      api.PutVaultCryptoRequest_builder{}.Build(),
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "unauthenticated",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().PutVaultCrypto(gomock.Any(), salt, ver).Return(skeeperusecase.ErrUnauthenticated)
+			},
+			req: api.PutVaultCryptoRequest_builder{
+				Vault: api.VaultCrypto_builder{KdfSalt: salt, MasterVerifier: ver}.Build(),
+			}.Build(),
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "conflict",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().PutVaultCrypto(gomock.Any(), salt, ver).Return(vaulterror.ErrConflict)
+			},
+			req: api.PutVaultCryptoRequest_builder{
+				Vault: api.VaultCrypto_builder{KdfSalt: salt, MasterVerifier: ver}.Build(),
+			}.Build(),
+			wantCode: codes.AlreadyExists,
+		},
+		{
+			name: "success",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().PutVaultCrypto(gomock.Any(), salt, ver).Return(nil)
+			},
+			req: api.PutVaultCryptoRequest_builder{
+				Vault: api.VaultCrypto_builder{KdfSalt: salt, MasterVerifier: ver}.Build(),
+			}.Build(),
+			wantOK: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUC := NewMockUseCase(ctrl)
+			tt.setup(mockUC)
+			srv := New(testLogger(), mockUC)
+			_, err := srv.PutVaultCrypto(context.Background(), tt.req)
+			if tt.wantOK {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			st, _ := status.FromError(err)
+			if st.Code() != tt.wantCode {
 				t.Fatalf("got %v", err)
 			}
 		})

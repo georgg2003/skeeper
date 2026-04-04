@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -16,9 +17,17 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
+// TLSConfig holds server TLS material for gRPC over TLS.
+type TLSConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	CertFile string `mapstructure:"cert_file"`
+	KeyFile  string `mapstructure:"key_file"`
+}
+
 type ServerConfig struct {
 	ListenAddr      string        `mapstructure:"listen_addr"`
 	GracefulTimeout time.Duration `mapstructure:"graceful_timeout"`
+	TLS             TLSConfig     `mapstructure:"tls"`
 }
 
 type Server struct {
@@ -81,35 +90,50 @@ func (s *Server) Serve(ctx context.Context) error {
 
 type ServerModifyFunc func(*grpc.Server)
 
-// TODO add recovery
-
+// New builds a gRPC server with request logging, panic recovery, and optional TLS.
 func New(
 	cfg ServerConfig,
 	l *slog.Logger,
 	modifyServer ServerModifyFunc,
 	opt ...grpc.ServerOption,
-) *Server {
+) (*Server, error) {
+	var serverOpts []grpc.ServerOption
+
+	if cfg.TLS.Enabled {
+		if cfg.TLS.CertFile == "" || cfg.TLS.KeyFile == "" {
+			return nil, errors.New("tls enabled but cert_file or key_file is empty")
+		}
+		creds, err := credentials.NewServerTLSFromFile(cfg.TLS.CertFile, cfg.TLS.KeyFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "load grpc tls credentials")
+		}
+		serverOpts = append(serverOpts, grpc.Creds(creds))
+	}
+
 	defaultOpts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
+			interceptors.NewUnaryRecoveryInterceptor(l),
 			interceptors.NewRequestInfoInterceptor(l),
 		),
 		grpc.ChainStreamInterceptor(
+			interceptors.NewStreamRecoveryInterceptor(l),
 			interceptors.NewStreamRequestInfoInterceptor(l),
 		),
 	}
 
-	opts := append(defaultOpts, opt...)
+	serverOpts = append(serverOpts, defaultOpts...)
+	serverOpts = append(serverOpts, opt...)
 
-	server := grpc.NewServer(opts...)
-	modifyServer(server)
-	reflection.Register(server)
+	grpcSrv := grpc.NewServer(serverOpts...)
+	modifyServer(grpcSrv)
+	reflection.Register(grpcSrv)
 
 	healthService := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(server, healthService)
+	grpc_health_v1.RegisterHealthServer(grpcSrv, healthService)
 
 	return &Server{
 		l:          l,
 		cfg:        cfg,
-		grpcServer: server,
-	}
+		grpcServer: grpcSrv,
+	}, nil
 }

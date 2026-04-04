@@ -100,10 +100,22 @@ func TestAutherServer_Login(t *testing.T) {
 
 	tests := []struct {
 		name     string
+		loginEm  string
+		loginPw  string
 		setup    func(m *MockUseCase)
 		wantCode codes.Code
 		wantOK   bool
 	}{
+		{
+			name:    "invalid_argument_on_validation",
+			loginEm: "bad",
+			loginPw: "",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: "bad", Password: ""}).
+					Return(models.LoginReponse{}, errors.NewValidationError("password", "empty"))
+			},
+			wantCode: codes.InvalidArgument,
+		},
 		{
 			name: "internal_on_usecase_error",
 			setup: func(m *MockUseCase) {
@@ -137,6 +149,9 @@ func TestAutherServer_Login(t *testing.T) {
 			tt.setup(mockUC)
 			srv := New(testLogger(), mockUC)
 			em, pw := email, pass
+			if tt.loginEm != "" || tt.loginPw != "" {
+				em, pw = tt.loginEm, tt.loginPw
+			}
 			out, err := srv.Login(context.Background(), api.LoginRequest_builder{Email: &em, Password: &pw}.Build())
 			if tt.wantOK {
 				if err != nil {

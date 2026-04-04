@@ -87,7 +87,7 @@ func (h *JWTHelper) ValidateToken(encodedToken string) (TokenClaims, error) {
 	claims := TokenClaims{}
 
 	token, err := jwt.ParseWithClaims(encodedToken, &claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+		if token.Method != jwt.SigningMethodRS256 {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return h.publicKey, nil

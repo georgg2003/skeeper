@@ -127,6 +127,18 @@ func TestUseCase_LoginUser(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name:    "invalid_email",
+			creds:   models.UserCredentials{Email: "not-email", Password: "x"},
+			setup:   func(m *MockRepository) {},
+			wantErr: true,
+		},
+		{
+			name:    "empty_password",
+			creds:   models.UserCredentials{Email: "a@b.c", Password: ""},
+			setup:   func(m *MockRepository) {},
+			wantErr: true,
+		},
+		{
 			name:  "user_not_found",
 			creds: models.UserCredentials{Email: "missing@example.com", Password: "x"},
 			setup: func(m *MockRepository) {

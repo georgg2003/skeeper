@@ -10,11 +10,18 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
+// GRPCClientTLS configures TLS for both Auther and Skeeper gRPC connections.
+type GRPCClientTLS struct {
+	Enabled bool   `mapstructure:"enabled"`
+	CAFile  string `mapstructure:"ca_file"`
+}
+
 // ClientConfig holds remote service endpoints and local vault location.
 type ClientConfig struct {
-	AutherAddr  string `mapstructure:"auther_addr"`
-	SkeeperAddr string `mapstructure:"skeeper_addr"`
-	DataDir     string `mapstructure:"data_dir"`
+	AutherAddr  string        `mapstructure:"auther_addr"`
+	SkeeperAddr string        `mapstructure:"skeeper_addr"`
+	DataDir     string        `mapstructure:"data_dir"`
+	GRPCTLS     GRPCClientTLS `mapstructure:"grpc_tls"`
 }
 
 // Load reads configPath with Viper when appropriate, then unmarshals.
@@ -34,10 +41,14 @@ func Load(configPath string, configPathExplicit bool) (*ClientConfig, error) {
 	_ = v.BindEnv("auther_addr", "SKEEPERCLI_AUTHER")
 	_ = v.BindEnv("skeeper_addr", "SKEEPERCLI_SKEEPER")
 	_ = v.BindEnv("data_dir", "SKEEPERCLI_DATA")
+	_ = v.BindEnv("grpc_tls.enabled", "SKEEPERCLI_GRPC_TLS_ENABLED")
+	_ = v.BindEnv("grpc_tls.ca_file", "SKEEPERCLI_GRPC_CA_FILE")
 
 	v.SetDefault("auther_addr", "127.0.0.1:50051")
 	v.SetDefault("skeeper_addr", "127.0.0.1:50052")
 	v.SetDefault("data_dir", "~/.skeepercli")
+	v.SetDefault("grpc_tls.enabled", false)
+	v.SetDefault("grpc_tls.ca_file", "config/keys/grpc_server.crt")
 
 	if configPath != "" {
 		if configPathExplicit {

@@ -18,10 +18,14 @@ import (
 )
 
 type memSession struct {
-	s *models.Session
+	s       *models.Session
+	saveErr error
 }
 
 func (m *memSession) SaveSession(ctx context.Context, s models.Session) error {
+	if m.saveErr != nil {
+		return m.saveErr
+	}
 	cp := s
 	m.s = &cp
 	return nil
@@ -260,6 +264,31 @@ func TestAuthUseCase_GetValidToken(t *testing.T) {
 				UserID:           &uid,
 			}},
 			remote:  &stubRemote{refreshErr: context.Canceled},
+			wantErr: true,
+		},
+		{
+			name: "refresh_save_session_error",
+			local: &memSession{
+				saveErr: context.Canceled,
+				s: &models.Session{
+					AccessToken:      "old",
+					RefreshToken:     rt,
+					ExpiresAt:        time.Now().Add(30 * time.Second),
+					RefreshExpiresAt: time.Now().Add(24 * time.Hour),
+					UserID:           &uid,
+				},
+			},
+			remote: &stubRemote{
+				refreshOut: func() *models.Session {
+					at2, rt2 := clientTestJWTHelper(t, uid)
+					return &models.Session{
+						AccessToken:      at2,
+						RefreshToken:     rt2,
+						ExpiresAt:        time.Now().Add(time.Hour),
+						RefreshExpiresAt: time.Now().Add(24 * time.Hour),
+					}
+				}(),
+			},
 			wantErr: true,
 		},
 	}
