@@ -1,4 +1,4 @@
-syntax = "proto3"; // Используй proto3 для стабильности, если нет жесткой нужды в edition 2023
+syntax = "proto3";
 
 package skeeper;
 option go_package = "github.com/georgg2003/skeeper/api";
@@ -6,7 +6,7 @@ option go_package = "github.com/georgg2003/skeeper/api";
 import "google/protobuf/timestamp.proto";
 
 message Entry {
-    uuid uuid = 1;           // UUID (генерится клиентом для оффлайн-работы)
+    string uuid = 1;         // UUID (генерится клиентом для оффлайн-работы)
     string type = 2;         // "credentials", "card", ...
     bytes encrypted_dek = 3; // DEK, зашифрованный мастер-ключом пользователя
     bytes payload = 4;       // Зашифрованные данные (логин:пароль, текст и т.д.)
@@ -27,6 +27,25 @@ message SyncResponse {
     repeated Entry updates = 1;
     google.protobuf.Timestamp current_sync_at = 2;
 }
+
+// VaultCrypto carries Argon2id KDF salt and a verifier so all devices derive the same master key
+// and only one master password can wrap new data (verifier = SHA-256(derived master key)).
+message VaultCrypto {
+    bytes kdf_salt = 1;
+    bytes master_verifier = 2;
+}
+
+message GetVaultCryptoRequest {}
+
+message GetVaultCryptoResponse {
+    VaultCrypto vault = 1;
+}
+
+message PutVaultCryptoRequest {
+    VaultCrypto vault = 1;
+}
+
+message PutVaultCryptoResponse {}
 
 message FileMetadata {
     string entry_id = 1;
@@ -52,6 +71,8 @@ message FileChunk {
 
 service Skeeper {
     rpc Sync(SyncRequest) returns (SyncResponse);
+    rpc GetVaultCrypto(GetVaultCryptoRequest) returns (GetVaultCryptoResponse);
+    rpc PutVaultCrypto(PutVaultCryptoRequest) returns (PutVaultCryptoResponse);
 
     // Потенциально можно добавить потоковый синк,
     // но для этого надо прикручивать редис для реализации pub/sub между клиентами, времени нет

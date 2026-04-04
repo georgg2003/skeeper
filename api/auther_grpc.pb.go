@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v7.34.0
-// source: api/auther.proto
+// source: auther.proto
 
 package api
 
@@ -194,5 +194,5 @@ var Auther_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/auther.proto",
+	Metadata: "auther.proto",
 }

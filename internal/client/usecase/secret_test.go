@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"testing"
@@ -13,8 +14,9 @@ import (
 )
 
 type fakeSecretStore struct {
-	salt    []byte
-	entries []models.Entry
+	salt     []byte
+	verifier []byte
+	entries  []models.Entry
 }
 
 func (f *fakeSecretStore) GetDirtyEntries(ctx context.Context, _ *int64) ([]models.Entry, error) {
@@ -41,11 +43,22 @@ func (f *fakeSecretStore) GetEntry(ctx context.Context, id uuid.UUID, _ *int64) 
 	return models.Entry{}, context.Canceled
 }
 
-func (f *fakeSecretStore) GetOrCreateKDFSalt(ctx context.Context) ([]byte, error) {
+func (f *fakeSecretStore) EnsureLocalVaultCrypto(ctx context.Context) ([]byte, []byte, error) {
 	if len(f.salt) == 0 {
 		f.salt = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	}
-	return f.salt, nil
+	return f.salt, f.verifier, nil
+}
+
+func (f *fakeSecretStore) ReplaceLocalVaultCrypto(ctx context.Context, salt, verifier []byte) error {
+	f.salt = append([]byte(nil), salt...)
+	f.verifier = append([]byte(nil), verifier...)
+	return nil
+}
+
+func (f *fakeSecretStore) SetLocalMasterVerifier(ctx context.Context, verifier []byte) error {
+	f.verifier = append([]byte(nil), verifier...)
+	return nil
 }
 
 func (f *fakeSecretStore) ListEntries(ctx context.Context, _ *int64) ([]models.Entry, error) {
@@ -55,7 +68,7 @@ func (f *fakeSecretStore) ListEntries(ctx context.Context, _ *int64) ([]models.E
 func TestSecretUseCase_PasswordRoundTrip(t *testing.T) {
 	st := &fakeSecretStore{}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	uc := NewSecretUseCase(st, noopSessionReaderForTests{}, log)
+	uc := NewSecretUseCase(st, noopSessionReaderForTests{}, nil, log)
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "svc", Notes: "n"}
 	if err := uc.SetPassword(ctx, meta, "secret-pw", "master!!"); err != nil {
@@ -78,5 +91,21 @@ func TestSecretUseCase_PasswordRoundTrip(t *testing.T) {
 	}
 	if string(payload) != "secret-pw" || gotMeta.Name != "svc" {
 		t.Fatalf("%q %+v", payload, gotMeta)
+	}
+}
+
+func TestSecretUseCase_RejectsOtherMasterPasswordAfterFirstEntry(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, noopSessionReaderForTests{}, nil, log)
+	ctx := context.Background()
+	meta := EntryMetadata{Name: "a"}
+	if err := uc.SetPassword(ctx, meta, "pw", "master-one"); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.SetPassword(ctx, EntryMetadata{Name: "b"}, "pw2", "master-two"); err == nil {
+		t.Fatal("expected wrong master password")
+	} else if !errors.Is(err, ErrWrongMasterPassword) {
+		t.Fatalf("want ErrWrongMasterPassword, got %v", err)
 	}
 }

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -13,9 +14,13 @@ import (
 
 var ErrInvalidToken = errors.New("refresh token is invalid")
 
+const vaultKDFSaltSize = 16
+
 type Repository interface {
 	UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) error
 	GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error)
+	GetVaultCrypto(ctx context.Context, userID int64) (kdfSalt, masterVerifier []byte, err error)
+	PutVaultCrypto(ctx context.Context, userID int64, kdfSalt, masterVerifier []byte) error
 }
 
 type UseCase struct {
@@ -47,6 +52,24 @@ func (uc *UseCase) Sync(
 		CurrentSyncAt: currentSyncAt,
 		Updates:       serverUpdates,
 	}, nil
+}
+
+// GetVaultCrypto returns the Argon2 salt and master-key verifier for the authenticated user.
+func (uc *UseCase) GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier []byte, err error) {
+	userID := contextlib.MustGetUserID(ctx)
+	return uc.repo.GetVaultCrypto(ctx, userID)
+}
+
+// PutVaultCrypto stores salt and verifier for the authenticated user (idempotent if unchanged).
+func (uc *UseCase) PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier []byte) error {
+	if len(kdfSalt) != vaultKDFSaltSize {
+		return errors.NewValidationError("kdf_salt", fmt.Sprintf("must be exactly %d bytes", vaultKDFSaltSize))
+	}
+	if len(masterVerifier) != 32 {
+		return errors.NewValidationError("master_verifier", "must be exactly 32 bytes (SHA-256 of derived master key)")
+	}
+	userID := contextlib.MustGetUserID(ctx)
+	return uc.repo.PutVaultCrypto(ctx, userID, kdfSalt, masterVerifier)
 }
 
 func New(

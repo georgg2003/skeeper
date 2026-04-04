@@ -1,6 +1,7 @@
 -- +goose Up
 CREATE TABLE entries (
   uuid TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
   type TEXT NOT NULL,
   encrypted_dek BLOB NOT NULL,
   payload BLOB NOT NULL,

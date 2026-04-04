@@ -25,11 +25,11 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s1, err := r.GetOrCreateKDFSalt(ctx)
+	s1, _, err := r.EnsureLocalVaultCrypto(ctx)
 	if err != nil || len(s1) != kdfSaltSize {
 		t.Fatalf("salt %+v err %v", s1, err)
 	}
-	s2, err := r.GetOrCreateKDFSalt(ctx)
+	s2, _, err := r.EnsureLocalVaultCrypto(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +38,7 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 	}
 
 	id := uuid.New()
+	uid := int64(1)
 	e := models.Entry{
 		UUID:         id,
 		Type:         models.EntryTypePassword,
@@ -46,6 +47,7 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 		Meta:         []byte{3},
 		Version:      1,
 		UpdatedAt:    time.Now().Truncate(time.Second),
+		UserID:       &uid,
 	}
 	if err := r.SaveEntry(ctx, e, true); err != nil {
 		t.Fatal(err)

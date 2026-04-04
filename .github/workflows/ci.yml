@@ -41,8 +41,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Format (goimports)
-        run: make fmt-check
+      - name: Goimports
+        run: make goimports
 
       - name: Lint
         run: make lint

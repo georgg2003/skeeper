@@ -21,6 +21,14 @@ type stubRepo struct {
 	getErr    error
 }
 
+func (s *stubRepo) GetVaultCrypto(context.Context, int64) ([]byte, []byte, error) {
+	return nil, nil, nil
+}
+
+func (s *stubRepo) PutVaultCrypto(context.Context, int64, []byte, []byte) error {
+	return nil
+}
+
 func (s *stubRepo) UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) error {
 	if s.upsertErr != nil {
 		return s.upsertErr

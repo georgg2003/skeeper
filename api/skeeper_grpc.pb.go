@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v7.34.0
-// source: api/skeeper.proto
+// source: skeeper.proto
 
 package api
 
@@ -20,7 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Skeeper_Sync_FullMethodName = "/skeeper.Skeeper/Sync"
+	Skeeper_Sync_FullMethodName           = "/skeeper.Skeeper/Sync"
+	Skeeper_GetVaultCrypto_FullMethodName = "/skeeper.Skeeper/GetVaultCrypto"
+	Skeeper_PutVaultCrypto_FullMethodName = "/skeeper.Skeeper/PutVaultCrypto"
 )
 
 // SkeeperClient is the client API for Skeeper service.
@@ -28,6 +30,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SkeeperClient interface {
 	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
+	GetVaultCrypto(ctx context.Context, in *GetVaultCryptoRequest, opts ...grpc.CallOption) (*GetVaultCryptoResponse, error)
+	PutVaultCrypto(ctx context.Context, in *PutVaultCryptoRequest, opts ...grpc.CallOption) (*PutVaultCryptoResponse, error)
 }
 
 type skeeperClient struct {
@@ -48,11 +52,33 @@ func (c *skeeperClient) Sync(ctx context.Context, in *SyncRequest, opts ...grpc.
 	return out, nil
 }
 
+func (c *skeeperClient) GetVaultCrypto(ctx context.Context, in *GetVaultCryptoRequest, opts ...grpc.CallOption) (*GetVaultCryptoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetVaultCryptoResponse)
+	err := c.cc.Invoke(ctx, Skeeper_GetVaultCrypto_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skeeperClient) PutVaultCrypto(ctx context.Context, in *PutVaultCryptoRequest, opts ...grpc.CallOption) (*PutVaultCryptoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PutVaultCryptoResponse)
+	err := c.cc.Invoke(ctx, Skeeper_PutVaultCrypto_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SkeeperServer is the server API for Skeeper service.
 // All implementations must embed UnimplementedSkeeperServer
 // for forward compatibility.
 type SkeeperServer interface {
 	Sync(context.Context, *SyncRequest) (*SyncResponse, error)
+	GetVaultCrypto(context.Context, *GetVaultCryptoRequest) (*GetVaultCryptoResponse, error)
+	PutVaultCrypto(context.Context, *PutVaultCryptoRequest) (*PutVaultCryptoResponse, error)
 	mustEmbedUnimplementedSkeeperServer()
 }
 
@@ -65,6 +91,12 @@ type UnimplementedSkeeperServer struct{}
 
 func (UnimplementedSkeeperServer) Sync(context.Context, *SyncRequest) (*SyncResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Sync not implemented")
+}
+func (UnimplementedSkeeperServer) GetVaultCrypto(context.Context, *GetVaultCryptoRequest) (*GetVaultCryptoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVaultCrypto not implemented")
+}
+func (UnimplementedSkeeperServer) PutVaultCrypto(context.Context, *PutVaultCryptoRequest) (*PutVaultCryptoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PutVaultCrypto not implemented")
 }
 func (UnimplementedSkeeperServer) mustEmbedUnimplementedSkeeperServer() {}
 func (UnimplementedSkeeperServer) testEmbeddedByValue()                 {}
@@ -105,6 +137,42 @@ func _Skeeper_Sync_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Skeeper_GetVaultCrypto_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetVaultCryptoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkeeperServer).GetVaultCrypto(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Skeeper_GetVaultCrypto_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkeeperServer).GetVaultCrypto(ctx, req.(*GetVaultCryptoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Skeeper_PutVaultCrypto_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutVaultCryptoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkeeperServer).PutVaultCrypto(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Skeeper_PutVaultCrypto_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkeeperServer).PutVaultCrypto(ctx, req.(*PutVaultCryptoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Skeeper_ServiceDesc is the grpc.ServiceDesc for Skeeper service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,7 +184,15 @@ var Skeeper_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Sync",
 			Handler:    _Skeeper_Sync_Handler,
 		},
+		{
+			MethodName: "GetVaultCrypto",
+			Handler:    _Skeeper_GetVaultCrypto_Handler,
+		},
+		{
+			MethodName: "PutVaultCrypto",
+			Handler:    _Skeeper_PutVaultCrypto_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/skeeper.proto",
+	Metadata: "skeeper.proto",
 }

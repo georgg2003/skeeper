@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+func TestMasterKeyVerifier_Deterministic(t *testing.T) {
+	key := make([]byte, KeyLength)
+	for i := range key {
+		key[i] = byte(i)
+	}
+	v1 := MasterKeyVerifier(key)
+	v2 := MasterKeyVerifier(key)
+	if !bytes.Equal(v1, v2) || len(v1) != 32 {
+		t.Fatalf("verifier %+v", v1)
+	}
+}
+
 func TestDeriveMasterKey_Deterministic(t *testing.T) {
 	salt := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	k1 := DeriveMasterKey("same-password", salt)

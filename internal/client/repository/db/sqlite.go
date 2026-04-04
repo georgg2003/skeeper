@@ -134,30 +134,46 @@ func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID, forUserID *int6
 
 const kdfSaltSize = 16
 
-// GetOrCreateKDFSalt returns the persisted Argon2id salt, generating one on first use.
-func (r *Repository) GetOrCreateKDFSalt(ctx context.Context) ([]byte, error) {
-	var salt []byte
-	err := r.db.QueryRowContext(ctx, `SELECT kdf_salt FROM crypto_meta WHERE id = 1`).Scan(&salt)
-	if err == nil && len(salt) > 0 {
-		return salt, nil
+// EnsureLocalVaultCrypto returns persisted Argon2 salt and optional master-key verifier (nil if unset).
+// Creates a new salt row if none exists.
+func (r *Repository) EnsureLocalVaultCrypto(ctx context.Context) (salt []byte, masterVerifier []byte, err error) {
+	err = r.db.QueryRowContext(ctx, `SELECT kdf_salt, master_verifier FROM crypto_meta WHERE id = 1`).Scan(&salt, &masterVerifier)
+	if err == nil {
+		return salt, masterVerifier, nil
 	}
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
+	if err != sql.ErrNoRows {
+		return nil, nil, err
 	}
-
 	salt = make([]byte, kdfSaltSize)
 	if _, err := rand.Read(salt); err != nil {
-		return nil, fmt.Errorf("generate kdf salt: %w", err)
+		return nil, nil, fmt.Errorf("generate kdf salt: %w", err)
 	}
-	if err == sql.ErrNoRows {
-		_, err = r.db.ExecContext(ctx, `INSERT INTO crypto_meta (id, kdf_salt) VALUES (1, ?)`, salt)
-	} else {
-		_, err = r.db.ExecContext(ctx, `UPDATE crypto_meta SET kdf_salt = ? WHERE id = 1`, salt)
-	}
+	_, err = r.db.ExecContext(ctx, `INSERT INTO crypto_meta (id, kdf_salt, master_verifier) VALUES (1, ?, NULL)`, salt)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return salt, nil
+	return salt, nil, nil
+}
+
+// ReplaceLocalVaultCrypto overwrites salt and verifier (e.g. after pulling from the server).
+func (r *Repository) ReplaceLocalVaultCrypto(ctx context.Context, salt, masterVerifier []byte) error {
+	var ver any
+	if len(masterVerifier) > 0 {
+		ver = masterVerifier
+	}
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO crypto_meta (id, kdf_salt, master_verifier) VALUES (1, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			kdf_salt = excluded.kdf_salt,
+			master_verifier = excluded.master_verifier
+	`, salt, ver)
+	return err
+}
+
+// SetLocalMasterVerifier persists the SHA-256(master key) fingerprint after the first successful encrypt.
+func (r *Repository) SetLocalMasterVerifier(ctx context.Context, masterVerifier []byte) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE crypto_meta SET master_verifier = ? WHERE id = 1`, masterVerifier)
+	return err
 }
 
 // ListEntries returns non-deleted rows for local browsing (payload remains ciphertext).

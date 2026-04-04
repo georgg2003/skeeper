@@ -3,7 +3,9 @@ package usecase
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -12,7 +14,11 @@ import (
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/crypto"
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
+	skeeperremote "github.com/georgg2003/skeeper/internal/client/repository/skeeper"
 )
+
+// ErrWrongMasterPassword is returned when the derived key does not match the stored verifier.
+var ErrWrongMasterPassword = errors.New("wrong master password")
 
 // EntryMetadata is cleartext metadata encrypted with the entry DEK before storage.
 type EntryMetadata struct {
@@ -21,14 +27,16 @@ type EntryMetadata struct {
 	ExtraTags map[string]string `json:"tags,omitempty"`
 }
 
-// LocalSecretStore is the persistence surface required for encrypted entries and KDF salt.
+// LocalSecretStore is the persistence surface required for encrypted entries and vault crypto metadata.
 type LocalSecretStore interface {
 	GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
 	MarkAsSynced(ctx context.Context, id uuid.UUID) error
 	SaveEntry(ctx context.Context, e models.Entry, isDirty bool) error
 	GetLastUpdate(ctx context.Context, forUserID *int64) (time.Time, error)
 	GetEntry(ctx context.Context, id uuid.UUID, forUserID *int64) (models.Entry, error)
-	GetOrCreateKDFSalt(ctx context.Context) ([]byte, error)
+	EnsureLocalVaultCrypto(ctx context.Context) (salt []byte, masterVerifier []byte, err error)
+	ReplaceLocalVaultCrypto(ctx context.Context, salt, masterVerifier []byte) error
+	SetLocalMasterVerifier(ctx context.Context, masterVerifier []byte) error
 	ListEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
 }
 
@@ -37,18 +45,26 @@ type SessionReader interface {
 	GetSession(ctx context.Context) (*models.Session, error)
 }
 
+// VaultRemote fetches and stores per-user KDF salt + master-key verifier on the Skeeper server.
+type VaultRemote interface {
+	GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier []byte, err error)
+	PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier []byte) error
+}
+
 // SecretUseCase creates and reads ciphertext entries protected by a user master password.
 type SecretUseCase struct {
 	local    LocalSecretStore
 	sessions SessionReader
+	remote   VaultRemote
 	log      *slog.Logger
 }
 
-// NewSecretUseCase constructs a SecretUseCase.
-func NewSecretUseCase(local LocalSecretStore, sessions SessionReader, log *slog.Logger) *SecretUseCase {
+// NewSecretUseCase constructs a SecretUseCase. remote may be nil (offline-only vault profile).
+func NewSecretUseCase(local LocalSecretStore, sessions SessionReader, remote VaultRemote, log *slog.Logger) *SecretUseCase {
 	return &SecretUseCase{
 		local:    local,
 		sessions: sessions,
+		remote:   remote,
 		log:      log.With("component", "secret_usecase"),
 	}
 }
@@ -62,16 +78,63 @@ func (uc *SecretUseCase) activeAutherUserID(ctx context.Context) *int64 {
 	return s.UserID
 }
 
+func (uc *SecretUseCase) pullRemoteVaultCrypto(ctx context.Context) error {
+	if uc.remote == nil || uc.activeAutherUserID(ctx) == nil {
+		return nil
+	}
+	salt, verifier, err := uc.remote.GetVaultCrypto(ctx)
+	if err != nil {
+		if errors.Is(err, skeeperremote.ErrVaultCryptoNotFound) {
+			return nil
+		}
+		return fmt.Errorf("fetch vault crypto: %w", err)
+	}
+	if len(salt) == 0 || len(verifier) == 0 {
+		return nil
+	}
+	return uc.local.ReplaceLocalVaultCrypto(ctx, salt, verifier)
+}
+
+func (uc *SecretUseCase) materializeVaultCrypto(ctx context.Context) (salt []byte, verifier []byte, err error) {
+	if err := uc.pullRemoteVaultCrypto(ctx); err != nil {
+		return nil, nil, err
+	}
+	return uc.local.EnsureLocalVaultCrypto(ctx)
+}
+
+func (uc *SecretUseCase) deriveAndCheckMasterKey(salt, storedVerifier []byte, masterPass string) ([]byte, error) {
+	masterKey := crypto.DeriveMasterKey(masterPass, salt)
+	if len(storedVerifier) > 0 {
+		v := crypto.MasterKeyVerifier(masterKey)
+		if subtle.ConstantTimeCompare(v, storedVerifier) != 1 {
+			return nil, ErrWrongMasterPassword
+		}
+	}
+	return masterKey, nil
+}
+
+func (uc *SecretUseCase) publishVaultCrypto(ctx context.Context, salt, masterKey []byte) error {
+	if uc.remote == nil || uc.activeAutherUserID(ctx) == nil {
+		return nil
+	}
+	ver := crypto.MasterKeyVerifier(masterKey)
+	return uc.remote.PutVaultCrypto(ctx, salt, ver)
+}
+
 // SetPassword stores a login/password pair as an encrypted PASSWORD-type entry.
 func (uc *SecretUseCase) SetPassword(ctx context.Context, meta EntryMetadata, password string, masterPass string) error {
 	uc.log.Info("creating new encrypted entry", "name", meta.Name)
 
-	salt, err := uc.local.GetOrCreateKDFSalt(ctx)
+	salt, storedVerifier, err := uc.materializeVaultCrypto(ctx)
 	if err != nil {
-		return fmt.Errorf("kdf salt: %w", err)
+		return err
 	}
 
-	masterKey := crypto.DeriveMasterKey(masterPass, salt)
+	masterKey, err := uc.deriveAndCheckMasterKey(salt, storedVerifier, masterPass)
+	if err != nil {
+		return err
+	}
+
 	dek := make([]byte, 32)
 	if _, err := rand.Read(dek); err != nil {
 		return fmt.Errorf("generate dek: %w", err)
@@ -109,7 +172,10 @@ func (uc *SecretUseCase) SetPassword(ctx context.Context, meta EntryMetadata, pa
 		UserID:       uc.activeAutherUserID(ctx),
 	}
 
-	return uc.local.SaveEntry(ctx, entry, true)
+	if err := uc.local.SaveEntry(ctx, entry, true); err != nil {
+		return err
+	}
+	return uc.finalizeVaultVerifier(ctx, salt, storedVerifier, masterKey)
 }
 
 // SetText stores arbitrary cleartext as an encrypted TEXT-type entry.
@@ -134,12 +200,16 @@ func (uc *SecretUseCase) SetCard(ctx context.Context, meta EntryMetadata, card m
 func (uc *SecretUseCase) setBlob(ctx context.Context, typ string, meta EntryMetadata, plaintext []byte, masterPass string) error {
 	uc.log.Info("creating encrypted entry", "type", typ, "name", meta.Name)
 
-	salt, err := uc.local.GetOrCreateKDFSalt(ctx)
+	salt, storedVerifier, err := uc.materializeVaultCrypto(ctx)
 	if err != nil {
-		return fmt.Errorf("kdf salt: %w", err)
+		return err
 	}
 
-	masterKey := crypto.DeriveMasterKey(masterPass, salt)
+	masterKey, err := uc.deriveAndCheckMasterKey(salt, storedVerifier, masterPass)
+	if err != nil {
+		return err
+	}
+
 	dek := make([]byte, 32)
 	if _, err := rand.Read(dek); err != nil {
 		return fmt.Errorf("generate dek: %w", err)
@@ -176,7 +246,20 @@ func (uc *SecretUseCase) setBlob(ctx context.Context, typ string, meta EntryMeta
 		UserID:       uc.activeAutherUserID(ctx),
 	}
 
-	return uc.local.SaveEntry(ctx, entry, true)
+	if err := uc.local.SaveEntry(ctx, entry, true); err != nil {
+		return err
+	}
+	return uc.finalizeVaultVerifier(ctx, salt, storedVerifier, masterKey)
+}
+
+func (uc *SecretUseCase) finalizeVaultVerifier(ctx context.Context, salt, storedVerifier []byte, masterKey []byte) error {
+	if len(storedVerifier) == 0 {
+		ver := crypto.MasterKeyVerifier(masterKey)
+		if err := uc.local.SetLocalMasterVerifier(ctx, ver); err != nil {
+			return fmt.Errorf("save master verifier: %w", err)
+		}
+	}
+	return uc.publishVaultCrypto(ctx, salt, masterKey)
 }
 
 // ListLocal returns ciphertext rows for display of ids and types without decryption.
@@ -197,12 +280,16 @@ func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, ma
 		return nil, nil, err
 	}
 
-	salt, err := uc.local.GetOrCreateKDFSalt(ctx)
+	salt, storedVerifier, err := uc.materializeVaultCrypto(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("kdf salt: %w", err)
+		return nil, nil, err
 	}
 
-	masterKey := crypto.DeriveMasterKey(masterPass, salt)
+	masterKey, err := uc.deriveAndCheckMasterKey(salt, storedVerifier, masterPass)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	dek, err := crypto.DecryptAESGCM(entry.EncryptedDek, masterKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("decryption failed (wrong master pass?): %w", err)

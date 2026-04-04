@@ -2,7 +2,7 @@ edition = "2023";
 
 package auther;
 
-option go_package = "github.com/georgg2003/skeeper/auther/api";
+option go_package = "github.com/georgg2003/skeeper/api";
 
 import "google/protobuf/timestamp.proto";
 

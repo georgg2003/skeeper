@@ -93,13 +93,14 @@ func bootstrap(cmd *cobra.Command) error {
 	}
 
 	authUC := usecase.NewAuthUseCase(dbRepo, autherCLI, l)
-	secretUC := usecase.NewSecretUseCase(dbRepo, dbRepo, l)
 
 	skeeperCLI, err := skeeperremote.NewSkeeperClient(skeeperAddr, authUC)
 	if err != nil {
 		_ = dbRepo.Close()
 		return fmt.Errorf("skeeper client: %w", err)
 	}
+
+	secretUC := usecase.NewSecretUseCase(dbRepo, dbRepo, skeeperCLI, l)
 	syncUC := usecase.NewSyncUseCase(dbRepo, skeeperCLI, dbRepo, l)
 
 	SetUseCases(authUC, secretUC, syncUC)

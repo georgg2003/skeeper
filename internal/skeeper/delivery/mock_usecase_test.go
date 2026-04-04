@@ -42,6 +42,84 @@ func (m *MockUseCase) EXPECT() *MockUseCaseMockRecorder {
 	return m.recorder
 }
 
+// GetVaultCrypto mocks base method.
+func (m *MockUseCase) GetVaultCrypto(arg0 context.Context) ([]byte, []byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVaultCrypto", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].([]byte)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetVaultCrypto indicates an expected call of GetVaultCrypto.
+func (mr *MockUseCaseMockRecorder) GetVaultCrypto(arg0 any) *MockUseCaseGetVaultCryptoCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVaultCrypto", reflect.TypeOf((*MockUseCase)(nil).GetVaultCrypto), arg0)
+	return &MockUseCaseGetVaultCryptoCall{Call: call}
+}
+
+// MockUseCaseGetVaultCryptoCall wrap *gomock.Call
+type MockUseCaseGetVaultCryptoCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockUseCaseGetVaultCryptoCall) Return(arg0, arg1 []byte, arg2 error) *MockUseCaseGetVaultCryptoCall {
+	c.Call = c.Call.Return(arg0, arg1, arg2)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockUseCaseGetVaultCryptoCall) Do(f func(context.Context) ([]byte, []byte, error)) *MockUseCaseGetVaultCryptoCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockUseCaseGetVaultCryptoCall) DoAndReturn(f func(context.Context) ([]byte, []byte, error)) *MockUseCaseGetVaultCryptoCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// PutVaultCrypto mocks base method.
+func (m *MockUseCase) PutVaultCrypto(arg0 context.Context, arg1, arg2 []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutVaultCrypto", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PutVaultCrypto indicates an expected call of PutVaultCrypto.
+func (mr *MockUseCaseMockRecorder) PutVaultCrypto(arg0, arg1, arg2 any) *MockUseCasePutVaultCryptoCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutVaultCrypto", reflect.TypeOf((*MockUseCase)(nil).PutVaultCrypto), arg0, arg1, arg2)
+	return &MockUseCasePutVaultCryptoCall{Call: call}
+}
+
+// MockUseCasePutVaultCryptoCall wrap *gomock.Call
+type MockUseCasePutVaultCryptoCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockUseCasePutVaultCryptoCall) Return(arg0 error) *MockUseCasePutVaultCryptoCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockUseCasePutVaultCryptoCall) Do(f func(context.Context, []byte, []byte) error) *MockUseCasePutVaultCryptoCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockUseCasePutVaultCryptoCall) DoAndReturn(f func(context.Context, []byte, []byte) error) *MockUseCasePutVaultCryptoCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Sync mocks base method.
 func (m *MockUseCase) Sync(arg0 context.Context, arg1 models.SyncRequest) (models.SyncResponse, error) {
 	m.ctrl.T.Helper()

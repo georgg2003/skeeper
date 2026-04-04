@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.34.0
-// source: api/skeeper.proto
+// source: skeeper.proto
 
 package api
 
@@ -38,7 +38,7 @@ type Entry struct {
 
 func (x *Entry) Reset() {
 	*x = Entry{}
-	mi := &file_api_skeeper_proto_msgTypes[0]
+	mi := &file_skeeper_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +50,7 @@ func (x *Entry) String() string {
 func (*Entry) ProtoMessage() {}
 
 func (x *Entry) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[0]
+	mi := &file_skeeper_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -207,7 +207,7 @@ type SyncRequest struct {
 
 func (x *SyncRequest) Reset() {
 	*x = SyncRequest{}
-	mi := &file_api_skeeper_proto_msgTypes[1]
+	mi := &file_skeeper_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -219,7 +219,7 @@ func (x *SyncRequest) String() string {
 func (*SyncRequest) ProtoMessage() {}
 
 func (x *SyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[1]
+	mi := &file_skeeper_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +291,7 @@ type SyncResponse struct {
 
 func (x *SyncResponse) Reset() {
 	*x = SyncResponse{}
-	mi := &file_api_skeeper_proto_msgTypes[2]
+	mi := &file_skeeper_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -303,7 +303,7 @@ func (x *SyncResponse) String() string {
 func (*SyncResponse) ProtoMessage() {}
 
 func (x *SyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[2]
+	mi := &file_skeeper_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -365,6 +365,307 @@ func (b0 SyncResponse_builder) Build() *SyncResponse {
 	return m0
 }
 
+// VaultCrypto carries Argon2id KDF salt and a verifier so all devices derive the same master key
+// and only one master password can wrap new data (verifier = SHA-256(derived master key)).
+type VaultCrypto struct {
+	state                     protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_KdfSalt        []byte                 `protobuf:"bytes,1,opt,name=kdf_salt,json=kdfSalt,proto3"`
+	xxx_hidden_MasterVerifier []byte                 `protobuf:"bytes,2,opt,name=master_verifier,json=masterVerifier,proto3"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *VaultCrypto) Reset() {
+	*x = VaultCrypto{}
+	mi := &file_skeeper_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VaultCrypto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VaultCrypto) ProtoMessage() {}
+
+func (x *VaultCrypto) ProtoReflect() protoreflect.Message {
+	mi := &file_skeeper_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *VaultCrypto) GetKdfSalt() []byte {
+	if x != nil {
+		return x.xxx_hidden_KdfSalt
+	}
+	return nil
+}
+
+func (x *VaultCrypto) GetMasterVerifier() []byte {
+	if x != nil {
+		return x.xxx_hidden_MasterVerifier
+	}
+	return nil
+}
+
+func (x *VaultCrypto) SetKdfSalt(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_KdfSalt = v
+}
+
+func (x *VaultCrypto) SetMasterVerifier(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_MasterVerifier = v
+}
+
+type VaultCrypto_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	KdfSalt        []byte
+	MasterVerifier []byte
+}
+
+func (b0 VaultCrypto_builder) Build() *VaultCrypto {
+	m0 := &VaultCrypto{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_KdfSalt = b.KdfSalt
+	x.xxx_hidden_MasterVerifier = b.MasterVerifier
+	return m0
+}
+
+type GetVaultCryptoRequest struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVaultCryptoRequest) Reset() {
+	*x = GetVaultCryptoRequest{}
+	mi := &file_skeeper_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVaultCryptoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVaultCryptoRequest) ProtoMessage() {}
+
+func (x *GetVaultCryptoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skeeper_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type GetVaultCryptoRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 GetVaultCryptoRequest_builder) Build() *GetVaultCryptoRequest {
+	m0 := &GetVaultCryptoRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
+type GetVaultCryptoResponse struct {
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Vault *VaultCrypto           `protobuf:"bytes,1,opt,name=vault,proto3"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetVaultCryptoResponse) Reset() {
+	*x = GetVaultCryptoResponse{}
+	mi := &file_skeeper_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVaultCryptoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVaultCryptoResponse) ProtoMessage() {}
+
+func (x *GetVaultCryptoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skeeper_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetVaultCryptoResponse) GetVault() *VaultCrypto {
+	if x != nil {
+		return x.xxx_hidden_Vault
+	}
+	return nil
+}
+
+func (x *GetVaultCryptoResponse) SetVault(v *VaultCrypto) {
+	x.xxx_hidden_Vault = v
+}
+
+func (x *GetVaultCryptoResponse) HasVault() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Vault != nil
+}
+
+func (x *GetVaultCryptoResponse) ClearVault() {
+	x.xxx_hidden_Vault = nil
+}
+
+type GetVaultCryptoResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Vault *VaultCrypto
+}
+
+func (b0 GetVaultCryptoResponse_builder) Build() *GetVaultCryptoResponse {
+	m0 := &GetVaultCryptoResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Vault = b.Vault
+	return m0
+}
+
+type PutVaultCryptoRequest struct {
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Vault *VaultCrypto           `protobuf:"bytes,1,opt,name=vault,proto3"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PutVaultCryptoRequest) Reset() {
+	*x = PutVaultCryptoRequest{}
+	mi := &file_skeeper_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutVaultCryptoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutVaultCryptoRequest) ProtoMessage() {}
+
+func (x *PutVaultCryptoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_skeeper_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PutVaultCryptoRequest) GetVault() *VaultCrypto {
+	if x != nil {
+		return x.xxx_hidden_Vault
+	}
+	return nil
+}
+
+func (x *PutVaultCryptoRequest) SetVault(v *VaultCrypto) {
+	x.xxx_hidden_Vault = v
+}
+
+func (x *PutVaultCryptoRequest) HasVault() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Vault != nil
+}
+
+func (x *PutVaultCryptoRequest) ClearVault() {
+	x.xxx_hidden_Vault = nil
+}
+
+type PutVaultCryptoRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Vault *VaultCrypto
+}
+
+func (b0 PutVaultCryptoRequest_builder) Build() *PutVaultCryptoRequest {
+	m0 := &PutVaultCryptoRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Vault = b.Vault
+	return m0
+}
+
+type PutVaultCryptoResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PutVaultCryptoResponse) Reset() {
+	*x = PutVaultCryptoResponse{}
+	mi := &file_skeeper_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutVaultCryptoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutVaultCryptoResponse) ProtoMessage() {}
+
+func (x *PutVaultCryptoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_skeeper_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type PutVaultCryptoResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 PutVaultCryptoResponse_builder) Build() *PutVaultCryptoResponse {
+	m0 := &PutVaultCryptoResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 type FileMetadata struct {
 	state               protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_EntryId  string                 `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3"`
@@ -377,7 +678,7 @@ type FileMetadata struct {
 
 func (x *FileMetadata) Reset() {
 	*x = FileMetadata{}
-	mi := &file_api_skeeper_proto_msgTypes[3]
+	mi := &file_skeeper_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -389,7 +690,7 @@ func (x *FileMetadata) String() string {
 func (*FileMetadata) ProtoMessage() {}
 
 func (x *FileMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[3]
+	mi := &file_skeeper_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -473,7 +774,7 @@ type UploadFileRequest struct {
 
 func (x *UploadFileRequest) Reset() {
 	*x = UploadFileRequest{}
-	mi := &file_api_skeeper_proto_msgTypes[4]
+	mi := &file_skeeper_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +786,7 @@ func (x *UploadFileRequest) String() string {
 func (*UploadFileRequest) ProtoMessage() {}
 
 func (x *UploadFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[4]
+	mi := &file_skeeper_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +912,7 @@ func (b0 UploadFileRequest_builder) Build() *UploadFileRequest {
 type case_UploadFileRequest_Data protoreflect.FieldNumber
 
 func (x case_UploadFileRequest_Data) String() string {
-	md := file_api_skeeper_proto_msgTypes[4].Descriptor()
+	md := file_skeeper_proto_msgTypes[9].Descriptor()
 	if x == 0 {
 		return "not set"
 	}
@@ -643,7 +944,7 @@ type DownloadFileRequest struct {
 
 func (x *DownloadFileRequest) Reset() {
 	*x = DownloadFileRequest{}
-	mi := &file_api_skeeper_proto_msgTypes[5]
+	mi := &file_skeeper_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -655,7 +956,7 @@ func (x *DownloadFileRequest) String() string {
 func (*DownloadFileRequest) ProtoMessage() {}
 
 func (x *DownloadFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[5]
+	mi := &file_skeeper_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +1001,7 @@ type FileChunk struct {
 
 func (x *FileChunk) Reset() {
 	*x = FileChunk{}
-	mi := &file_api_skeeper_proto_msgTypes[6]
+	mi := &file_skeeper_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -712,7 +1013,7 @@ func (x *FileChunk) String() string {
 func (*FileChunk) ProtoMessage() {}
 
 func (x *FileChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_api_skeeper_proto_msgTypes[6]
+	mi := &file_skeeper_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -751,11 +1052,11 @@ func (b0 FileChunk_builder) Build() *FileChunk {
 	return m0
 }
 
-var File_api_skeeper_proto protoreflect.FileDescriptor
+var File_skeeper_proto protoreflect.FileDescriptor
 
-const file_api_skeeper_proto_rawDesc = "" +
+const file_skeeper_proto_rawDesc = "" +
 	"\n" +
-	"\x11api/skeeper.proto\x12\askeeper\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf6\x01\n" +
+	"\rskeeper.proto\x12\askeeper\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf6\x01\n" +
 	"\x05Entry\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12#\n" +
@@ -773,7 +1074,16 @@ const file_api_skeeper_proto_rawDesc = "" +
 	"lastSyncAt\"|\n" +
 	"\fSyncResponse\x12(\n" +
 	"\aupdates\x18\x01 \x03(\v2\x0e.skeeper.EntryR\aupdates\x12B\n" +
-	"\x0fcurrent_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\rcurrentSyncAt\"u\n" +
+	"\x0fcurrent_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\rcurrentSyncAt\"Q\n" +
+	"\vVaultCrypto\x12\x19\n" +
+	"\bkdf_salt\x18\x01 \x01(\fR\akdfSalt\x12'\n" +
+	"\x0fmaster_verifier\x18\x02 \x01(\fR\x0emasterVerifier\"\x17\n" +
+	"\x15GetVaultCryptoRequest\"D\n" +
+	"\x16GetVaultCryptoResponse\x12*\n" +
+	"\x05vault\x18\x01 \x01(\v2\x14.skeeper.VaultCryptoR\x05vault\"C\n" +
+	"\x15PutVaultCryptoRequest\x12*\n" +
+	"\x05vault\x18\x01 \x01(\v2\x14.skeeper.VaultCryptoR\x05vault\"\x18\n" +
+	"\x16PutVaultCryptoResponse\"u\n" +
 	"\fFileMetadata\x12\x19\n" +
 	"\bentry_id\x18\x01 \x01(\tR\aentryId\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x12\n" +
@@ -786,43 +1096,56 @@ const file_api_skeeper_proto_rawDesc = "" +
 	"\x13DownloadFileRequest\x12\x19\n" +
 	"\bentry_id\x18\x01 \x01(\tR\aentryId\"!\n" +
 	"\tFileChunk\x12\x14\n" +
-	"\x05chunk\x18\x01 \x01(\fR\x05chunk2>\n" +
+	"\x05chunk\x18\x01 \x01(\fR\x05chunk2\xe4\x01\n" +
 	"\aSkeeper\x123\n" +
-	"\x04Sync\x12\x14.skeeper.SyncRequest\x1a\x15.skeeper.SyncResponseB#Z!github.com/georgg2003/skeeper/apib\x06proto3"
+	"\x04Sync\x12\x14.skeeper.SyncRequest\x1a\x15.skeeper.SyncResponse\x12Q\n" +
+	"\x0eGetVaultCrypto\x12\x1e.skeeper.GetVaultCryptoRequest\x1a\x1f.skeeper.GetVaultCryptoResponse\x12Q\n" +
+	"\x0ePutVaultCrypto\x12\x1e.skeeper.PutVaultCryptoRequest\x1a\x1f.skeeper.PutVaultCryptoResponseB#Z!github.com/georgg2003/skeeper/apib\x06proto3"
 
-var file_api_skeeper_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_api_skeeper_proto_goTypes = []any{
-	(*Entry)(nil),                 // 0: skeeper.Entry
-	(*SyncRequest)(nil),           // 1: skeeper.SyncRequest
-	(*SyncResponse)(nil),          // 2: skeeper.SyncResponse
-	(*FileMetadata)(nil),          // 3: skeeper.FileMetadata
-	(*UploadFileRequest)(nil),     // 4: skeeper.UploadFileRequest
-	(*DownloadFileRequest)(nil),   // 5: skeeper.DownloadFileRequest
-	(*FileChunk)(nil),             // 6: skeeper.FileChunk
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+var file_skeeper_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_skeeper_proto_goTypes = []any{
+	(*Entry)(nil),                  // 0: skeeper.Entry
+	(*SyncRequest)(nil),            // 1: skeeper.SyncRequest
+	(*SyncResponse)(nil),           // 2: skeeper.SyncResponse
+	(*VaultCrypto)(nil),            // 3: skeeper.VaultCrypto
+	(*GetVaultCryptoRequest)(nil),  // 4: skeeper.GetVaultCryptoRequest
+	(*GetVaultCryptoResponse)(nil), // 5: skeeper.GetVaultCryptoResponse
+	(*PutVaultCryptoRequest)(nil),  // 6: skeeper.PutVaultCryptoRequest
+	(*PutVaultCryptoResponse)(nil), // 7: skeeper.PutVaultCryptoResponse
+	(*FileMetadata)(nil),           // 8: skeeper.FileMetadata
+	(*UploadFileRequest)(nil),      // 9: skeeper.UploadFileRequest
+	(*DownloadFileRequest)(nil),    // 10: skeeper.DownloadFileRequest
+	(*FileChunk)(nil),              // 11: skeeper.FileChunk
+	(*timestamppb.Timestamp)(nil),  // 12: google.protobuf.Timestamp
 }
-var file_api_skeeper_proto_depIdxs = []int32{
-	7, // 0: skeeper.Entry.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 1: skeeper.SyncRequest.updates:type_name -> skeeper.Entry
-	7, // 2: skeeper.SyncRequest.last_sync_at:type_name -> google.protobuf.Timestamp
-	0, // 3: skeeper.SyncResponse.updates:type_name -> skeeper.Entry
-	7, // 4: skeeper.SyncResponse.current_sync_at:type_name -> google.protobuf.Timestamp
-	3, // 5: skeeper.UploadFileRequest.info:type_name -> skeeper.FileMetadata
-	1, // 6: skeeper.Skeeper.Sync:input_type -> skeeper.SyncRequest
-	2, // 7: skeeper.Skeeper.Sync:output_type -> skeeper.SyncResponse
-	7, // [7:8] is the sub-list for method output_type
-	6, // [6:7] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+var file_skeeper_proto_depIdxs = []int32{
+	12, // 0: skeeper.Entry.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 1: skeeper.SyncRequest.updates:type_name -> skeeper.Entry
+	12, // 2: skeeper.SyncRequest.last_sync_at:type_name -> google.protobuf.Timestamp
+	0,  // 3: skeeper.SyncResponse.updates:type_name -> skeeper.Entry
+	12, // 4: skeeper.SyncResponse.current_sync_at:type_name -> google.protobuf.Timestamp
+	3,  // 5: skeeper.GetVaultCryptoResponse.vault:type_name -> skeeper.VaultCrypto
+	3,  // 6: skeeper.PutVaultCryptoRequest.vault:type_name -> skeeper.VaultCrypto
+	8,  // 7: skeeper.UploadFileRequest.info:type_name -> skeeper.FileMetadata
+	1,  // 8: skeeper.Skeeper.Sync:input_type -> skeeper.SyncRequest
+	4,  // 9: skeeper.Skeeper.GetVaultCrypto:input_type -> skeeper.GetVaultCryptoRequest
+	6,  // 10: skeeper.Skeeper.PutVaultCrypto:input_type -> skeeper.PutVaultCryptoRequest
+	2,  // 11: skeeper.Skeeper.Sync:output_type -> skeeper.SyncResponse
+	5,  // 12: skeeper.Skeeper.GetVaultCrypto:output_type -> skeeper.GetVaultCryptoResponse
+	7,  // 13: skeeper.Skeeper.PutVaultCrypto:output_type -> skeeper.PutVaultCryptoResponse
+	11, // [11:14] is the sub-list for method output_type
+	8,  // [8:11] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
-func init() { file_api_skeeper_proto_init() }
-func file_api_skeeper_proto_init() {
-	if File_api_skeeper_proto != nil {
+func init() { file_skeeper_proto_init() }
+func file_skeeper_proto_init() {
+	if File_skeeper_proto != nil {
 		return
 	}
-	file_api_skeeper_proto_msgTypes[4].OneofWrappers = []any{
+	file_skeeper_proto_msgTypes[9].OneofWrappers = []any{
 		(*uploadFileRequest_Info)(nil),
 		(*uploadFileRequest_Chunk)(nil),
 	}
@@ -830,17 +1153,17 @@ func file_api_skeeper_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_skeeper_proto_rawDesc), len(file_api_skeeper_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_skeeper_proto_rawDesc), len(file_skeeper_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_api_skeeper_proto_goTypes,
-		DependencyIndexes: file_api_skeeper_proto_depIdxs,
-		MessageInfos:      file_api_skeeper_proto_msgTypes,
+		GoTypes:           file_skeeper_proto_goTypes,
+		DependencyIndexes: file_skeeper_proto_depIdxs,
+		MessageInfos:      file_skeeper_proto_msgTypes,
 	}.Build()
-	File_api_skeeper_proto = out.File
-	file_api_skeeper_proto_goTypes = nil
-	file_api_skeeper_proto_depIdxs = nil
+	File_skeeper_proto = out.File
+	file_skeeper_proto_goTypes = nil
+	file_skeeper_proto_depIdxs = nil
 }

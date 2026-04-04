@@ -2,6 +2,7 @@ package postgres_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/georgg2003/skeeper/internal/integrationtest"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/vaulterror"
 	"github.com/georgg2003/skeeper/internal/skeeper/repository/postgres"
 )
 
@@ -17,7 +19,7 @@ import (
 
 func truncateSkeeper(t *testing.T, ctx context.Context, p *pgxpool.Pool) {
 	t.Helper()
-	_, err := p.Exec(ctx, `TRUNCATE TABLE entries`)
+	_, err := p.Exec(ctx, `TRUNCATE TABLE entries, vault_crypto`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,5 +406,47 @@ func TestIntegration_Upsert_SoftDeleteRoundtrip(t *testing.T) {
 	}
 	if len(got) != 1 || !got[0].IsDeleted || got[0].Version != 2 {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestIntegration_VaultCryptoPutGet(t *testing.T) {
+	ctx := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	const userID int64 = 501
+	salt := make([]byte, 16)
+	for i := range salt {
+		salt[i] = byte(i)
+	}
+	ver := make([]byte, 32)
+	for i := range ver {
+		ver[i] = byte(i + 1)
+	}
+
+	_, _, err := repo.GetVaultCrypto(ctx, userID)
+	if err == nil || !errors.Is(err, vaulterror.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+
+	if err := repo.PutVaultCrypto(ctx, userID, salt, ver); err != nil {
+		t.Fatal(err)
+	}
+	gotSalt, gotVer, err := repo.GetVaultCrypto(ctx, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(gotSalt) != string(salt) || string(gotVer) != string(ver) {
+		t.Fatalf("mismatch")
+	}
+	if err := repo.PutVaultCrypto(ctx, userID, salt, ver); err != nil {
+		t.Fatalf("idempotent put: %v", err)
+	}
+	otherSalt := append([]byte(nil), salt...)
+	otherSalt[0] ^= 0xff
+	if err := repo.PutVaultCrypto(ctx, userID, otherSalt, ver); !errors.Is(err, vaulterror.ErrConflict) {
+		t.Fatalf("expected conflict, got %v", err)
 	}
 }

@@ -40,7 +40,7 @@ func NewEntryFromProto(e *api.Entry) (Entry, error) {
 		return Entry{}, errors.NewValidationError("uuid", "invalid uuid format")
 	}
 
-	return Entry{
+	out := Entry{
 		UUID:         parsedUUID,
 		Type:         e.GetType(),
 		EncryptedDek: e.GetEncryptedDek(),
@@ -48,8 +48,11 @@ func NewEntryFromProto(e *api.Entry) (Entry, error) {
 		Meta:         e.GetMeta(),
 		Version:      e.GetVersion(),
 		IsDeleted:    e.GetIsDeleted(),
-		UpdatedAt:    e.GetUpdatedAt().AsTime(),
-	}, nil
+	}
+	if ts := e.GetUpdatedAt(); ts != nil {
+		out.UpdatedAt = ts.AsTime()
+	}
+	return out, nil
 }
 
 type SyncRequest struct {

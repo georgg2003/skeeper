@@ -1,7 +1,9 @@
 package postgres
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/vaulterror"
 )
 
 type Repository struct {
@@ -108,6 +111,49 @@ func (r *Repository) GetUpdatedAfter(ctx context.Context, userID int64, lastSync
 	}
 
 	return result, nil
+}
+
+const (
+	vaultKDFSaltBytes = 16
+	vaultVerifierSize = 32 // SHA-256
+)
+
+// GetVaultCrypto returns stored KDF salt and master-key verifier for the user.
+func (r *Repository) GetVaultCrypto(ctx context.Context, userID int64) (salt, verifier []byte, err error) {
+	err = r.pool.QueryRow(ctx,
+		`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
+		userID,
+	).Scan(&salt, &verifier)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, vaulterror.ErrNotFound
+	}
+	return salt, verifier, err
+}
+
+// PutVaultCrypto inserts or updates vault parameters. Re-sending the same salt and verifier succeeds.
+func (r *Repository) PutVaultCrypto(ctx context.Context, userID int64, salt, verifier []byte) error {
+	if len(salt) != vaultKDFSaltBytes || len(verifier) != vaultVerifierSize {
+		return fmt.Errorf("invalid vault crypto payload sizes")
+	}
+	var existingSalt, existingVer []byte
+	err := r.pool.QueryRow(ctx,
+		`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
+		userID,
+	).Scan(&existingSalt, &existingVer)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		_, err = r.pool.Exec(ctx,
+			`INSERT INTO vault_crypto (user_id, kdf_salt, master_verifier) VALUES ($1, $2, $3)`,
+			userID, salt, verifier,
+		)
+		return err
+	case err != nil:
+		return err
+	case bytes.Equal(existingSalt, salt) && bytes.Equal(existingVer, verifier):
+		return nil
+	default:
+		return vaulterror.ErrConflict
+	}
 }
 
 func (r *Repository) Close() {
