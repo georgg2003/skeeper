@@ -32,7 +32,6 @@ func (uc UseCase) CreateUser(ctx context.Context, creds models.UserCredentials) 
 	if err := creds.Validate(); err != nil {
 		return models.UserInfo{}, errors.Wrap(err, "user credentials are invalid")
 	}
-
 	hash, err := creds.HashPassword()
 	if err != nil {
 		return models.UserInfo{}, errors.Wrap(err, "failed to hash password")
@@ -64,7 +63,11 @@ func (uc UseCase) insertTokenSet(ctx context.Context, userID int64) (jwthelper.T
 
 func (uc UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginReponse, error) {
 	user, err := uc.repository.SelectUserByEmail(ctx, creds.Email)
-	if errors.As(err, postgres.ErrUserNotExist) {
+	if errors.Is(err, postgres.ErrUserNotExist) {
+		return models.LoginReponse{}, ErrUserNotExist
+	}
+
+	if err = creds.CheckPassword(user.PasswordHash); err != nil {
 		return models.LoginReponse{}, ErrUserNotExist
 	}
 
@@ -81,7 +84,7 @@ func (uc UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (
 
 func (uc UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
 	userID, err := uc.repository.DeleteRefreshTokenAndReturnUser(ctx, utils.HashToken(refreshToken))
-	if errors.As(err, postgres.ErrInvalidToken) {
+	if errors.Is(err, postgres.ErrInvalidToken) {
 		return jwthelper.TokenPair{}, ErrInvalidToken
 	}
 

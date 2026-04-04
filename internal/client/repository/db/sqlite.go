@@ -159,10 +159,15 @@ func (r *Repository) ListEntries(ctx context.Context) ([]models.Entry, error) {
 }
 
 func (r *Repository) GetLastUpdate(ctx context.Context) (time.Time, error) {
-	var lastUpdate time.Time
-	query := `SELECT COALESCE(MAX(updated_at), '1970-01-01 00:00:00') FROM entries`
-	err := r.db.QueryRowContext(ctx, query).Scan(&lastUpdate)
-	return lastUpdate, err
+	var lastUpdateInt int64
+	query := `SELECT COALESCE(unixepoch(MAX(updated_at)), 0) FROM entries`
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&lastUpdateInt)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Unix(lastUpdateInt, 0), nil
 }
 
 func New(dsn string) (*Repository, error) {

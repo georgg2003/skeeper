@@ -79,6 +79,7 @@ func (r *Repository) GetUpdatedAfter(ctx context.Context, userID int64, lastSync
 	query := `
 		SELECT
 			uuid,
+			user_id,
 			type,
 			encrypted_dek,
 			payload,

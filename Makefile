@@ -75,8 +75,14 @@ gen-keys:
 	openssl genrsa -out config/keys/jwt_private.pem 2048
 	openssl rsa -in config/keys/jwt_private.pem -pubout -out config/keys/jwt_public.pem
 
-.PHONY: run
-run: build
-	bin/auther -config config/auther.yaml &
-	bin/skeeper -config config/skeeper.yaml &
-	bin/skeepercli -config config/client.yaml
+.PHONY: run_auther
+run_auther:
+	go run cmd/auther/main.go -config config/auther.yaml
+	
+.PHONY: run_skeeper
+run_skeeper:
+	go run cmd/skeeper/main.go -config config/skeeper.yaml
+
+.PHONY: goose_down
+goose_down:
+	goose -dir ./migrations/auther postgres "postgres://auther_user:auther_password@127.0.0.1:5431/auther_db?sslmode=disable" status

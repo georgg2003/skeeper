@@ -2,6 +2,8 @@ package interceptors
 
 import (
 	"context"
+	"log/slog"
+	"time"
 
 	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
 	"github.com/google/uuid"
@@ -53,7 +55,7 @@ func (w *wrappedStream) Context() context.Context {
 	return w.ctx
 }
 
-func NewRequestInfoInterceptor() grpc.UnaryServerInterceptor {
+func NewRequestInfoInterceptor(l *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
@@ -61,11 +63,20 @@ func NewRequestInfoInterceptor() grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (any, error) {
 		newCtx := fillRequestInfo(ctx, info.FullMethod)
-		return handler(newCtx, req)
+		t0 := time.Now()
+		l.InfoContext(newCtx, "request started")
+		res, err := handler(newCtx, req)
+		l.InfoContext(
+			newCtx,
+			"request finished",
+			"duration", time.Since(t0),
+			"err", err,
+		)
+		return res, err
 	}
 }
 
-func NewStreamRequestInfoInterceptor() grpc.StreamServerInterceptor {
+func NewStreamRequestInfoInterceptor(l *slog.Logger) grpc.StreamServerInterceptor {
 	return func(
 		srv any,
 		ss grpc.ServerStream,
@@ -73,7 +84,16 @@ func NewStreamRequestInfoInterceptor() grpc.StreamServerInterceptor {
 		handler grpc.StreamHandler,
 	) error {
 		newCtx := fillRequestInfo(ss.Context(), info.FullMethod)
+		t0 := time.Now()
+		l.InfoContext(newCtx, "stream request started")
 		wrapped := &wrappedStream{ServerStream: ss, ctx: newCtx}
-		return handler(srv, wrapped)
+		err := handler(srv, wrapped)
+		l.InfoContext(
+			newCtx,
+			"stream request finished",
+			"duration", time.Since(t0),
+			"err", err,
+		)
+		return err
 	}
 }

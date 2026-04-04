@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/hex"
 	"net/mail"
 
 	"github.com/georgg2003/skeeper/pkg/errors"
@@ -34,23 +33,27 @@ func (creds *UserCredentials) Validate() error {
 	return errors.Join(creds.validateEmail(), creds.validatePassword())
 }
 
-func (creds *UserCredentials) HashPassword() (string, error) {
+func (creds *UserCredentials) HashPassword() ([]byte, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return hex.EncodeToString(hash), nil
+	return hash, nil
+}
+
+func (creds *UserCredentials) CheckPassword(passwordHash []byte) error {
+	return bcrypt.CompareHashAndPassword(passwordHash, []byte(creds.Password))
 }
 
 type DBUserCredentials struct {
 	Email        string
-	PasswordHash string
+	PasswordHash []byte
 }
 
 type UserInfo struct {
 	ID           int64
 	Email        string
-	PasswordHash string
+	PasswordHash []byte
 }
 
 type RefreshTokenHashed struct {

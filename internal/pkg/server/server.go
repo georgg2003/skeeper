@@ -80,6 +80,8 @@ func (s *Server) Serve(ctx context.Context) error {
 
 type ServerModifyFunc func(*grpc.Server)
 
+// TODO add recovery
+
 func New(
 	cfg ServerConfig,
 	l *slog.Logger,
@@ -88,10 +90,10 @@ func New(
 ) *Server {
 	defaultOpts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
-			interceptors.NewRequestInfoInterceptor(),
+			interceptors.NewRequestInfoInterceptor(l),
 		),
 		grpc.ChainStreamInterceptor(
-			interceptors.NewStreamRequestInfoInterceptor(),
+			interceptors.NewStreamRequestInfoInterceptor(l),
 		),
 	}
 

@@ -45,7 +45,8 @@ func (c *AutherClient) Login(ctx context.Context, email, password string) (*mode
 		return nil, errors.New("invalid login response: missing tokens")
 	}
 	return &models.Session{
-		AccessToken:  at.GetToken(),
+		AccessToken: at.GetToken(),
+		// TODO add access token expiry
 		RefreshToken: rt.GetToken(),
 		ExpiresAt:    at.GetExpiresAt().AsTime(),
 	}, nil

@@ -33,14 +33,14 @@ func (uc *UseCase) Sync(
 	if len(req.Updates) > 0 {
 		err := uc.repo.UpsertEntries(ctx, userID, req.Updates)
 		if err != nil {
-			return models.SyncResponse{}, err
+			return models.SyncResponse{}, errors.Wrap(err, "failed to upsert entries")
 		}
 	}
 
 	currentSyncAt := time.Now()
 	serverUpdates, err := uc.repo.GetUpdatedAfter(ctx, userID, req.LastSyncAt)
 	if err != nil {
-		return models.SyncResponse{}, err
+		return models.SyncResponse{}, errors.Wrap(err, "failed to get updates")
 	}
 
 	return models.SyncResponse{

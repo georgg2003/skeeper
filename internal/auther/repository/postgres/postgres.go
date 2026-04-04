@@ -36,8 +36,9 @@ func (r *Repository) InsertUser(ctx context.Context, creds models.DBUserCredenti
 	}
 
 	return models.UserInfo{
-		ID:    userID,
-		Email: creds.Email,
+		ID:           userID,
+		Email:        creds.Email,
+		PasswordHash: creds.PasswordHash,
 	}, nil
 }
 
