@@ -14,7 +14,6 @@ import (
 var ErrUserNotExist = errors.New("user not exists")
 var ErrInvalidToken = errors.New("refresh token is invalid")
 
-//go:generate TODO
 type Repository interface {
 	InsertUser(context.Context, models.DBUserCredentials) (models.UserInfo, error)
 	DeleteRefreshTokenAndReturnUser(context.Context, string) (int64, error)

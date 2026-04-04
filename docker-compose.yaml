@@ -1,3 +1,6 @@
+# Integration tests (go test -tags=integration):
+#   AUTHER_TEST_DSN=postgres://auther_user:auther_password@127.0.0.1:5431/auther_db?sslmode=disable
+#   SKEEPER_TEST_DSN=postgres://skeeper_user:skeeper_password@127.0.0.1:5432/skeeper_db?sslmode=disable
 services:
   auther-db:
     image: postgres:16-alpine

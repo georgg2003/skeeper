@@ -13,11 +13,16 @@ var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Authenticate with the Auther service",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if authUC == nil {
+			return fmt.Errorf("client not initialized")
+		}
 		var username string
-		fmt.Print("Enter username: ")
-		fmt.Scanln(&username)
+		fmt.Print("Email: ")
+		if _, err := fmt.Scanln(&username); err != nil {
+			return fmt.Errorf("read email: %w", err)
+		}
 
-		fmt.Print("Enter password: ")
+		fmt.Print("Password: ")
 		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			return fmt.Errorf("failed to read password: %w", err)
@@ -26,12 +31,11 @@ var loginCmd = &cobra.Command{
 		fmt.Println()
 
 		ctx := context.Background()
-		err = authUseCase.Login(ctx, username, password)
-		if err != nil {
+		if err := authUC.Login(ctx, username, password); err != nil {
 			return fmt.Errorf("login failed: %w", err)
 		}
 
-		fmt.Println("Successfully logged in!")
+		fmt.Println("Successfully logged in.")
 		return nil
 	},
 }

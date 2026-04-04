@@ -49,7 +49,7 @@ func (r *Repository) DeleteRefreshTokenAndReturnUser(
 
 	err := r.pool.QueryRow(
 		ctx,
-		`DELETE FROM tokens WHERE token_hash = $1 AND expires_at > now() RETURNIN user_id`,
+		`DELETE FROM refresh_tokens WHERE token_hash = $1 AND expires_at > now() RETURNING user_id`,
 		refreshTokenHash,
 	).Scan(&userID)
 
@@ -71,7 +71,7 @@ func (r *Repository) InsertRefreshToken(
 ) error {
 	if _, err := r.pool.Exec(
 		ctx, `
-			INSERT INTO tokens (user_id, token_hash, expires_at) 
+			INSERT INTO refresh_tokens (user_id, token_hash, expires_at) 
     	VALUES ($1, $2, $3)`,
 		userID,
 		refreshToken.Hash,

@@ -13,7 +13,6 @@ import (
 
 var ErrInvalidToken = errors.New("refresh token is invalid")
 
-//go:generate mockgen TODO
 type Repository interface {
 	UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) error
 	GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error)

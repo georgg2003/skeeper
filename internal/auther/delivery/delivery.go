@@ -14,7 +14,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-//go:generate mockgen TODO
+// UseCase is implemented by the auther use case layer.
+//
+//go:generate go run go.uber.org/mock/mockgen@v0.6.0 -typed -destination=mock_usecase_test.go -package=delivery -source=delivery.go UseCase
 type UseCase interface {
 	CreateUser(context.Context, models.UserCredentials) (models.UserInfo, error)
 	LoginUser(context.Context, models.UserCredentials) (models.LoginReponse, error)

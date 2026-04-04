@@ -11,6 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// UseCase is implemented by the skeeper use case layer.
+//
+//go:generate go run go.uber.org/mock/mockgen@v0.6.0 -typed -destination=mock_usecase_test.go -package=delivery -source=delivery.go UseCase
 type UseCase interface {
 	Sync(context.Context, models.SyncRequest) (models.SyncResponse, error)
 }

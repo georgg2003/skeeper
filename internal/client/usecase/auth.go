@@ -9,26 +9,28 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// Описываем зависимости прямо здесь.
-// Нам не важно, SQLite это или Postgres, главное — эти методы.
-
+// SessionStore persists the authenticated session in local storage.
 type SessionStore interface {
 	SaveSession(ctx context.Context, s models.Session) error
 	GetSession(ctx context.Context) (*models.Session, error)
 	ClearSession(ctx context.Context) error
 }
 
+// RemoteAuthenticator talks to the Auther service for signup and JWT lifecycle.
 type RemoteAuthenticator interface {
-	SignIn(ctx context.Context, login, password string) (*models.Session, error)
+	CreateUser(ctx context.Context, email, password string) error
+	Login(ctx context.Context, login, password string) (*models.Session, error)
 	Refresh(ctx context.Context, refreshToken string) (*models.Session, error)
 }
 
+// AuthUseCase coordinates remote authentication with the on-disk session.
 type AuthUseCase struct {
 	local  SessionStore
 	remote RemoteAuthenticator
 	l      *slog.Logger
 }
 
+// NewAuthUseCase constructs an AuthUseCase.
 func NewAuthUseCase(l SessionStore, r RemoteAuthenticator, log *slog.Logger) *AuthUseCase {
 	return &AuthUseCase{
 		local:  l,
@@ -37,10 +39,21 @@ func NewAuthUseCase(l SessionStore, r RemoteAuthenticator, log *slog.Logger) *Au
 	}
 }
 
+// Register creates a remote account and immediately establishes a local session.
+func (uc *AuthUseCase) Register(ctx context.Context, email, password string) error {
+	uc.l.InfoContext(ctx, "registering user", "email", email)
+	if err := uc.remote.CreateUser(ctx, email, password); err != nil {
+		uc.l.ErrorContext(ctx, "remote registration failed", "error", err)
+		return errors.Wrap(err, "remote registration")
+	}
+	return uc.Login(ctx, email, password)
+}
+
+// Login authenticates against Auther and stores tokens locally.
 func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error {
 	uc.l.InfoContext(ctx, "attempting to login", "user", login)
 
-	session, err := uc.remote.SignIn(ctx, login, password)
+	session, err := uc.remote.Login(ctx, login, password)
 	if err != nil {
 		uc.l.ErrorContext(ctx, "failed to sign in via remote service", "error", err)
 		return errors.Wrap(err, "remote sign in error")
@@ -56,6 +69,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error 
 	return nil
 }
 
+// GetValidToken returns a non-expired access token, refreshing when needed.
 func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	session, err := uc.local.GetSession(ctx)
 	if err != nil {
@@ -74,7 +88,7 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 
 	newSession, err := uc.remote.Refresh(ctx, session.RefreshToken)
 	if err != nil {
-		uc.l.ErrorContext(ctx, "failed to refresh token", "eerrr", err)
+		uc.l.ErrorContext(ctx, "failed to refresh token", "error", err)
 		return "", errors.Wrap(err, "refresh token error")
 	}
 
@@ -86,6 +100,7 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	return newSession.AccessToken, nil
 }
 
+// Logout clears the stored session.
 func (uc *AuthUseCase) Logout(ctx context.Context) error {
 	uc.l.InfoContext(ctx, "logging out and clearing session")
 	return uc.local.ClearSession(ctx)

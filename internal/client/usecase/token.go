@@ -42,6 +42,7 @@ func (uc *TokenUseCase) GetValidToken(ctx context.Context) (string, error) {
 	return newSession.AccessToken, nil
 }
 
-func NewTokenUseCase(s SessionStore, a AuthProvider) *TokenUseCase {
-	return &TokenUseCase{store: s, authClient: a}
+// NewTokenUseCase constructs a TokenUseCase.
+func NewTokenUseCase(s SessionStore, a AuthProvider, log *slog.Logger) *TokenUseCase {
+	return &TokenUseCase{store: s, authClient: a, l: log.With("component", "token_usecase")}
 }

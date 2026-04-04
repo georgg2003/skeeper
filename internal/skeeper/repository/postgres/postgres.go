@@ -77,15 +77,15 @@ func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []
 
 func (r *Repository) GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error) {
 	query := `
-		SELECT 
-            uuid, 
-            type, 
-            encrypted_dek as "EncryptedDek", 
-            payload, 
-            meta, 
-            version, 
-            is_deleted as "IsDeleted", 
-            updated_at as "UpdatedAt"
+		SELECT
+			uuid,
+			type,
+			encrypted_dek,
+			payload,
+			meta,
+			version,
+			is_deleted,
+			updated_at
 		FROM entries
 		WHERE user_id = $1 AND updated_at > $2
 		ORDER BY updated_at ASC;

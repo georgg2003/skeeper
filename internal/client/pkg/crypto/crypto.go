@@ -1,3 +1,4 @@
+// Package crypto provides Argon2id-based key derivation and AES-GCM for the local vault.
 package crypto
 
 import (

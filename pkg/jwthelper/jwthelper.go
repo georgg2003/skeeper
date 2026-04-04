@@ -1,3 +1,4 @@
+// Package jwthelper issues and validates RSA-signed JWT access tokens and opaque refresh tokens.
 package jwthelper
 
 import (
