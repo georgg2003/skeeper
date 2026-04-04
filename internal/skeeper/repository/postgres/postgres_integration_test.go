@@ -30,7 +30,7 @@ func skeeperTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	dsn := os.Getenv("SKEEPER_TEST_DSN")
 	if dsn == "" {
-		t.Skip("SKEEPER_TEST_DSN not set (start skeeper-db from docker-compose.yaml)")
+		t.Fatal("SKEEPER_TEST_DSN not set (start skeeper-db from docker-compose.yaml)")
 	}
 	skeeperPoolOnce.Do(func() {
 		ctx := context.Background()

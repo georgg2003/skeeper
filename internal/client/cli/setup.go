@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	clientcfg "github.com/georgg2003/skeeper/internal/client/pkg/config"
 	"github.com/georgg2003/skeeper/internal/client/repository/auther"
 	"github.com/georgg2003/skeeper/internal/client/repository/db"
 	skeeperremote "github.com/georgg2003/skeeper/internal/client/repository/skeeper"
@@ -19,13 +20,6 @@ var (
 	setupOnce sync.Once
 	setupErr  error
 )
-
-func getenv(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
 
 func expandPath(p string) (string, error) {
 	if len(p) >= 2 && p[0] == '~' && (p[1] == '/' || p[1] == '\\') {
@@ -46,18 +40,19 @@ func ensureApp(cmd *cobra.Command) error {
 }
 
 func bootstrap(cmd *cobra.Command) error {
-	autherAddr, err := cmd.Flags().GetString("auther")
+	root := cmd.Root()
+	cfgPath, err := root.PersistentFlags().GetString("config")
 	if err != nil {
 		return err
 	}
-	skeeperAddr, err := cmd.Flags().GetString("skeeper")
+	fileCfg, err := clientcfg.New(cfgPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("client config: %w", err)
 	}
-	dataDir, err := cmd.Flags().GetString("data-dir")
-	if err != nil {
-		return err
-	}
+
+	autherAddr := pickAddr(root, "auther", fileCfg.AutherAddr, "127.0.0.1:50051")
+	skeeperAddr := pickAddr(root, "skeeper", fileCfg.SkeeperAddr, "127.0.0.1:50052")
+	dataDir := pickAddr(root, "data-dir", fileCfg.DataDir, "~/.skeepercli")
 
 	dir, err := expandPath(dataDir)
 	if err != nil {
@@ -101,4 +96,17 @@ func bootstrap(cmd *cobra.Command) error {
 
 	SetUseCases(authUC, secretUC, syncUC)
 	return nil
+}
+
+// pickAddr returns the flag value if that persistent flag was set on the CLI;
+// otherwise value from config/env (already merged by Viper), then defaultDefault.
+func pickAddr(root *cobra.Command, flagName, fromCfg, defaultVal string) string {
+	if root.PersistentFlags().Changed(flagName) {
+		v, _ := root.PersistentFlags().GetString(flagName)
+		return v
+	}
+	if fromCfg != "" {
+		return fromCfg
+	}
+	return defaultVal
 }

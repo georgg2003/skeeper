@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// New loads configPath with Viper, applies envPrefix for AutomaticEnv, unmarshals into T.
 func New[T any](configPath string, envPrefix string) (*T, error) {
 	if configPath == "" {
 		return nil, fmt.Errorf("config path is empty")
@@ -24,8 +25,7 @@ func New[T any](configPath string, envPrefix string) (*T, error) {
 	}
 
 	var cfg T
-	err := v.Unmarshal(&cfg)
-	if err != nil {
+	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshall config")
 	}
 	return &cfg, nil

@@ -23,7 +23,7 @@ func TestEncryptDecryptAESGCM_RoundTrip(t *testing.T) {
 	for i := range key {
 		key[i] = byte(i + 1)
 	}
-	plain := []byte("hello gophkeeper")
+	plain := []byte("hello skeeper")
 
 	ct, err := EncryptAESGCM(plain, key)
 	if err != nil {

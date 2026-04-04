@@ -27,6 +27,9 @@ go.work.sum
 # env file
 .env
 
+# Local JWT keys (see config/auther.yaml)
+config/keys/*.pem
+
 # Editor/IDE
 .idea/
 .vscode/

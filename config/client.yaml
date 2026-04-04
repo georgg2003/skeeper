@@ -1,0 +1,5 @@
+# skeepercli. Override with flags or env SKEEPERCLI_AUTHER / SKEEPERCLI_SKEEPER / SKEEPERCLI_DATA.
+
+auther_addr: "127.0.0.1:50051"
+skeeper_addr: "127.0.0.1:50052"
+data_dir: "~/.skeepercli"

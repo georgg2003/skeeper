@@ -1,4 +1,4 @@
-// Command gophkeeper is the GophKeeper CLI client (Windows, Linux, macOS).
+// Command skeepercli is the skeeper CLI client (Windows, Linux, macOS).
 package main
 
 import (

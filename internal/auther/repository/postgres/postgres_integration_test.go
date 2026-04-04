@@ -19,10 +19,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Set AUTHER_TEST_DSN to a Postgres URL matching docker-compose (e.g.
-// postgres://auther_user:auther_password@127.0.0.1:5431/auther_db?sslmode=disable).
-// Run: docker compose up -d auther-db && go test -tags=integration ./internal/auther/repository/postgres/...
-
 var (
 	autherPoolOnce sync.Once
 	autherPool     *pgxpool.Pool
@@ -33,7 +29,7 @@ func autherTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	dsn := os.Getenv("AUTHER_TEST_DSN")
 	if dsn == "" {
-		t.Skip("AUTHER_TEST_DSN not set (start auther-db from docker-compose.yaml)")
+		t.Fatal("AUTHER_TEST_DSN not set (start auther-db from docker-compose.yaml)")
 	}
 	autherPoolOnce.Do(func() {
 		ctx := context.Background()

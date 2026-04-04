@@ -1,4 +1,4 @@
-// Package cli defines Cobra commands for the GophKeeper client.
+// Package cli defines Cobra commands for the skeeper client.
 package cli
 
 import (
@@ -26,8 +26,8 @@ func SetUseCases(a *usecase.AuthUseCase, s *usecase.SecretUseCase, y *usecase.Sy
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "gophkeeper",
-	Short: "GophKeeper password manager CLI",
+	Use:   "skeepercli",
+	Short: "skeeper password manager CLI",
 	Long:  "Local encrypted vault with Auther (auth) and Skeeper (sync) backends.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if slices.ContainsFunc(os.Args, func(s string) bool {
@@ -50,11 +50,37 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().String("auther", getenv("GOPHKEEPER_AUTHER", "127.0.0.1:50051"), "Auther gRPC host:port")
-	rootCmd.PersistentFlags().String("skeeper", getenv("GOPHKEEPER_SKEEPER", "127.0.0.1:50052"), "Skeeper gRPC host:port")
-	rootCmd.PersistentFlags().String("data-dir", getenv("GOPHKEEPER_DATA", "~/.gophkeeper"), "Local vault directory (SQLite)")
+	rootCmd.PersistentFlags().String(
+		"config",
+		"config/client.yaml",
+		"Path to client YAML config (Viper)",
+	)
+	rootCmd.PersistentFlags().String(
+		"auther",
+		"",
+		"Auther gRPC host:port (overrides config and SKEEPERCLI_AUTHER)",
+	)
+	rootCmd.PersistentFlags().String(
+		"skeeper",
+		"",
+		"Skeeper gRPC host:port (overrides config and SKEEPERCLI_SKEEPER)",
+	)
+	rootCmd.PersistentFlags().String(
+		"data-dir",
+		"",
+		"Local vault directory (overrides config and SKEEPERCLI_DATA)",
+	)
 
-	rootCmd.AddCommand(loginCmd, registerCmd, logoutCmd, syncCmd)
-	rootCmd.AddCommand(addPasswordCmd, addTextCmd, addBinaryCmd, addCardCmd)
-	rootCmd.AddCommand(listCmd, getCmd)
+	rootCmd.AddCommand(
+		loginCmd,
+		registerCmd,
+		logoutCmd,
+		syncCmd,
+		addPasswordCmd,
+		addTextCmd,
+		addBinaryCmd,
+		addCardCmd,
+		listCmd,
+		getCmd,
+	)
 }
