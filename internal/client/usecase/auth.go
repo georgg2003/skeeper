@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/georgg2003/skeeper/internal/client/pkg/jwtuser"
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
@@ -59,6 +60,13 @@ func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error 
 		return errors.Wrap(err, "remote sign in error")
 	}
 
+	uid, err := jwtuser.UserIDFromAccessTokenUnverified(session.AccessToken)
+	if err != nil {
+		uc.l.ErrorContext(ctx, "access token missing user id", "error", err)
+		return errors.Wrap(err, "parse access token user id")
+	}
+	session.UserID = &uid
+
 	err = uc.local.SaveSession(ctx, *session)
 	if err != nil {
 		uc.l.ErrorContext(ctx, "failed to save session to local db", "error", err)
@@ -94,6 +102,14 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	if err != nil {
 		uc.l.ErrorContext(ctx, "failed to refresh token", "error", err)
 		return "", errors.Wrap(err, "refresh token error")
+	}
+
+	uid, err := jwtuser.UserIDFromAccessTokenUnverified(newSession.AccessToken)
+	if err != nil {
+		uc.l.WarnContext(ctx, "refreshed access token missing user id", "error", err)
+		newSession.UserID = session.UserID
+	} else {
+		newSession.UserID = &uid
 	}
 
 	if err := uc.local.SaveSession(ctx, *newSession); err != nil {

@@ -19,6 +19,9 @@ import (
 var (
 	setupOnce sync.Once
 	setupErr  error
+
+	// When true, ensureApp skips bootstrap so tests can inject stubs via SetUseCases.
+	skipBootstrapForTest bool
 )
 
 func expandPath(p string) (string, error) {
@@ -33,6 +36,9 @@ func expandPath(p string) (string, error) {
 }
 
 func ensureApp(cmd *cobra.Command) error {
+	if skipBootstrapForTest {
+		return nil
+	}
 	setupOnce.Do(func() {
 		setupErr = bootstrap(cmd)
 	})
@@ -45,7 +51,8 @@ func bootstrap(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	fileCfg, err := clientcfg.New(cfgPath)
+	cfgExplicit := root.PersistentFlags().Changed("config")
+	fileCfg, err := clientcfg.Load(cfgPath, cfgExplicit)
 	if err != nil {
 		return fmt.Errorf("client config: %w", err)
 	}
@@ -66,7 +73,7 @@ func bootstrap(cmd *cobra.Command) error {
 		return err
 	}
 
-	l := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	l := slog.New(slog.NewJSONHandler(cmd.Root().OutOrStdout(), nil))
 
 	dbRepo, err := db.New(dbPath)
 	if err != nil {
@@ -85,21 +92,21 @@ func bootstrap(cmd *cobra.Command) error {
 	}
 
 	authUC := usecase.NewAuthUseCase(dbRepo, autherCLI, l)
-	secretUC := usecase.NewSecretUseCase(dbRepo, l)
+	secretUC := usecase.NewSecretUseCase(dbRepo, dbRepo, l)
 
 	skeeperCLI, err := skeeperremote.NewSkeeperClient(skeeperAddr, authUC)
 	if err != nil {
 		_ = dbRepo.Close()
 		return fmt.Errorf("skeeper client: %w", err)
 	}
-	syncUC := usecase.NewSyncUseCase(dbRepo, skeeperCLI, l)
+	syncUC := usecase.NewSyncUseCase(dbRepo, skeeperCLI, dbRepo, l)
 
 	SetUseCases(authUC, secretUC, syncUC)
 	return nil
 }
 
 // pickAddr returns the flag value if that persistent flag was set on the CLI;
-// otherwise value from config/env (already merged by Viper), then defaultDefault.
+// otherwise the value from config/env (already merged by Viper), then defaultVal.
 func pickAddr(root *cobra.Command, flagName, fromCfg, defaultVal string) string {
 	if root.PersistentFlags().Changed(flagName) {
 		v, _ := root.PersistentFlags().GetString(flagName)

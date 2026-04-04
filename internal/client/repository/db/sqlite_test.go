@@ -49,11 +49,11 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 	if err := r.SaveEntry(ctx, e, true); err != nil {
 		t.Fatal(err)
 	}
-	dirty, err := r.GetDirtyEntries(ctx)
+	dirty, err := r.GetDirtyEntries(ctx, nil)
 	if err != nil || len(dirty) != 1 {
 		t.Fatalf("dirty %+v err %v", dirty, err)
 	}
-	got, err := r.GetEntry(ctx, id)
+	got, err := r.GetEntry(ctx, id, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,11 +63,11 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 	if err := r.MarkAsSynced(ctx, id); err != nil {
 		t.Fatal(err)
 	}
-	dirty, _ = r.GetDirtyEntries(ctx)
+	dirty, _ = r.GetDirtyEntries(ctx, nil)
 	if len(dirty) != 0 {
 		t.Fatal("expected no dirty")
 	}
-	list, err := r.ListEntries(ctx)
+	list, err := r.ListEntries(ctx, nil)
 	if err != nil || len(list) != 1 {
 		t.Fatalf("list %+v", list)
 	}

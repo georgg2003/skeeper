@@ -3,11 +3,9 @@ package cli
 import (
 	"context"
 	"fmt"
-	"syscall"
 
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var addPasswordCmd = &cobra.Command{
@@ -17,35 +15,33 @@ var addPasswordCmd = &cobra.Command{
 		if secretUC == nil {
 			return fmt.Errorf("client not initialized")
 		}
-		var name, notes string
-		fmt.Print("Entry name (e.g. Gmail): ")
-		if _, err := fmt.Scanln(&name); err != nil {
-			return err
-		}
-		fmt.Print("Notes (optional): ")
-		_, _ = fmt.Scanln(&notes)
-
-		fmt.Print("Password to store: ")
-		secretBytes, err := term.ReadPassword(int(syscall.Stdin))
+		writePrompt(cmd, "Entry name (e.g. Gmail): ")
+		name, err := readLine(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Println()
+		writePrompt(cmd, "Notes (optional): ")
+		notes, _ := readLine(cmd)
 
-		fmt.Print("Master password: ")
-		masterBytes, err := term.ReadPassword(int(syscall.Stdin))
+		writePrompt(cmd, "Password to store: ")
+		secretStr, err := readPasswordLine(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Println()
+
+		writePrompt(cmd, "Master password: ")
+		masterStr, err := readPasswordLine(cmd)
+		if err != nil {
+			return err
+		}
 
 		ctx := context.Background()
 		meta := usecase.EntryMetadata{Name: name, Notes: notes}
-		if err := secretUC.SetPassword(ctx, meta, string(secretBytes), string(masterBytes)); err != nil {
+		if err := secretUC.SetPassword(ctx, meta, secretStr, masterStr); err != nil {
 			return fmt.Errorf("save secret: %w", err)
 		}
 
-		fmt.Println("Encrypted entry saved locally (run `sync` to upload).")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Encrypted entry saved locally (run `sync` to upload).")
 		return nil
 	},
 }

@@ -3,10 +3,10 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"slices"
 
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/spf13/cobra"
 )
 
@@ -15,13 +15,13 @@ var (
 	Version   = "dev"
 	BuildTime = "unknown"
 
-	authUC   *usecase.AuthUseCase
-	secretUC *usecase.SecretUseCase
-	syncUC   *usecase.SyncUseCase
+	authUC   AuthCommands
+	secretUC SecretCommands
+	syncUC   SyncCommands
 )
 
 // SetUseCases wires use cases (used from tests or after bootstrap).
-func SetUseCases(a *usecase.AuthUseCase, s *usecase.SecretUseCase, y *usecase.SyncUseCase) {
+func SetUseCases(a AuthCommands, s SecretCommands, y SyncCommands) {
 	authUC, secretUC, syncUC = a, s, y
 }
 
@@ -49,11 +49,33 @@ func Execute() {
 	}
 }
 
+// Run executes the root command with explicit stdio and argv (e.g. integration tests). Args should not include the program name.
+// Nil readers/writers fall back to [os.Stdin], [os.Stdout], and [os.Stderr].
+func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	rootCmd.SetArgs(args)
+	if stdin != nil {
+		rootCmd.SetIn(stdin)
+	} else {
+		rootCmd.SetIn(os.Stdin)
+	}
+	if stdout != nil {
+		rootCmd.SetOut(stdout)
+	} else {
+		rootCmd.SetOut(os.Stdout)
+	}
+	if stderr != nil {
+		rootCmd.SetErr(stderr)
+	} else {
+		rootCmd.SetErr(os.Stderr)
+	}
+	return rootCmd.Execute()
+}
+
 func init() {
 	rootCmd.PersistentFlags().String(
 		"config",
 		"config/client.yaml",
-		"Path to client YAML config (Viper)",
+		"YAML config (Viper); if this path is missing and you did not pass --config, defaults and SKEEPERCLI_* env apply",
 	)
 	rootCmd.PersistentFlags().String(
 		"auther",

@@ -3,12 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
-	"syscall"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var addCardCmd = &cobra.Command{
@@ -18,48 +16,48 @@ var addCardCmd = &cobra.Command{
 		if secretUC == nil {
 			return fmt.Errorf("client not initialized")
 		}
-		var name, notes string
-		fmt.Print("Entry name: ")
-		if _, err := fmt.Scanln(&name); err != nil {
+		writePrompt(cmd, "Entry name: ")
+		name, err := readLine(cmd)
+		if err != nil {
 			return err
 		}
-		fmt.Print("Notes (optional): ")
-		_, _ = fmt.Scanln(&notes)
+		writePrompt(cmd, "Notes (optional): ")
+		notes, _ := readLine(cmd)
 
 		card := models.CardPayload{}
-		fmt.Print("Cardholder: ")
-		if _, err := fmt.Scanln(&card.Holder); err != nil {
-			return err
-		}
-		fmt.Print("Number: ")
-		if _, err := fmt.Scanln(&card.Number); err != nil {
-			return err
-		}
-		fmt.Print("Expiry (MM/YY): ")
-		if _, err := fmt.Scanln(&card.Expiry); err != nil {
-			return err
-		}
-		fmt.Print("CVC: ")
-		cvc, err := term.ReadPassword(int(syscall.Stdin))
+		writePrompt(cmd, "Cardholder: ")
+		card.Holder, err = readLine(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Println()
-		card.CVC = string(cvc)
+		writePrompt(cmd, "Number: ")
+		card.Number, err = readLine(cmd)
+		if err != nil {
+			return err
+		}
+		writePrompt(cmd, "Expiry (MM/YY): ")
+		card.Expiry, err = readLine(cmd)
+		if err != nil {
+			return err
+		}
+		writePrompt(cmd, "CVC: ")
+		card.CVC, err = readPasswordLine(cmd)
+		if err != nil {
+			return err
+		}
 
-		fmt.Print("Master password: ")
-		masterBytes, err := term.ReadPassword(int(syscall.Stdin))
+		writePrompt(cmd, "Master password: ")
+		masterStr, err := readPasswordLine(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Println()
 
 		ctx := context.Background()
 		meta := usecase.EntryMetadata{Name: name, Notes: notes}
-		if err := secretUC.SetCard(ctx, meta, card, string(masterBytes)); err != nil {
+		if err := secretUC.SetCard(ctx, meta, card, masterStr); err != nil {
 			return fmt.Errorf("save card: %w", err)
 		}
-		fmt.Println("Encrypted card saved locally (run `sync` to upload).")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Encrypted card saved locally (run `sync` to upload).")
 		return nil
 	},
 }

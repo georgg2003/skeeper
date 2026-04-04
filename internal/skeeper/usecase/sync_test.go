@@ -36,51 +36,91 @@ func (s *stubRepo) GetUpdatedAfter(ctx context.Context, userID int64, lastSync t
 	return s.ret, nil
 }
 
-func TestUseCase_Sync_UpsertAndFetch(t *testing.T) {
-	id := uuid.New()
-	repo := &stubRepo{
-		ret: []models.Entry{
-			{UUID: id, Type: "TEXT", Version: 2, UpdatedAt: time.Unix(300, 0).UTC()},
-		},
-	}
-	l := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	uc := New(l, repo, nil)
-
-	in := models.SyncRequest{
-		LastSyncAt: time.Unix(100, 0).UTC(),
-		Updates: []models.Entry{
-			{UUID: uuid.New(), Type: "PASSWORD", Version: 1, UpdatedAt: time.Unix(200, 0).UTC()},
-		},
-	}
-	ctx := contextlib.SetUserID(context.Background(), 42)
-	out, err := uc.Sync(ctx, in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(repo.upserted) != 1 || len(repo.upserted[0]) != 1 {
-		t.Fatalf("upsert %+v", repo.upserted)
-	}
-	if !repo.lastSeen.Equal(in.LastSyncAt) {
-		t.Fatalf("last sync %v vs %v", repo.lastSeen, in.LastSyncAt)
-	}
-	if len(out.Updates) != 1 || out.Updates[0].UUID != id {
-		t.Fatalf("response %+v", out.Updates)
-	}
+func testSyncLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 }
 
-func TestUseCase_Sync_NoUpdates(t *testing.T) {
-	repo := &stubRepo{}
-	l := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	uc := New(l, repo, nil)
-	ctx := contextlib.SetUserID(context.Background(), 1)
-	out, err := uc.Sync(ctx, models.SyncRequest{LastSyncAt: time.Unix(1, 0).UTC()})
-	if err != nil {
-		t.Fatal(err)
+func TestUseCase_Sync(t *testing.T) {
+	id := uuid.New()
+	baseLast := time.Unix(100, 0).UTC()
+
+	tests := []struct {
+		name    string
+		repo    *stubRepo
+		req     models.SyncRequest
+		userID  int64
+		wantErr bool
+		check   func(t *testing.T, repo *stubRepo, out models.SyncResponse)
+	}{
+		{
+			name: "upserts_then_fetches",
+			repo: &stubRepo{
+				ret: []models.Entry{{UUID: id, Type: "TEXT", Version: 2, UpdatedAt: time.Unix(300, 0).UTC()}},
+			},
+			req: models.SyncRequest{
+				LastSyncAt: baseLast,
+				Updates:    []models.Entry{{UUID: uuid.New(), Type: "PASSWORD", Version: 1, UpdatedAt: time.Unix(200, 0).UTC()}},
+			},
+			userID: 42,
+			check: func(t *testing.T, repo *stubRepo, out models.SyncResponse) {
+				if len(repo.upserted) != 1 || len(repo.upserted[0]) != 1 {
+					t.Fatalf("upsert %+v", repo.upserted)
+				}
+				if !repo.lastSeen.Equal(baseLast) {
+					t.Fatalf("last sync %v vs %v", repo.lastSeen, baseLast)
+				}
+				if len(out.Updates) != 1 || out.Updates[0].UUID != id {
+					t.Fatalf("response %+v", out.Updates)
+				}
+			},
+		},
+		{
+			name: "no_client_updates_skips_upsert",
+			repo: &stubRepo{},
+			req:  models.SyncRequest{LastSyncAt: time.Unix(1, 0).UTC()},
+			userID: 1,
+			check: func(t *testing.T, repo *stubRepo, out models.SyncResponse) {
+				if len(repo.upserted) != 0 {
+					t.Fatal("unexpected upsert")
+				}
+				if len(out.Updates) != 0 {
+					t.Fatalf("expected no updates, got %d", len(out.Updates))
+				}
+			},
+		},
+		{
+			name:    "upsert_error",
+			repo:    &stubRepo{upsertErr: context.Canceled},
+			req:     models.SyncRequest{Updates: []models.Entry{{UUID: id}}},
+			userID:  1,
+			wantErr: true,
+		},
+		{
+			name:    "get_error",
+			repo:    &stubRepo{getErr: context.Canceled},
+			req:     models.SyncRequest{LastSyncAt: time.Unix(1, 0).UTC()},
+			userID:  1,
+			wantErr: true,
+		},
 	}
-	if len(repo.upserted) != 0 {
-		t.Fatal("unexpected upsert")
-	}
-	if len(out.Updates) != 0 {
-		t.Fatalf("expected no updates, got %d", len(out.Updates))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uc := New(testSyncLogger(), tt.repo, nil)
+			ctx := contextlib.SetUserID(context.Background(), tt.userID)
+			out, err := uc.Sync(ctx, tt.req)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.check != nil {
+				tt.check(t, tt.repo, out)
+			}
+		})
 	}
 }

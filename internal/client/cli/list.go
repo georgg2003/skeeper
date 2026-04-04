@@ -19,8 +19,9 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		out := cmd.OutOrStdout()
 		if len(entries) == 0 {
-			fmt.Println("No entries.")
+			_, _ = fmt.Fprintln(out, "No entries.")
 			return nil
 		}
 		for _, e := range entries {
@@ -28,7 +29,7 @@ var listCmd = &cobra.Command{
 			if e.IsDirty {
 				dirty = " (dirty)"
 			}
-			fmt.Printf("%s  %-8s  %s%s\n", e.UUID.String(), displayType(e.Type), e.UpdatedAt.Format("2006-01-02 15:04"), dirty)
+			_, _ = fmt.Fprintf(out, "%s  %-8s  %s%s\n", e.UUID.String(), displayType(e.Type), e.UpdatedAt.Format("2006-01-02 15:04"), dirty)
 		}
 		return nil
 	},

@@ -20,14 +20,10 @@ test:
 test-race:
 	$(GO) test -race ./...
 
-# Requires docker compose Postgres (matches config/auther.yaml and config/skeeper.yaml ports).
+# Repository integration tests (Docker required for testcontainers-go).
 .PHONY: test-integration
 test-integration:
-	docker compose up -d auther-db skeeper-db
-	AUTHER_TEST_DSN="postgres://auther_user:auther_password@127.0.0.1:5431/auther_db?sslmode=disable" \
-	SKEEPER_TEST_DSN="postgres://skeeper_user:skeeper_password@127.0.0.1:5432/skeeper_db?sslmode=disable" \
-		$(GO) test -tags=integration ./internal/auther/repository/postgres/... ./internal/skeeper/repository/postgres/...
-	docker compose down
+	$(GO) test -tags=integration ./internal/auther/repository/postgres/... ./internal/skeeper/repository/postgres/...
 
 .PHONY: lint
 lint:

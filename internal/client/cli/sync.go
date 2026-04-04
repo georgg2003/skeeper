@@ -18,7 +18,7 @@ var syncCmd = &cobra.Command{
 		if err := syncUC.Sync(ctx); err != nil {
 			return fmt.Errorf("sync failed: %w", err)
 		}
-		fmt.Println("Sync completed.")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Sync completed.")
 		return nil
 	},
 }

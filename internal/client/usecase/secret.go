@@ -22,24 +22,43 @@ type EntryMetadata struct {
 
 // LocalSecretStore is the persistence surface required for encrypted entries and KDF salt.
 type LocalSecretStore interface {
-	GetDirtyEntries(ctx context.Context) ([]models.Entry, error)
+	GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
 	MarkAsSynced(ctx context.Context, id uuid.UUID) error
 	SaveEntry(ctx context.Context, e models.Entry, isDirty bool) error
-	GetLastUpdate(ctx context.Context) (time.Time, error)
-	GetEntry(ctx context.Context, id uuid.UUID) (models.Entry, error)
+	GetLastUpdate(ctx context.Context, forUserID *int64) (time.Time, error)
+	GetEntry(ctx context.Context, id uuid.UUID, forUserID *int64) (models.Entry, error)
 	GetOrCreateKDFSalt(ctx context.Context) ([]byte, error)
-	ListEntries(ctx context.Context) ([]models.Entry, error)
+	ListEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
+}
+
+// SessionReader returns the persisted Auther session (for per-user local scoping).
+type SessionReader interface {
+	GetSession(ctx context.Context) (*models.Session, error)
 }
 
 // SecretUseCase creates and reads ciphertext entries protected by a user master password.
 type SecretUseCase struct {
-	local LocalSecretStore
-	log   *slog.Logger
+	local    LocalSecretStore
+	sessions SessionReader
+	log      *slog.Logger
 }
 
 // NewSecretUseCase constructs a SecretUseCase.
-func NewSecretUseCase(local LocalSecretStore, log *slog.Logger) *SecretUseCase {
-	return &SecretUseCase{local: local, log: log.With("component", "secret_usecase")}
+func NewSecretUseCase(local LocalSecretStore, sessions SessionReader, log *slog.Logger) *SecretUseCase {
+	return &SecretUseCase{
+		local:    local,
+		sessions: sessions,
+		log:      log.With("component", "secret_usecase"),
+	}
+}
+
+// activeAutherUserID is the logged-in account for local row scoping; nil if no session or legacy session row.
+func (uc *SecretUseCase) activeAutherUserID(ctx context.Context) *int64 {
+	s, err := uc.sessions.GetSession(ctx)
+	if err != nil || s == nil || s.UserID == nil {
+		return nil
+	}
+	return s.UserID
 }
 
 // SetPassword stores a login/password pair as an encrypted PASSWORD-type entry.
@@ -86,6 +105,7 @@ func (uc *SecretUseCase) SetPassword(ctx context.Context, meta EntryMetadata, pa
 		Version:      1,
 		UpdatedAt:    time.Now(),
 		IsDeleted:    false,
+		UserID:       uc.activeAutherUserID(ctx),
 	}
 
 	return uc.local.SaveEntry(ctx, entry, true)
@@ -152,24 +172,26 @@ func (uc *SecretUseCase) setBlob(ctx context.Context, typ string, meta EntryMeta
 		Version:      1,
 		UpdatedAt:    time.Now(),
 		IsDeleted:    false,
+		UserID:       uc.activeAutherUserID(ctx),
 	}
 
 	return uc.local.SaveEntry(ctx, entry, true)
 }
 
 // ListLocal returns ciphertext rows for display of ids and types without decryption.
+// When the local session has a user id, only that user's rows are listed.
 func (uc *SecretUseCase) ListLocal(ctx context.Context) ([]models.Entry, error) {
-	return uc.local.ListEntries(ctx)
+	return uc.local.ListEntries(ctx, uc.activeAutherUserID(ctx))
 }
 
 // GetLocalEntry returns one ciphertext row (e.g. to read the type label before decrypting payload).
 func (uc *SecretUseCase) GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error) {
-	return uc.local.GetEntry(ctx, id)
+	return uc.local.GetEntry(ctx, id, uc.activeAutherUserID(ctx))
 }
 
 // GetDecryptedEntry decrypts a single entry after deriving the master key.
 func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *EntryMetadata, error) {
-	entry, err := uc.local.GetEntry(ctx, id)
+	entry, err := uc.local.GetEntry(ctx, id, uc.activeAutherUserID(ctx))
 	if err != nil {
 		return nil, nil, err
 	}

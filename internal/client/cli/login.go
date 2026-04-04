@@ -3,10 +3,8 @@ package cli
 import (
 	"context"
 	"fmt"
-	"syscall"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var loginCmd = &cobra.Command{
@@ -16,26 +14,24 @@ var loginCmd = &cobra.Command{
 		if authUC == nil {
 			return fmt.Errorf("client not initialized")
 		}
-		var username string
-		fmt.Print("Email: ")
-		if _, err := fmt.Scanln(&username); err != nil {
+		writePrompt(cmd, "Email: ")
+		username, err := readLine(cmd)
+		if err != nil {
 			return fmt.Errorf("read email: %w", err)
 		}
 
-		fmt.Print("Password: ")
-		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+		writePrompt(cmd, "Password: ")
+		password, err := readPasswordLine(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to read password: %w", err)
 		}
-		password := string(bytePassword)
-		fmt.Println()
 
 		ctx := context.Background()
 		if err := authUC.Login(ctx, username, password); err != nil {
 			return fmt.Errorf("login failed: %w", err)
 		}
 
-		fmt.Println("Successfully logged in.")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Successfully logged in.")
 		return nil
 	},
 }

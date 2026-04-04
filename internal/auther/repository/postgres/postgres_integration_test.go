@@ -1,60 +1,29 @@
 //go:build integration
 
+// Repository integration tests: Postgres via testcontainers-go (Docker required).
+
 package postgres
 
 import (
 	"context"
 	"errors"
-	"os"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	"github.com/georgg2003/skeeper/internal/integrationtest"
-	authermigrate "github.com/georgg2003/skeeper/migrations/auther"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"github.com/georgg2003/skeeper/pkg/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	autherPoolOnce sync.Once
-	autherPool     *pgxpool.Pool
-	autherPoolErr  error
-)
-
 func autherTestPool(t *testing.T) *pgxpool.Pool {
-	t.Helper()
-	dsn := os.Getenv("AUTHER_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("AUTHER_TEST_DSN not set (start auther-db from docker-compose.yaml)")
-	}
-	autherPoolOnce.Do(func() {
-		ctx := context.Background()
-		autherPool, autherPoolErr = pgxpool.New(ctx, dsn)
-		if autherPoolErr != nil {
-			return
-		}
-		autherPoolErr = integrationtest.GooseMigrate(ctx, autherPool, authermigrate.GooseFiles)
-		if autherPoolErr != nil {
-			autherPool.Close()
-			autherPool = nil
-		}
-	})
-	if autherPoolErr != nil {
-		t.Fatal(autherPoolErr)
-	}
-	return autherPool
+	return integrationtest.AutherTestPool(t)
 }
 
 func truncateAuther(t *testing.T, ctx context.Context, p *pgxpool.Pool) {
-	t.Helper()
-	_, err := p.Exec(ctx, `TRUNCATE TABLE users RESTART IDENTITY CASCADE`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	integrationtest.TruncateAuther(t, ctx, p)
 }
 
 func TestIntegration_InsertUser_SelectByEmail(t *testing.T) {
@@ -66,7 +35,7 @@ func TestIntegration_InsertUser_SelectByEmail(t *testing.T) {
 	email := "u-" + uuid.NewString() + "@example.com"
 	info, err := repo.InsertUser(ctx, models.DBUserCredentials{
 		Email:        email,
-		PasswordHash: "deadbeef",
+		PasswordHash: []byte("deadbeef"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +48,7 @@ func TestIntegration_InsertUser_SelectByEmail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.ID != info.ID || got.Email != email || got.PasswordHash != "deadbeef" {
+	if got.ID != info.ID || got.Email != email || string(got.PasswordHash) != "deadbeef" {
 		t.Fatalf("%+v", got)
 	}
 }
@@ -91,7 +60,7 @@ func TestIntegration_InsertUser_DuplicateEmail(t *testing.T) {
 	repo := &Repository{pool: p}
 
 	email := "dup-" + uuid.NewString() + "@example.com"
-	creds := models.DBUserCredentials{Email: email, PasswordHash: "a"}
+	creds := models.DBUserCredentials{Email: email, PasswordHash: []byte("a")}
 	if _, err := repo.InsertUser(ctx, creds); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +89,7 @@ func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
 	repo := &Repository{pool: p}
 
 	email := "tok-" + uuid.NewString() + "@example.com"
-	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: "h"})
+	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
 	if err != nil {
 		t.Fatal(err)
 	}

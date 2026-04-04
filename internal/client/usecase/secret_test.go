@@ -16,7 +16,7 @@ type fakeSecretStore struct {
 	entries []models.Entry
 }
 
-func (f *fakeSecretStore) GetDirtyEntries(ctx context.Context) ([]models.Entry, error) {
+func (f *fakeSecretStore) GetDirtyEntries(ctx context.Context, _ *int64) ([]models.Entry, error) {
 	return nil, nil
 }
 
@@ -27,11 +27,11 @@ func (f *fakeSecretStore) SaveEntry(ctx context.Context, e models.Entry, isDirty
 	return nil
 }
 
-func (f *fakeSecretStore) GetLastUpdate(ctx context.Context) (time.Time, error) {
+func (f *fakeSecretStore) GetLastUpdate(ctx context.Context, _ *int64) (time.Time, error) {
 	return time.Time{}, nil
 }
 
-func (f *fakeSecretStore) GetEntry(ctx context.Context, id uuid.UUID) (models.Entry, error) {
+func (f *fakeSecretStore) GetEntry(ctx context.Context, id uuid.UUID, _ *int64) (models.Entry, error) {
 	for _, e := range f.entries {
 		if e.UUID == id {
 			return e, nil
@@ -47,14 +47,14 @@ func (f *fakeSecretStore) GetOrCreateKDFSalt(ctx context.Context) ([]byte, error
 	return f.salt, nil
 }
 
-func (f *fakeSecretStore) ListEntries(ctx context.Context) ([]models.Entry, error) {
+func (f *fakeSecretStore) ListEntries(ctx context.Context, _ *int64) ([]models.Entry, error) {
 	return f.entries, nil
 }
 
 func TestSecretUseCase_PasswordRoundTrip(t *testing.T) {
 	st := &fakeSecretStore{}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	uc := NewSecretUseCase(st, log)
+	uc := NewSecretUseCase(st, noopSessionReaderForTests{}, log)
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "svc", Notes: "n"}
 	if err := uc.SetPassword(ctx, meta, "secret-pw", "master!!"); err != nil {

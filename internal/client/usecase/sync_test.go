@@ -24,7 +24,7 @@ type memLocal struct {
 	remoteErr  error
 }
 
-func (m *memLocal) GetDirtyEntries(ctx context.Context) ([]models.Entry, error) {
+func (m *memLocal) GetDirtyEntries(ctx context.Context, _ *int64) ([]models.Entry, error) {
 	if m.dirtyErr != nil {
 		return nil, m.dirtyErr
 	}
@@ -47,7 +47,7 @@ func (m *memLocal) SaveEntry(ctx context.Context, e models.Entry, isDirty bool) 
 	return nil
 }
 
-func (m *memLocal) GetLastUpdate(ctx context.Context) (time.Time, error) {
+func (m *memLocal) GetLastUpdate(ctx context.Context, _ *int64) (time.Time, error) {
 	if m.lastErr != nil {
 		return time.Time{}, m.lastErr
 	}
@@ -65,6 +65,12 @@ func (r *memRemote) Sync(ctx context.Context, entries []models.Entry, lastUpdate
 	return r.local.remoteResp, nil
 }
 
+type noopSessionReaderForTests struct{}
+
+func (noopSessionReaderForTests) GetSession(context.Context) (*models.Session, error) {
+	return nil, nil
+}
+
 func TestSyncUseCase_Sync_MergesRemote(t *testing.T) {
 	id := uuid.New()
 	loc := &memLocal{
@@ -75,7 +81,7 @@ func TestSyncUseCase_Sync_MergesRemote(t *testing.T) {
 		},
 	}
 	rem := &memRemote{local: loc}
-	uc := NewSyncUseCase(loc, rem, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
+	uc := NewSyncUseCase(loc, rem, noopSessionReaderForTests{}, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
 
 	if err := uc.Sync(context.Background()); err != nil {
 		t.Fatal(err)
@@ -94,7 +100,7 @@ func TestSyncUseCase_Sync_RemoteError(t *testing.T) {
 		remoteErr: context.Canceled,
 	}
 	rem := &memRemote{local: loc}
-	uc := NewSyncUseCase(loc, rem, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
+	uc := NewSyncUseCase(loc, rem, noopSessionReaderForTests{}, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
 	if err := uc.Sync(context.Background()); err == nil {
 		t.Fatal("expected error")
 	}

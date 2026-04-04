@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"syscall"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/spf13/cobra"
 	"github.com/google/uuid"
-	"golang.org/x/term"
 )
 
 var getCmd = &cobra.Command{
@@ -32,43 +30,43 @@ var getCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Print("Master password: ")
-		masterBytes, err := term.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			return err
-		}
-		fmt.Println()
-
-		payload, meta, err := secretUC.GetDecryptedEntry(ctx, id, string(masterBytes))
+		writePrompt(cmd, "Master password: ")
+		masterStr, err := readPasswordLine(cmd)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Name: %s\n", meta.Name)
+		payload, meta, err := secretUC.GetDecryptedEntry(ctx, id, masterStr)
+		if err != nil {
+			return err
+		}
+
+		out := cmd.OutOrStdout()
+		_, _ = fmt.Fprintf(out, "Name: %s\n", meta.Name)
 		if meta.Notes != "" {
-			fmt.Printf("Notes: %s\n", meta.Notes)
+			_, _ = fmt.Fprintf(out, "Notes: %s\n", meta.Notes)
 		}
-		fmt.Printf("Type: %s\n", row.Type)
+		_, _ = fmt.Fprintf(out, "Type: %s\n", row.Type)
 
 		switch row.Type {
 		case models.EntryTypePassword:
-			fmt.Printf("Password: %s\n", string(payload))
+			_, _ = fmt.Fprintf(out, "Password: %s\n", string(payload))
 		case models.EntryTypeText:
-			fmt.Printf("Text:\n%s\n", string(payload))
+			_, _ = fmt.Fprintf(out, "Text:\n%s\n", string(payload))
 		case models.EntryTypeBinary:
 			outPath := fmt.Sprintf("%s.bin", id.String())
 			if err := os.WriteFile(outPath, payload, 0o600); err != nil {
 				return err
 			}
-			fmt.Printf("Wrote %d bytes to %s\n", len(payload), outPath)
+			_, _ = fmt.Fprintf(out, "Wrote %d bytes to %s\n", len(payload), outPath)
 		case models.EntryTypeCard:
 			var c models.CardPayload
 			if err := json.Unmarshal(payload, &c); err != nil {
 				return err
 			}
-			fmt.Printf("Holder: %s\nNumber: %s\nExpiry: %s\nCVC: %s\n", c.Holder, c.Number, c.Expiry, c.CVC)
+			_, _ = fmt.Fprintf(out, "Holder: %s\nNumber: %s\nExpiry: %s\nCVC: %s\n", c.Holder, c.Number, c.Expiry, c.CVC)
 		default:
-			fmt.Printf("Raw payload (%d bytes)\n", len(payload))
+			_, _ = fmt.Fprintf(out, "Raw payload (%d bytes)\n", len(payload))
 		}
 		return nil
 	},

@@ -106,6 +106,11 @@ func (r *Repository) Close() {
 	r.pool.Close()
 }
 
+// NewRepository returns a repository backed by an existing pool (e.g. integration tests outside this package).
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
+}
+
 type PostgresConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     uint16 `mapstructure:"port"`

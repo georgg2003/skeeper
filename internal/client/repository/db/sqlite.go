@@ -25,8 +25,8 @@ func (r *Repository) SaveEntry(ctx context.Context, e models.Entry, isDirty bool
 
 	query := `
 		INSERT INTO entries (
-			uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty, user_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(uuid) DO UPDATE SET
 			type = excluded.type,
 			encrypted_dek = excluded.encrypted_dek,
@@ -35,8 +35,13 @@ func (r *Repository) SaveEntry(ctx context.Context, e models.Entry, isDirty bool
 			version = excluded.version,
 			is_deleted = excluded.is_deleted,
 			updated_at = excluded.updated_at,
-			is_dirty = excluded.is_dirty;
+			is_dirty = excluded.is_dirty,
+			user_id = COALESCE(excluded.user_id, entries.user_id);
 	`
+	var uid any
+	if e.UserID != nil {
+		uid = *e.UserID
+	}
 	_, err := r.db.ExecContext(ctx, query,
 		e.UUID.String(),
 		e.Type,
@@ -47,15 +52,21 @@ func (r *Repository) SaveEntry(ctx context.Context, e models.Entry, isDirty bool
 		e.IsDeleted,
 		e.UpdatedAt,
 		dirtyInt,
+		uid,
 	)
 	return err
 }
 
-func (r *Repository) GetDirtyEntries(ctx context.Context) ([]models.Entry, error) {
-	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at 
+func (r *Repository) GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error) {
+	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, user_id
 	          FROM entries WHERE is_dirty = 1`
+	var args []any
+	if forUserID != nil {
+		query += ` AND user_id = ?`
+		args = append(args, *forUserID)
+	}
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,11 +76,16 @@ func (r *Repository) GetDirtyEntries(ctx context.Context) ([]models.Entry, error
 	for rows.Next() {
 		var e models.Entry
 		var uStr string
-		err := rows.Scan(&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt)
+		var userID sql.NullInt64
+		err := rows.Scan(&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt, &userID)
 		if err != nil {
 			return nil, err
 		}
 		e.UUID, _ = uuid.Parse(uStr)
+		if userID.Valid {
+			v := userID.Int64
+			e.UserID = &v
+		}
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -81,15 +97,22 @@ func (r *Repository) MarkAsSynced(ctx context.Context, u uuid.UUID) error {
 	return err
 }
 
-// GetEntry returns a single entry by id.
-func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID) (models.Entry, error) {
-	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty
+// GetEntry returns a single entry by id. When forUserID is non-nil, the row must belong to that user.
+func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID, forUserID *int64) (models.Entry, error) {
+	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty, user_id
 	          FROM entries WHERE uuid = ?`
+	var args []any
+	args = append(args, id.String())
+	if forUserID != nil {
+		query += ` AND user_id = ?`
+		args = append(args, *forUserID)
+	}
 	var e models.Entry
 	var uStr string
 	var dirtyInt int
-	err := r.db.QueryRowContext(ctx, query, id.String()).Scan(
-		&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt, &dirtyInt,
+	var userID sql.NullInt64
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(
+		&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt, &dirtyInt, &userID,
 	)
 	if err != nil {
 		return models.Entry{}, err
@@ -99,6 +122,10 @@ func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID) (models.Entry, 
 		return models.Entry{}, err
 	}
 	e.IsDirty = dirtyInt != 0
+	if userID.Valid {
+		v := userID.Int64
+		e.UserID = &v
+	}
 	return e, nil
 }
 
@@ -130,11 +157,18 @@ func (r *Repository) GetOrCreateKDFSalt(ctx context.Context) ([]byte, error) {
 	return salt, nil
 }
 
-// ListEntries returns all non-deleted rows for local browsing (payload remains ciphertext).
-func (r *Repository) ListEntries(ctx context.Context) ([]models.Entry, error) {
-	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty
-	          FROM entries WHERE is_deleted = 0 ORDER BY updated_at DESC`
-	rows, err := r.db.QueryContext(ctx, query)
+// ListEntries returns non-deleted rows for local browsing (payload remains ciphertext).
+// When forUserID is non-nil, only rows for that Auther user id are returned.
+func (r *Repository) ListEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error) {
+	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty, user_id
+	          FROM entries WHERE is_deleted = 0`
+	var args []any
+	if forUserID != nil {
+		query += ` AND user_id = ?`
+		args = append(args, *forUserID)
+	}
+	query += ` ORDER BY updated_at DESC`
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +179,8 @@ func (r *Repository) ListEntries(ctx context.Context) ([]models.Entry, error) {
 		var e models.Entry
 		var uStr string
 		var dirtyInt int
-		if err := rows.Scan(&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt, &dirtyInt); err != nil {
+		var userID sql.NullInt64
+		if err := rows.Scan(&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt, &dirtyInt, &userID); err != nil {
 			return nil, err
 		}
 		e.UUID, err = uuid.Parse(uStr)
@@ -153,16 +188,25 @@ func (r *Repository) ListEntries(ctx context.Context) ([]models.Entry, error) {
 			return nil, err
 		}
 		e.IsDirty = dirtyInt != 0
+		if userID.Valid {
+			v := userID.Int64
+			e.UserID = &v
+		}
 		out = append(out, e)
 	}
 	return out, rows.Err()
 }
 
-func (r *Repository) GetLastUpdate(ctx context.Context) (time.Time, error) {
+func (r *Repository) GetLastUpdate(ctx context.Context, forUserID *int64) (time.Time, error) {
 	var lastUpdateInt int64
 	query := `SELECT COALESCE(unixepoch(MAX(updated_at)), 0) FROM entries`
+	var args []any
+	if forUserID != nil {
+		query += ` WHERE user_id = ?`
+		args = append(args, *forUserID)
+	}
 
-	err := r.db.QueryRowContext(ctx, query).Scan(&lastUpdateInt)
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&lastUpdateInt)
 	if err != nil {
 		return time.Time{}, err
 	}

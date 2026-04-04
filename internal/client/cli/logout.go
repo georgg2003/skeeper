@@ -17,7 +17,7 @@ var logoutCmd = &cobra.Command{
 		if err := authUC.Logout(context.Background()); err != nil {
 			return err
 		}
-		fmt.Println("Logged out.")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Logged out.")
 		return nil
 	},
 }

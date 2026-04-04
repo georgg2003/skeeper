@@ -27,6 +27,8 @@ type Entry struct {
 	UpdatedAt    time.Time
 
 	IsDirty bool
+
+	UserID *int64 // auther user id this row belongs to; nil for legacy rows before user scoping
 }
 
 // Session holds JWT material returned by Auther.
@@ -35,6 +37,7 @@ type Session struct {
 	RefreshToken     string
 	ExpiresAt        time.Time // access token expiry
 	RefreshExpiresAt time.Time // refresh token expiry
+	UserID           *int64    // auther user id (from access JWT); nil if unknown / legacy row
 }
 
 // User is a minimal account projection (used after registration).

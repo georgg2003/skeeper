@@ -21,166 +21,201 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func TestCreateUser_ValidationErrorMapsToInvalidArgument(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		CreateUser(gomock.Any(), models.UserCredentials{Email: "x@y.z", Password: "secret"}).
-		Return(models.UserInfo{}, errors.NewValidationError("email", "bad"))
+func TestAutherServer_CreateUser(t *testing.T) {
+	emailOK, passOK := "ok@example.com", "secret"
+	valErr := errors.NewValidationError("email", "invalid")
 
-	srv := New(testLogger(), mockUC)
-	email := "x@y.z"
-	pass := "secret"
-	_, err := srv.CreateUser(context.Background(), api.CreateUserRequest_builder{
-		Email: &email, Password: &pass,
-	}.Build())
-	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.InvalidArgument {
-		t.Fatalf("got %v", err)
-	}
-}
-
-func TestCreateUser_InternalError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		CreateUser(gomock.Any(), models.UserCredentials{Email: "x@y.z", Password: "secret"}).
-		Return(models.UserInfo{}, errors.New("boom"))
-
-	srv := New(testLogger(), mockUC)
-	email := "x@y.z"
-	pass := "secret"
-	_, err := srv.CreateUser(context.Background(), api.CreateUserRequest_builder{
-		Email: &email, Password: &pass,
-	}.Build())
-	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.Internal {
-		t.Fatalf("got %v", err)
-	}
-}
-
-func TestCreateUser_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		CreateUser(gomock.Any(), models.UserCredentials{Email: "a@b.c", Password: "p"}).
-		Return(models.UserInfo{ID: 7, Email: "a@b.c"}, nil)
-
-	srv := New(testLogger(), mockUC)
-	email := "a@b.c"
-	pass := "p"
-	resp, err := srv.CreateUser(context.Background(), api.CreateUserRequest_builder{
-		Email: &email, Password: &pass,
-	}.Build())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.GetUser().GetId() != 7 || resp.GetUser().GetEmail() != "a@b.c" {
-		t.Fatalf("user %+v", resp.GetUser())
-	}
-}
-
-func TestLogin_InternalError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		LoginUser(gomock.Any(), models.UserCredentials{Email: "a@b.c", Password: "p"}).
-		Return(models.LoginReponse{}, errors.New("db down"))
-
-	srv := New(testLogger(), mockUC)
-	email := "a@b.c"
-	pass := "p"
-	_, err := srv.Login(context.Background(), api.LoginRequest_builder{Email: &email, Password: &pass}.Build())
-	st, _ := status.FromError(err)
-	if st.Code() != codes.Internal {
-		t.Fatalf("got %v", err)
-	}
-}
-
-func TestLogin_Success(t *testing.T) {
-	at := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
-	rt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		LoginUser(gomock.Any(), models.UserCredentials{Email: "u@x.y", Password: "pw"}).
-		Return(models.LoginReponse{
-			User: models.UserInfo{ID: 9, Email: "u@x.y"},
-			TokenPair: jwthelper.TokenPair{
-				AccessToken:  jwthelper.Token{Token: "access-jwt", ExpiresAt: at},
-				RefreshToken: jwthelper.Token{Token: "refresh-opaque", ExpiresAt: rt},
+	tests := []struct {
+		name     string
+		setup    func(m *MockUseCase)
+		email    string
+		password string
+		wantCode codes.Code
+		wantOK   bool
+		wantID   int64
+	}{
+		{
+			name: "validation_error_invalid_argument",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().CreateUser(gomock.Any(), models.UserCredentials{Email: "bad", Password: "x"}).
+					Return(models.UserInfo{}, valErr)
 			},
-		}, nil)
+			email:    "bad",
+			password: "x",
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "internal_on_generic_error",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().CreateUser(gomock.Any(), models.UserCredentials{Email: emailOK, Password: passOK}).
+					Return(models.UserInfo{}, errors.New("db"))
+			},
+			email:    emailOK,
+			password: passOK,
+			wantCode: codes.Internal,
+		},
+		{
+			name: "success",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().CreateUser(gomock.Any(), models.UserCredentials{Email: emailOK, Password: passOK}).
+					Return(models.UserInfo{ID: 42, Email: emailOK}, nil)
+			},
+			email:    emailOK,
+			password: passOK,
+			wantOK:   true,
+			wantID:   42,
+		},
+	}
 
-	srv := New(testLogger(), mockUC)
-	email := "u@x.y"
-	pass := "pw"
-	out, err := srv.Login(context.Background(), api.LoginRequest_builder{Email: &email, Password: &pass}.Build())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out.GetUser().GetId() != 9 {
-		t.Fatal(out.GetUser())
-	}
-	if out.GetAccessToken().GetToken() != "access-jwt" || !out.GetAccessToken().GetExpiresAt().AsTime().Equal(at) {
-		t.Fatal("access token mismatch")
-	}
-	if out.GetRefreshToken().GetToken() != "refresh-opaque" || !out.GetRefreshToken().GetExpiresAt().AsTime().Equal(rt) {
-		t.Fatal("refresh token mismatch")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUC := NewMockUseCase(ctrl)
+			tt.setup(mockUC)
+			srv := New(testLogger(), mockUC)
+
+			resp, err := srv.CreateUser(context.Background(), api.CreateUserRequest_builder{
+				Email: &tt.email, Password: &tt.password,
+			}.Build())
+			if tt.wantOK {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp.GetUser().GetId() != tt.wantID || resp.GetUser().GetEmail() != emailOK {
+					t.Fatalf("user %+v", resp.GetUser())
+				}
+				return
+			}
+			st, ok := status.FromError(err)
+			if !ok || st.Code() != tt.wantCode {
+				t.Fatalf("got %v", err)
+			}
+		})
 	}
 }
 
-func TestExchangeToken_InvalidRefreshMapsToUnauthenticated(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		RotateToken(gomock.Any(), "any").
-		Return(jwthelper.TokenPair{}, usecase.ErrInvalidToken)
+func TestAutherServer_Login(t *testing.T) {
+	email, pass := "u@x.y", "pw"
 
-	srv := New(testLogger(), mockUC)
-	rt := "any"
-	_, err := srv.ExchangeToken(context.Background(), api.ExchangeTokenRequest_builder{RefreshToken: &rt}.Build())
-	st, _ := status.FromError(err)
-	if st.Code() != codes.Unauthenticated {
-		t.Fatalf("got %v", err)
+	tests := []struct {
+		name     string
+		setup    func(m *MockUseCase)
+		wantCode codes.Code
+		wantOK   bool
+	}{
+		{
+			name: "internal_on_usecase_error",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: email, Password: pass}).
+					Return(models.LoginReponse{}, errors.New("any"))
+			},
+			wantCode: codes.Internal,
+		},
+		{
+			name: "success",
+			setup: func(m *MockUseCase) {
+				at := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+				rt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: email, Password: pass}).
+					Return(models.LoginReponse{
+						User: models.UserInfo{ID: 9, Email: email},
+						TokenPair: jwthelper.TokenPair{
+							AccessToken:  jwthelper.Token{Token: "access-jwt", ExpiresAt: at},
+							RefreshToken: jwthelper.Token{Token: "refresh-opaque", ExpiresAt: rt},
+						},
+					}, nil)
+			},
+			wantOK: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUC := NewMockUseCase(ctrl)
+			tt.setup(mockUC)
+			srv := New(testLogger(), mockUC)
+			em, pw := email, pass
+			out, err := srv.Login(context.Background(), api.LoginRequest_builder{Email: &em, Password: &pw}.Build())
+			if tt.wantOK {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if out.GetUser().GetId() != 9 || out.GetAccessToken().GetToken() != "access-jwt" {
+					t.Fatalf("%+v", out)
+				}
+				return
+			}
+			st, _ := status.FromError(err)
+			if st.Code() != tt.wantCode {
+				t.Fatalf("got %v", err)
+			}
+		})
 	}
 }
 
-func TestExchangeToken_InternalError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		RotateToken(gomock.Any(), "x").
-		Return(jwthelper.TokenPair{}, errors.New("rotate failed"))
-
-	srv := New(testLogger(), mockUC)
-	rt := "x"
-	_, err := srv.ExchangeToken(context.Background(), api.ExchangeTokenRequest_builder{RefreshToken: &rt}.Build())
-	st, _ := status.FromError(err)
-	if st.Code() != codes.Internal {
-		t.Fatalf("got %v", err)
-	}
-}
-
-func TestExchangeToken_Success(t *testing.T) {
+func TestAutherServer_ExchangeToken(t *testing.T) {
 	at := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
 	rt := time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second)
-	ctrl := gomock.NewController(t)
-	mockUC := NewMockUseCase(ctrl)
-	mockUC.EXPECT().
-		RotateToken(gomock.Any(), "old-refresh").
-		Return(jwthelper.TokenPair{
-			AccessToken:  jwthelper.Token{Token: "new-access", ExpiresAt: at},
-			RefreshToken: jwthelper.Token{Token: "new-refresh", ExpiresAt: rt},
-		}, nil)
 
-	srv := New(testLogger(), mockUC)
-	old := "old-refresh"
-	out, err := srv.ExchangeToken(context.Background(), api.ExchangeTokenRequest_builder{RefreshToken: &old}.Build())
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name     string
+		setup    func(m *MockUseCase)
+		in       string
+		wantCode codes.Code
+		wantOK   bool
+	}{
+		{
+			name: "invalid_refresh_unauthenticated",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().RotateToken(gomock.Any(), "bad").Return(jwthelper.TokenPair{}, usecase.ErrInvalidToken)
+			},
+			in:       "bad",
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "internal_on_other_error",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().RotateToken(gomock.Any(), "x").Return(jwthelper.TokenPair{}, errors.New("rotate failed"))
+			},
+			in:       "x",
+			wantCode: codes.Internal,
+		},
+		{
+			name: "success",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().RotateToken(gomock.Any(), "old-refresh").
+					Return(jwthelper.TokenPair{
+						AccessToken:  jwthelper.Token{Token: "new-access", ExpiresAt: at},
+						RefreshToken: jwthelper.Token{Token: "new-refresh", ExpiresAt: rt},
+					}, nil)
+			},
+			in:     "old-refresh",
+			wantOK: true,
+		},
 	}
-	if out.GetAccessToken().GetToken() != "new-access" {
-		t.Fatal(out.GetAccessToken())
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUC := NewMockUseCase(ctrl)
+			tt.setup(mockUC)
+			srv := New(testLogger(), mockUC)
+			tok := tt.in
+			out, err := srv.ExchangeToken(context.Background(), api.ExchangeTokenRequest_builder{RefreshToken: &tok}.Build())
+			if tt.wantOK {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if out.GetAccessToken().GetToken() != "new-access" {
+					t.Fatal(out.GetAccessToken())
+				}
+				return
+			}
+			st, _ := status.FromError(err)
+			if st.Code() != tt.wantCode {
+				t.Fatalf("got %v", err)
+			}
+		})
 	}
 }

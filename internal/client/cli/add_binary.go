@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"syscall"
 
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var addBinaryCmd = &cobra.Command{
@@ -25,27 +23,26 @@ var addBinaryCmd = &cobra.Command{
 			return fmt.Errorf("read file: %w", err)
 		}
 
-		var name, notes string
-		fmt.Print("Entry name: ")
-		if _, err := fmt.Scanln(&name); err != nil {
-			return err
-		}
-		fmt.Print("Notes (optional): ")
-		_, _ = fmt.Scanln(&notes)
-
-		fmt.Print("Master password: ")
-		masterBytes, err := term.ReadPassword(int(syscall.Stdin))
+		writePrompt(cmd, "Entry name: ")
+		name, err := readLine(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Println()
+		writePrompt(cmd, "Notes (optional): ")
+		notes, _ := readLine(cmd)
+
+		writePrompt(cmd, "Master password: ")
+		masterStr, err := readPasswordLine(cmd)
+		if err != nil {
+			return err
+		}
 
 		ctx := context.Background()
 		meta := usecase.EntryMetadata{Name: name, Notes: notes}
-		if err := secretUC.SetBinary(ctx, meta, data, string(masterBytes)); err != nil {
+		if err := secretUC.SetBinary(ctx, meta, data, masterStr); err != nil {
 			return fmt.Errorf("save binary: %w", err)
 		}
-		fmt.Println("Encrypted binary saved locally (run `sync` to upload).")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Encrypted binary saved locally (run `sync` to upload).")
 		return nil
 	},
 }
