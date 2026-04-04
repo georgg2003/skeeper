@@ -7,14 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/api"
-	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
-	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/google/uuid"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/georgg2003/skeeper/api"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 func testLogger() *slog.Logger {

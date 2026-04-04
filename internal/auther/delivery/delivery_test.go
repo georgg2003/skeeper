@@ -7,14 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/mock/gomock"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	usecase "github.com/georgg2003/skeeper/internal/auther/usecase"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
-	"go.uber.org/mock/gomock"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func testLogger() *slog.Logger {

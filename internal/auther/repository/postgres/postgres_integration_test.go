@@ -1,8 +1,6 @@
-//go:build integration
-
 // Repository integration tests: Postgres via testcontainers-go (Docker required).
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -10,27 +8,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
+	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/internal/integrationtest"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"github.com/georgg2003/skeeper/pkg/utils"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func autherTestPool(t *testing.T) *pgxpool.Pool {
-	return integrationtest.AutherTestPool(t)
-}
-
-func truncateAuther(t *testing.T, ctx context.Context, p *pgxpool.Pool) {
+func newAutherRepository(t *testing.T, ctx context.Context, p *pgxpool.Pool) *postgres.Repository {
+	t.Helper()
 	integrationtest.TruncateAuther(t, ctx, p)
+	return postgres.NewFromPool(p)
 }
 
 func TestIntegration_InsertUser_SelectByEmail(t *testing.T) {
 	ctx := context.Background()
-	p := autherTestPool(t)
-	truncateAuther(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newAutherRepository(
+		t,
+		ctx,
+		integrationtest.AutherTestPool(t),
+	)
 
 	email := "u-" + uuid.NewString() + "@example.com"
 	info, err := repo.InsertUser(ctx, models.DBUserCredentials{
@@ -55,9 +55,11 @@ func TestIntegration_InsertUser_SelectByEmail(t *testing.T) {
 
 func TestIntegration_InsertUser_DuplicateEmail(t *testing.T) {
 	ctx := context.Background()
-	p := autherTestPool(t)
-	truncateAuther(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newAutherRepository(
+		t,
+		ctx,
+		integrationtest.AutherTestPool(t),
+	)
 
 	email := "dup-" + uuid.NewString() + "@example.com"
 	creds := models.DBUserCredentials{Email: email, PasswordHash: []byte("a")}
@@ -65,29 +67,32 @@ func TestIntegration_InsertUser_DuplicateEmail(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := repo.InsertUser(ctx, creds)
-	if !errors.Is(err, ErrUserExists) {
+	if !errors.Is(err, postgres.ErrUserExists) {
 		t.Fatalf("want ErrUserExists, got %v", err)
 	}
 }
 
 func TestIntegration_SelectUserByEmail_NotFound(t *testing.T) {
 	ctx := context.Background()
-	p := autherTestPool(t)
-	truncateAuther(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newAutherRepository(
+		t,
+		ctx,
+		integrationtest.AutherTestPool(t),
+	)
 
 	_, err := repo.SelectUserByEmail(ctx, "missing-"+uuid.NewString()+"@example.com")
-	if !errors.Is(err, ErrUserNotExist) {
+	if !errors.Is(err, postgres.ErrUserNotExist) {
 		t.Fatalf("got %v", err)
 	}
 }
 
 func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
 	ctx := context.Background()
-	p := autherTestPool(t)
-	truncateAuther(t, ctx, p)
-	repo := &Repository{pool: p}
-
+	repo := newAutherRepository(
+		t,
+		ctx,
+		integrationtest.AutherTestPool(t),
+	)
 	email := "tok-" + uuid.NewString() + "@example.com"
 	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
 	if err != nil {
@@ -113,7 +118,7 @@ func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
 	}
 
 	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash)
-	if !errors.Is(err, ErrInvalidToken) {
+	if !errors.Is(err, postgres.ErrInvalidToken) {
 		t.Fatalf("second delete: %v", err)
 	}
 }

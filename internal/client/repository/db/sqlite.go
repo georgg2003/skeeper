@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
+	clientmigrate "github.com/georgg2003/skeeper/migrations/client"
+
 	"github.com/google/uuid"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 type Repository struct {
@@ -70,7 +73,7 @@ func (r *Repository) GetDirtyEntries(ctx context.Context, forUserID *int64) ([]m
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.Entry
 	for rows.Next() {
@@ -172,7 +175,7 @@ func (r *Repository) ListEntries(ctx context.Context, forUserID *int64) ([]model
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []models.Entry
 	for rows.Next() {
@@ -228,13 +231,13 @@ func (r *Repository) Close() error {
 }
 
 func (r *Repository) RunMigrations(ctx context.Context) error {
-	goose.SetBaseFS(migrationsFS)
+	goose.SetBaseFS(clientmigrate.ClientMigrationsFS)
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return err
 	}
 
-	if err := goose.Up(r.db, "migrations"); err != nil {
+	if err := goose.UpContext(ctx, r.db, "."); err != nil {
 		return fmt.Errorf("goose up: %w", err)
 	}
 

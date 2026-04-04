@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
-	"github.com/google/uuid"
 )
 
 type stubRepo struct {
@@ -75,9 +76,9 @@ func TestUseCase_Sync(t *testing.T) {
 			},
 		},
 		{
-			name: "no_client_updates_skips_upsert",
-			repo: &stubRepo{},
-			req:  models.SyncRequest{LastSyncAt: time.Unix(1, 0).UTC()},
+			name:   "no_client_updates_skips_upsert",
+			repo:   &stubRepo{},
+			req:    models.SyncRequest{LastSyncAt: time.Unix(1, 0).UTC()},
 			userID: 1,
 			check: func(t *testing.T, repo *stubRepo, out models.SyncResponse) {
 				if len(repo.upserted) != 0 {

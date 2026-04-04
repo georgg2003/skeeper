@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/spf13/viper"
+
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 // New loads configPath with Viper, applies envPrefix for AutomaticEnv, unmarshals into T.

@@ -6,8 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 // LocalSyncRepo reads and writes encrypted entries in the local SQLite cache.

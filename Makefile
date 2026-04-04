@@ -1,4 +1,6 @@
 GO ?= go
+MODULE := github.com/georgg2003/skeeper
+GO_DIRS := $(shell $(GO) list -f '{{.Dir}}' ./... | sort -u)
 
 .PHONY: generate
 generate:
@@ -6,11 +8,11 @@ generate:
 
 .PHONY: fmt
 fmt:
-	@$(GO) fmt ./...
+	@$(GO) tool goimports -local $(MODULE) -w $(GO_DIRS)
 
-.PHONY: vet
-vet:
-	$(GO) vet ./...
+.PHONY: fmt-check
+fmt-check:
+	@test -z "$$($(GO) tool goimports -l -local $(MODULE) $(GO_DIRS))" || (echo "run make fmt"; exit 1)
 
 .PHONY: test
 test:
@@ -20,18 +22,12 @@ test:
 test-race:
 	$(GO) test -race ./...
 
-# Repository integration tests (Docker required for testcontainers-go).
-.PHONY: test-integration
-test-integration:
-	$(GO) test -tags=integration ./internal/auther/repository/postgres/... ./internal/skeeper/repository/postgres/...
-
 .PHONY: lint
 lint:
-	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run ./... || \
-		( echo "golangci-lint not found; running go vet only. Install: https://golangci-lint.run/usage/install/" ; $(GO) vet ./... )
+	@$(GO) tool golangci-lint run ./...
 
 .PHONY: check
-check: fmt vet test
+check: fmt-check lint test
 
 .PHONY: build
 build: bin/auther bin/skeeper bin/skeepercli

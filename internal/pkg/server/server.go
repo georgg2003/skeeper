@@ -6,13 +6,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/pkg/interceptors"
-	"github.com/georgg2003/skeeper/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/georgg2003/skeeper/internal/pkg/interceptors"
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 type ServerConfig struct {

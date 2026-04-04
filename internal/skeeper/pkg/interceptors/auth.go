@@ -4,12 +4,13 @@ import (
 	"context"
 	"strings"
 
-	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
-	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
+	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
 func authorize(ctx context.Context, jwt *jwthelper.JWTHelper) (context.Context, error) {

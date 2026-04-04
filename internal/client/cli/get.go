@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/spf13/cobra"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 var getCmd = &cobra.Command{

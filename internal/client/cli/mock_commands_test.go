@@ -13,10 +13,11 @@ import (
 	context "context"
 	reflect "reflect"
 
-	models "github.com/georgg2003/skeeper/internal/client/pkg/models"
-	usecase "github.com/georgg2003/skeeper/internal/client/usecase"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
+
+	models "github.com/georgg2003/skeeper/internal/client/pkg/models"
+	usecase "github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 // MockAuthCommands is a mock of AuthCommands interface.

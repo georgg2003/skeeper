@@ -1,16 +1,16 @@
-//go:build integration
-
-package postgres
+package postgres_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/integrationtest"
-	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/georgg2003/skeeper/internal/integrationtest"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
+	"github.com/georgg2003/skeeper/internal/skeeper/repository/postgres"
 )
 
 // Repository integration tests: Postgres via testcontainers-go (Docker required).
@@ -23,11 +23,19 @@ func truncateSkeeper(t *testing.T, ctx context.Context, p *pgxpool.Pool) {
 	}
 }
 
+func newSkeeperRepository(t *testing.T, ctx context.Context, p *pgxpool.Pool) *postgres.Repository {
+	t.Helper()
+	truncateSkeeper(t, ctx, p)
+	return postgres.NewFromPool(p)
+}
+
 func TestIntegration_UpsertAndGetUpdatedAfter(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 42
 
 	id := uuid.New()
@@ -64,9 +72,11 @@ func TestIntegration_UpsertAndGetUpdatedAfter(t *testing.T) {
 
 func TestIntegration_Upsert_VersionIncreases(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 7
 
 	id := uuid.New()
@@ -97,9 +107,11 @@ func TestIntegration_Upsert_VersionIncreases(t *testing.T) {
 
 func TestIntegration_Upsert_DoesNotDowngradeVersion(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 8
 
 	id := uuid.New()
@@ -133,9 +145,11 @@ func TestIntegration_Upsert_DoesNotDowngradeVersion(t *testing.T) {
 
 func TestIntegration_UpsertEntries_EmptyNoOp(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	if err := repo.UpsertEntries(ctx, 1, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -146,9 +160,11 @@ func TestIntegration_UpsertEntries_EmptyNoOp(t *testing.T) {
 
 func TestIntegration_GetUpdatedAfter_UserIsolation(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 
 	const userA int64 = 101
 	const userB int64 = 102
@@ -188,9 +204,11 @@ func TestIntegration_GetUpdatedAfter_UserIsolation(t *testing.T) {
 
 func TestIntegration_UpsertEntries_BatchRoundtrip(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 55
 	ts := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
 
@@ -252,9 +270,11 @@ func TestIntegration_UpsertEntries_BatchRoundtrip(t *testing.T) {
 
 func TestIntegration_GetUpdatedAfter_OrderedByUpdatedAtAsc(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 66
 	base := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 
@@ -285,9 +305,11 @@ func TestIntegration_GetUpdatedAfter_OrderedByUpdatedAtAsc(t *testing.T) {
 
 func TestIntegration_GetUpdatedAfter_ExcludesRowsAtExactlyLastSync(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 77
 	t0 := time.Date(2026, 6, 1, 15, 30, 0, 0, time.UTC)
 	id := uuid.New()
@@ -318,9 +340,11 @@ func TestIntegration_GetUpdatedAfter_ExcludesRowsAtExactlyLastSync(t *testing.T)
 
 func TestIntegration_Upsert_SameVersion_DoesNotOverwrite(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 88
 	id := uuid.New()
 	ts := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
@@ -350,9 +374,11 @@ func TestIntegration_Upsert_SameVersion_DoesNotOverwrite(t *testing.T) {
 
 func TestIntegration_Upsert_SoftDeleteRoundtrip(t *testing.T) {
 	ctx := context.Background()
-	p := integrationtest.SkeeperPostgresPool(t)
-	truncateSkeeper(t, ctx, p)
-	repo := &Repository{pool: p}
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
 	const userID int64 = 99
 	id := uuid.New()
 	t1 := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)

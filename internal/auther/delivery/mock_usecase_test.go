@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	models "github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	jwthelper "github.com/georgg2003/skeeper/pkg/jwthelper"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUseCase is a mock of UseCase interface.

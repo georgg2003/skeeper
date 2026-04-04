@@ -5,9 +5,10 @@ package cli
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/internal/client/usecase"
-	"github.com/google/uuid"
 )
 
 // Narrow interfaces keep Cobra commands testable without a live vault or network.

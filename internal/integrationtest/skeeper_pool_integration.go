@@ -1,5 +1,3 @@
-//go:build integration
-
 package integrationtest
 
 import (
@@ -7,9 +5,10 @@ import (
 	"sync"
 	"testing"
 
-	skeepermigrate "github.com/georgg2003/skeeper/migrations/skeeper"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	skeepermigrate "github.com/georgg2003/skeeper/migrations/skeeper"
 )
 
 var (
@@ -29,6 +28,7 @@ func SkeeperPostgresPool(t *testing.T) *pgxpool.Pool {
 			postgres.WithDatabase("skeeper_db"),
 			postgres.WithUsername("skeeper_user"),
 			postgres.WithPassword("skeeper_password"),
+			postgres.BasicWaitStrategies(),
 		)
 		if err != nil {
 			skeeperPoolErr = err

@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/api"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/georgg2003/skeeper/api"
 )
 
 func TestEntryProtoRoundTrip(t *testing.T) {

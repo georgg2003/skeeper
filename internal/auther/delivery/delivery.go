@@ -6,14 +6,15 @@ import (
 	"context"
 	"log/slog"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	usecase "github.com/georgg2003/skeeper/internal/auther/usecase"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // UseCase is implemented by the auther use case layer.

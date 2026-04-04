@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // AutherClient wraps the generated gRPC client with domain-oriented helpers.

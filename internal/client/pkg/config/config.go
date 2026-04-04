@@ -5,8 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/spf13/viper"
+
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 // ClientConfig holds remote service endpoints and local vault location.

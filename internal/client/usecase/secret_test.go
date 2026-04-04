@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 type fakeSecretStore struct {

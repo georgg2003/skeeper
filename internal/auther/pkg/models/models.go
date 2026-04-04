@@ -3,9 +3,10 @@ package models
 import (
 	"net/mail"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserCredentials struct {

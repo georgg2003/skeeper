@@ -6,11 +6,12 @@ import (
 	"context"
 	"log/slog"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // UseCase is implemented by the skeeper use case layer.

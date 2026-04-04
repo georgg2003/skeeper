@@ -1,5 +1,3 @@
-//go:build integration
-
 package integrationtest
 
 import (
@@ -7,9 +5,10 @@ import (
 	"sync"
 	"testing"
 
-	authermigrate "github.com/georgg2003/skeeper/migrations/auther"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	authermigrate "github.com/georgg2003/skeeper/migrations/auther"
 )
 
 var (
@@ -29,6 +28,7 @@ func AutherTestPool(t *testing.T) *pgxpool.Pool {
 			postgres.WithDatabase("auther_db"),
 			postgres.WithUsername("auther_user"),
 			postgres.WithPassword("auther_password"),
+			postgres.BasicWaitStrategies(),
 		)
 		if err != nil {
 			autherPoolErr = err

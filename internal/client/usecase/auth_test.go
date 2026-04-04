@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
+
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
-	"github.com/golang-jwt/jwt/v4"
 )
 
 type memSession struct {
@@ -36,9 +37,9 @@ func (m *memSession) ClearSession(ctx context.Context) error {
 }
 
 type stubRemote struct {
-	createErr error
-	loginOut  *models.Session
-	loginErr  error
+	createErr  error
+	loginOut   *models.Session
+	loginErr   error
 	refreshOut *models.Session
 	refreshErr error
 }

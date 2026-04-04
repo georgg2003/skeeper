@@ -11,12 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/mock/gomock"
+
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 	"github.com/georgg2003/skeeper/pkg/utils"
-	"go.uber.org/mock/gomock"
 )
 
 func testJWTHelper(t *testing.T) *jwthelper.JWTHelper {

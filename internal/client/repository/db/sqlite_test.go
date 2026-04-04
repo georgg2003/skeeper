@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 func TestRepository_KDFSaltAndEntry(t *testing.T) {
@@ -17,7 +18,7 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	ctx := context.Background()
 	if err := r.RunMigrations(ctx); err != nil {

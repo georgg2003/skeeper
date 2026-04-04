@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 func TestClientEntryProtoRoundTrip(t *testing.T) {
@@ -57,4 +58,3 @@ func TestClientEntryToProto_SetsTimestamp(t *testing.T) {
 		t.Fatal("timestamp not set")
 	}
 }
-

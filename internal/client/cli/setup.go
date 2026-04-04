@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/spf13/cobra"
+
 	clientcfg "github.com/georgg2003/skeeper/internal/client/pkg/config"
 	"github.com/georgg2003/skeeper/internal/client/repository/auther"
 	"github.com/georgg2003/skeeper/internal/client/repository/db"
 	skeeperremote "github.com/georgg2003/skeeper/internal/client/repository/skeeper"
 	"github.com/georgg2003/skeeper/internal/client/usecase"
-	"github.com/spf13/cobra"
 )
 
 var (

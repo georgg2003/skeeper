@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/google/uuid"
 	"go.uber.org/mock/gomock"
+
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
+	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func runCLITest(t *testing.T, a AuthCommands, s SecretCommands, y SyncCommands, stdin string, args ...string) (stdout, stderr string, err error) {

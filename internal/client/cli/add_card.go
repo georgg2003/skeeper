@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/internal/client/usecase"
-	"github.com/spf13/cobra"
 )
 
 var addCardCmd = &cobra.Command{

@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/georgg2003/skeeper/api"
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/georgg2003/skeeper/api"
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 // TokenProvider supplies a bearer access token for authenticated RPCs.

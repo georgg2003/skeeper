@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	models "github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	gomock "go.uber.org/mock/gomock"
+
+	models "github.com/georgg2003/skeeper/internal/auther/pkg/models"
 )
 
 // MockRepository is a mock of Repository interface.

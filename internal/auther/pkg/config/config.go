@@ -21,4 +21,3 @@ func New() (*AutherConfig, error) {
 
 	return config.New[AutherConfig](*configPath, "AUTHER")
 }
-

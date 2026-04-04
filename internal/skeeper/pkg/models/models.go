@@ -3,10 +3,11 @@ package models
 import (
 	"time"
 
-	"github.com/georgg2003/skeeper/api"
-	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/georgg2003/skeeper/api"
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 type Entry struct {

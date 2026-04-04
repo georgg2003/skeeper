@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 )
 
 type Repository struct {
@@ -121,13 +122,19 @@ type PostgresConfig struct {
 	Database string `mapstructure:"database"`
 }
 
-func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
-	pool, err := pgxpool.New(ctx, connStr)
+func NewFromPool(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
+}
 
+func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
+	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		return nil, err
 	}
+	return NewFromPool(pool), nil
+}
 
-	return &Repository{pool: pool}, err
+func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
+	return NewFromString(ctx, connStr)
 }

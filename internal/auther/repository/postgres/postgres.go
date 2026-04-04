@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
-	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 var ErrUserExists = errors.New("user already exists")
@@ -76,7 +77,7 @@ func (r *Repository) InsertRefreshToken(
     	VALUES ($1, $2, $3)`,
 		userID,
 		refreshToken.Hash,
-		refreshToken.Token.ExpiresAt,
+		refreshToken.ExpiresAt,
 	); err != nil {
 		return errors.Wrap(err, "failed to insert new refresh token")
 	}
@@ -119,13 +120,19 @@ type PostgresConfig struct {
 	Database string `mapstructure:"database"`
 }
 
-func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
-	pool, err := pgxpool.New(ctx, connStr)
+func NewFromPool(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
+}
 
+func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
+	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		return nil, err
 	}
+	return NewFromPool(pool), nil
+}
 
-	return &Repository{pool: pool}, err
+func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
+	return NewFromString(ctx, connStr)
 }

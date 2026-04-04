@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/spf13/cobra"
+
+	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 var addBinaryCmd = &cobra.Command{

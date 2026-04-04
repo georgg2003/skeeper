@@ -5,11 +5,12 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+
+	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
 )
 
 func getMetadataValue(md metadata.MD, keys ...string) string {

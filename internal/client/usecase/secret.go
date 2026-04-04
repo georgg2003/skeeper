@@ -8,9 +8,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/georgg2003/skeeper/internal/client/pkg/crypto"
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/google/uuid"
 )
 
 // EntryMetadata is cleartext metadata encrypted with the entry DEK before storage.
