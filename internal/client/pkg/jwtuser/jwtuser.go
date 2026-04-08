@@ -1,5 +1,5 @@
-// Package jwtuser reads Auther access-token claims without signature verification.
-// The token is only used to record user_id in the local session; API calls are still authorized by the server.
+// Package jwtuser pulls user_id out of the access JWT without verifying the signature—we only
+// need it for local row scoping; the server still enforces auth on every RPC.
 package jwtuser
 
 import (
@@ -8,7 +8,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-// UserIDFromAccessTokenUnverified returns the numeric user id embedded in the JWT payload.
 func UserIDFromAccessTokenUnverified(token string) (int64, error) {
 	p := jwt.NewParser()
 	t, _, err := p.ParseUnverified(token, jwt.MapClaims{})

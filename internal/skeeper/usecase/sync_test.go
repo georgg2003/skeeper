@@ -15,11 +15,12 @@ import (
 )
 
 type stubRepo struct {
-	upserted  [][]models.Entry
-	lastSeen  time.Time
-	ret       []models.Entry
-	upsertErr error
-	getErr    error
+	upserted       [][]models.Entry
+	upsertApplied  [][]uuid.UUID
+	lastSeen       time.Time
+	ret            []models.Entry
+	upsertErr      error
+	getErr         error
 }
 
 func (s *stubRepo) GetVaultCrypto(context.Context, int64) ([]byte, []byte, error) {
@@ -30,12 +31,17 @@ func (s *stubRepo) PutVaultCrypto(context.Context, int64, []byte, []byte) error 
 	return nil
 }
 
-func (s *stubRepo) UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) error {
+func (s *stubRepo) UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) ([]uuid.UUID, error) {
 	if s.upsertErr != nil {
-		return s.upsertErr
+		return nil, s.upsertErr
 	}
 	s.upserted = append(s.upserted, entries)
-	return nil
+	applied := make([]uuid.UUID, 0, len(entries))
+	for _, e := range entries {
+		applied = append(applied, e.UUID)
+	}
+	s.upsertApplied = append(s.upsertApplied, applied)
+	return applied, nil
 }
 
 func (s *stubRepo) GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error) {

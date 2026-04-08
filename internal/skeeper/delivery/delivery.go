@@ -1,3 +1,4 @@
+// Package delivery is the gRPC surface for Skeeper: sync and vault crypto RPCs mapped from protobuf to usecase.
 package delivery
 
 //go:generate go tool mockgen -typed -destination=mock_usecase_test.go -package=delivery -source=delivery.go UseCase
@@ -17,7 +18,6 @@ import (
 	pkgerrors "github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// UseCase is implemented by the skeeper use case layer.
 type UseCase interface {
 	Sync(context.Context, models.SyncRequest) (models.SyncResponse, error)
 	GetVaultCrypto(context.Context) ([]byte, []byte, error)

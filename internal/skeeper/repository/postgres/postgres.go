@@ -1,3 +1,4 @@
+// Package postgres is the Skeeper Postgres repo: entries sync and vault_crypto rows.
 package postgres
 
 import (
@@ -20,9 +21,9 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) error {
+func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) ([]uuid.UUID, error) {
 	if len(entries) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	uuids := make([]uuid.UUID, len(entries))
@@ -56,7 +57,8 @@ func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []
 			version = EXCLUDED.version,
 			is_deleted = EXCLUDED.is_deleted,
 			updated_at = EXCLUDED.updated_at
-		WHERE entries.user_id = EXCLUDED.user_id AND entries.version < EXCLUDED.version;
+		WHERE entries.user_id = EXCLUDED.user_id AND entries.version < EXCLUDED.version
+		RETURNING uuid;
 	`
 
 	userIDs := make([]int64, len(entries))
@@ -64,7 +66,7 @@ func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []
 		userIDs[i] = userID
 	}
 
-	_, err := r.pool.Exec(
+	rows, err := r.pool.Query(
 		ctx,
 		query,
 		uuids,
@@ -77,7 +79,20 @@ func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []
 		deleted,
 		updatedAt,
 	)
-	return err
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var applied []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		applied = append(applied, id)
+	}
+	return applied, rows.Err()
 }
 
 func (r *Repository) GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error) {
@@ -116,10 +131,9 @@ func (r *Repository) GetUpdatedAfter(ctx context.Context, userID int64, lastSync
 
 const (
 	vaultKDFSaltBytes = 16
-	vaultVerifierSize = 32 // SHA-256
+	vaultVerifierSize = 32
 )
 
-// GetVaultCrypto returns stored KDF salt and master-key verifier for the user.
 func (r *Repository) GetVaultCrypto(ctx context.Context, userID int64) (salt, verifier []byte, err error) {
 	err = r.pool.QueryRow(ctx,
 		`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
@@ -131,7 +145,6 @@ func (r *Repository) GetVaultCrypto(ctx context.Context, userID int64) (salt, ve
 	return salt, verifier, err
 }
 
-// PutVaultCrypto inserts or updates vault parameters. Re-sending the same salt and verifier succeeds.
 func (r *Repository) PutVaultCrypto(ctx context.Context, userID int64, salt, verifier []byte) error {
 	if len(salt) != vaultKDFSaltBytes || len(verifier) != vaultVerifierSize {
 		return fmt.Errorf("invalid vault crypto payload sizes")
@@ -143,11 +156,23 @@ func (r *Repository) PutVaultCrypto(ctx context.Context, userID int64, salt, ver
 	).Scan(&existingSalt, &existingVer)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		_, err = r.pool.Exec(ctx,
-			`INSERT INTO vault_crypto (user_id, kdf_salt, master_verifier) VALUES ($1, $2, $3)`,
+		if _, insErr := r.pool.Exec(ctx,
+			`INSERT INTO vault_crypto (user_id, kdf_salt, master_verifier) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO NOTHING`,
 			userID, salt, verifier,
-		)
-		return err
+		); insErr != nil {
+			return insErr
+		}
+		err = r.pool.QueryRow(ctx,
+			`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
+			userID,
+		).Scan(&existingSalt, &existingVer)
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(existingSalt, salt) && bytes.Equal(existingVer, verifier) {
+			return nil
+		}
+		return vaulterror.ErrConflict
 	case err != nil:
 		return err
 	case bytes.Equal(existingSalt, salt) && bytes.Equal(existingVer, verifier):
@@ -161,7 +186,6 @@ func (r *Repository) Close() {
 	r.pool.Close()
 }
 
-// PostgresConfig is the shared connection shape for YAML/env (see internal/pkg/postgres).
 type PostgresConfig = ippostgres.Config
 
 func NewFromPool(pool *pgxpool.Pool) *Repository {

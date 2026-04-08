@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -11,20 +12,17 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
-// LocalSyncRepo reads and writes encrypted entries in the local SQLite cache.
 type LocalSyncRepo interface {
 	GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
-	MarkAsSynced(ctx context.Context, id uuid.UUID) error
+	PersistSyncResult(ctx context.Context, userID int64, updates []models.Entry, dirty []models.Entry, applied map[uuid.UUID]struct{}) error
 	SaveEntry(ctx context.Context, e models.Entry, isDirty bool) error
 	GetLastUpdate(ctx context.Context, forUserID *int64) (time.Time, error)
 }
 
-// RemoteSyncRepo performs bidirectional sync with the Skeeper server.
 type RemoteSyncRepo interface {
-	Sync(ctx context.Context, entries []models.Entry, lastUpdate time.Time) ([]models.Entry, error)
+	Sync(ctx context.Context, entries []models.Entry, lastUpdate time.Time) ([]models.Entry, []uuid.UUID, error)
 }
 
-// SyncUseCase pushes dirty local rows and merges server updates.
 type SyncUseCase struct {
 	local   LocalSyncRepo
 	remote  RemoteSyncRepo
@@ -32,7 +30,6 @@ type SyncUseCase struct {
 	log     *slog.Logger
 }
 
-// NewSyncUseCase constructs a SyncUseCase.
 func NewSyncUseCase(local LocalSyncRepo, remote RemoteSyncRepo, session SessionReader, log *slog.Logger) *SyncUseCase {
 	return &SyncUseCase{
 		local:   local,
@@ -42,49 +39,46 @@ func NewSyncUseCase(local LocalSyncRepo, remote RemoteSyncRepo, session SessionR
 	}
 }
 
-func (uc *SyncUseCase) activeAutherUserID(ctx context.Context) *int64 {
+func (uc *SyncUseCase) requireAutherUserID(ctx context.Context) (int64, error) {
 	s, err := uc.session.GetSession(ctx)
 	if err != nil || s == nil || s.UserID == nil {
-		return nil
+		return 0, errors.New("sync requires an active session; log in first")
 	}
-	return s.UserID
+	return *s.UserID, nil
 }
 
-// Sync runs one full sync cycle (requires a valid auth token on the remote client).
 func (uc *SyncUseCase) Sync(ctx context.Context) error {
-	uid := uc.activeAutherUserID(ctx)
-	dirty, err := uc.local.GetDirtyEntries(ctx, uid)
+	uid, err := uc.requireAutherUserID(ctx)
+	if err != nil {
+		return err
+	}
+
+	dirty, err := uc.local.GetDirtyEntries(ctx, &uid)
 	if err != nil {
 		return fmt.Errorf("read local dirty: %w", err)
 	}
 
-	lastUpdate, err := uc.local.GetLastUpdate(ctx, uid)
+	lastUpdate, err := uc.local.GetLastUpdate(ctx, &uid)
 	if err != nil {
 		return err
 	}
 
 	uc.log.InfoContext(ctx, "syncing", "dirty_count", len(dirty), "last_update", lastUpdate)
 
-	updates, err := uc.remote.Sync(ctx, dirty, lastUpdate)
+	updates, applied, err := uc.remote.Sync(ctx, dirty, lastUpdate)
 	if err != nil {
 		return fmt.Errorf("grpc sync call: %w", err)
 	}
 
-	for _, remoteEntry := range updates {
-		if uid != nil {
-			remoteEntry.UserID = uid
-		}
-		if err := uc.local.SaveEntry(ctx, remoteEntry, false); err != nil {
-			return fmt.Errorf("save remote update: %w", err)
-		}
+	appliedSet := make(map[uuid.UUID]struct{}, len(applied))
+	for _, id := range applied {
+		appliedSet[id] = struct{}{}
 	}
 
-	for _, e := range dirty {
-		if err := uc.local.MarkAsSynced(ctx, e.UUID); err != nil {
-			return err
-		}
+	if err := uc.local.PersistSyncResult(ctx, uid, updates, dirty, appliedSet); err != nil {
+		return fmt.Errorf("persist sync: %w", err)
 	}
 
-	uc.log.InfoContext(ctx, "sync completed", "remote_updates", len(updates))
+	uc.log.InfoContext(ctx, "sync completed", "remote_updates", len(updates), "applied_local", len(applied))
 	return nil
 }

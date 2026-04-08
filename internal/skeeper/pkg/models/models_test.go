@@ -64,14 +64,20 @@ func TestNewSyncRequestFromProto(t *testing.T) {
 
 func TestSyncResponse_ToProto(t *testing.T) {
 	ts := time.Unix(999, 0).UTC()
+	id := uuid.New()
 	s := SyncResponse{
-		CurrentSyncAt: ts,
+		CurrentSyncAt:      ts,
+		AppliedUpdateUUIDs: []uuid.UUID{id},
 		Updates: []Entry{
-			{UUID: uuid.New(), Type: "P", UpdatedAt: ts},
+			{UUID: id, Type: "P", UpdatedAt: ts},
 		},
 	}
 	p := s.ToProto()
 	if p.GetCurrentSyncAt() == nil || len(p.GetUpdates()) != 1 {
 		t.Fatal("bad proto")
+	}
+	ap := p.GetAppliedUpdateUuids()
+	if len(ap) != 1 || ap[0] != id.String() {
+		t.Fatalf("applied uuids %+v", ap)
 	}
 }

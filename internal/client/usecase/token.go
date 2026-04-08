@@ -41,12 +41,12 @@ func (uc *TokenUseCase) GetValidToken(ctx context.Context) (string, error) {
 
 	if err := uc.store.SaveSession(ctx, *newSession); err != nil {
 		uc.l.ErrorContext(ctx, "failed to save new session", "err", err)
+		return "", errors.Wrap(err, "save refreshed session")
 	}
 
 	return newSession.AccessToken, nil
 }
 
-// NewTokenUseCase constructs a TokenUseCase.
 func NewTokenUseCase(s SessionStore, a AuthProvider, log *slog.Logger) *TokenUseCase {
 	return &TokenUseCase{store: s, authClient: a, l: log.With("component", "token_usecase")}
 }

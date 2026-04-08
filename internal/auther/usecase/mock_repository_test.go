@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	models "github.com/georgg2003/skeeper/internal/auther/pkg/models"
+	jwthelper "github.com/georgg2003/skeeper/pkg/jwthelper"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRepository is a mock of Repository interface.
@@ -78,83 +78,6 @@ func (c *MockRepositoryCloseCall) DoAndReturn(f func()) *MockRepositoryCloseCall
 	return c
 }
 
-// DeleteRefreshTokenAndReturnUser mocks base method.
-func (m *MockRepository) DeleteRefreshTokenAndReturnUser(arg0 context.Context, arg1 string) (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteRefreshTokenAndReturnUser", arg0, arg1)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DeleteRefreshTokenAndReturnUser indicates an expected call of DeleteRefreshTokenAndReturnUser.
-func (mr *MockRepositoryMockRecorder) DeleteRefreshTokenAndReturnUser(arg0, arg1 any) *MockRepositoryDeleteRefreshTokenAndReturnUserCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRefreshTokenAndReturnUser", reflect.TypeOf((*MockRepository)(nil).DeleteRefreshTokenAndReturnUser), arg0, arg1)
-	return &MockRepositoryDeleteRefreshTokenAndReturnUserCall{Call: call}
-}
-
-// MockRepositoryDeleteRefreshTokenAndReturnUserCall wrap *gomock.Call
-type MockRepositoryDeleteRefreshTokenAndReturnUserCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockRepositoryDeleteRefreshTokenAndReturnUserCall) Return(arg0 int64, arg1 error) *MockRepositoryDeleteRefreshTokenAndReturnUserCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockRepositoryDeleteRefreshTokenAndReturnUserCall) Do(f func(context.Context, string) (int64, error)) *MockRepositoryDeleteRefreshTokenAndReturnUserCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepositoryDeleteRefreshTokenAndReturnUserCall) DoAndReturn(f func(context.Context, string) (int64, error)) *MockRepositoryDeleteRefreshTokenAndReturnUserCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// InsertRefreshToken mocks base method.
-func (m *MockRepository) InsertRefreshToken(ctx context.Context, userID int64, rt models.RefreshTokenHashed) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertRefreshToken", ctx, userID, rt)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// InsertRefreshToken indicates an expected call of InsertRefreshToken.
-func (mr *MockRepositoryMockRecorder) InsertRefreshToken(ctx, userID, rt any) *MockRepositoryInsertRefreshTokenCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRefreshToken", reflect.TypeOf((*MockRepository)(nil).InsertRefreshToken), ctx, userID, rt)
-	return &MockRepositoryInsertRefreshTokenCall{Call: call}
-}
-
-// MockRepositoryInsertRefreshTokenCall wrap *gomock.Call
-type MockRepositoryInsertRefreshTokenCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockRepositoryInsertRefreshTokenCall) Return(arg0 error) *MockRepositoryInsertRefreshTokenCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockRepositoryInsertRefreshTokenCall) Do(f func(context.Context, int64, models.RefreshTokenHashed) error) *MockRepositoryInsertRefreshTokenCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepositoryInsertRefreshTokenCall) DoAndReturn(f func(context.Context, int64, models.RefreshTokenHashed) error) *MockRepositoryInsertRefreshTokenCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // InsertUser mocks base method.
 func (m *MockRepository) InsertUser(arg0 context.Context, arg1 models.DBUserCredentials) (models.UserInfo, error) {
 	m.ctrl.T.Helper()
@@ -190,6 +113,83 @@ func (c *MockRepositoryInsertUserCall) Do(f func(context.Context, models.DBUserC
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockRepositoryInsertUserCall) DoAndReturn(f func(context.Context, models.DBUserCredentials) (models.UserInfo, error)) *MockRepositoryInsertUserCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// ReplaceUserRefreshTokens mocks base method.
+func (m *MockRepository) ReplaceUserRefreshTokens(ctx context.Context, userID int64, pair jwthelper.TokenPair) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceUserRefreshTokens", ctx, userID, pair)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReplaceUserRefreshTokens indicates an expected call of ReplaceUserRefreshTokens.
+func (mr *MockRepositoryMockRecorder) ReplaceUserRefreshTokens(ctx, userID, pair any) *MockRepositoryReplaceUserRefreshTokensCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceUserRefreshTokens", reflect.TypeOf((*MockRepository)(nil).ReplaceUserRefreshTokens), ctx, userID, pair)
+	return &MockRepositoryReplaceUserRefreshTokensCall{Call: call}
+}
+
+// MockRepositoryReplaceUserRefreshTokensCall wrap *gomock.Call
+type MockRepositoryReplaceUserRefreshTokensCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryReplaceUserRefreshTokensCall) Return(arg0 error) *MockRepositoryReplaceUserRefreshTokensCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryReplaceUserRefreshTokensCall) Do(f func(context.Context, int64, jwthelper.TokenPair) error) *MockRepositoryReplaceUserRefreshTokensCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryReplaceUserRefreshTokensCall) DoAndReturn(f func(context.Context, int64, jwthelper.TokenPair) error) *MockRepositoryReplaceUserRefreshTokensCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// RotateRefreshToken mocks base method.
+func (m *MockRepository) RotateRefreshToken(ctx context.Context, refreshPlain string, mint func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RotateRefreshToken", ctx, refreshPlain, mint)
+	ret0, _ := ret[0].(jwthelper.TokenPair)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RotateRefreshToken indicates an expected call of RotateRefreshToken.
+func (mr *MockRepositoryMockRecorder) RotateRefreshToken(ctx, refreshPlain, mint any) *MockRepositoryRotateRefreshTokenCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RotateRefreshToken", reflect.TypeOf((*MockRepository)(nil).RotateRefreshToken), ctx, refreshPlain, mint)
+	return &MockRepositoryRotateRefreshTokenCall{Call: call}
+}
+
+// MockRepositoryRotateRefreshTokenCall wrap *gomock.Call
+type MockRepositoryRotateRefreshTokenCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryRotateRefreshTokenCall) Return(arg0 jwthelper.TokenPair, arg1 error) *MockRepositoryRotateRefreshTokenCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryRotateRefreshTokenCall) Do(f func(context.Context, string, func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error)) *MockRepositoryRotateRefreshTokenCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryRotateRefreshTokenCall) DoAndReturn(f func(context.Context, string, func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error)) *MockRepositoryRotateRefreshTokenCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

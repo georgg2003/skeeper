@@ -2,5 +2,5 @@ package usecase
 
 import "github.com/georgg2003/skeeper/pkg/errors"
 
-// ErrUnauthenticated is returned when the request context has no authenticated user id.
+// ErrUnauthenticated means the JWT interceptor never set a user id on the context.
 var ErrUnauthenticated = errors.New("unauthenticated")

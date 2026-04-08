@@ -1,8 +1,10 @@
 # skeepercli. Override with flags or env SKEEPERCLI_AUTHER / SKEEPERCLI_SKEEPER / SKEEPERCLI_DATA.
+# For local dev without TLS, set allow_insecure_grpc: true. In production use grpc_tls.enabled: true.
 
 auther_addr: "127.0.0.1:50051"
 skeeper_addr: "127.0.0.1:50052"
 data_dir: "~/.skeepercli"
+allow_insecure_grpc: true
 grpc_tls:
   enabled: false
   ca_file: "config/keys/grpc_server.crt"

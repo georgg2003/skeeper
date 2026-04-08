@@ -1,6 +1,5 @@
-/*
-Обертка над стандартным пакетом errors, для кастомизации ошибок и гибкости.
-*/
+// Package errors wraps the standard library errors package with validation helpers,
+// typed errors, and fmt-based wrapping—same ideas, a bit nicer to use here.
 package errors
 
 import (
@@ -8,8 +7,6 @@ import (
 	"fmt"
 	"runtime"
 )
-
-// Proxy
 
 func New(msg string) error {
 	return errors.New(msg)
@@ -30,8 +27,6 @@ func AsType[E error](err error) (E, bool) {
 func Join(errs ...error) error {
 	return errors.Join(errs...)
 }
-
-// Custom errors
 
 type TypedError struct {
 	Type string
@@ -60,8 +55,6 @@ func (err *ValidationError) Error() string {
 func NewValidationError(field string, text string) error {
 	return &ValidationError{Field: field, Message: text}
 }
-
-// Methods
 
 func Wrap(err error, msg string) error {
 	return fmt.Errorf("%s: %w", msg, err)

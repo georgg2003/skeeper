@@ -1,3 +1,4 @@
+// Package vaulterror holds errors for server-side vault salt and master-key fingerprint storage.
 package vaulterror
 
 import "errors"

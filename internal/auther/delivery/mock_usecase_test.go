@@ -13,10 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	models "github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	jwthelper "github.com/georgg2003/skeeper/pkg/jwthelper"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUseCase is a mock of UseCase interface.
@@ -83,10 +82,10 @@ func (c *MockUseCaseCreateUserCall) DoAndReturn(f func(context.Context, models.U
 }
 
 // LoginUser mocks base method.
-func (m *MockUseCase) LoginUser(arg0 context.Context, arg1 models.UserCredentials) (models.LoginReponse, error) {
+func (m *MockUseCase) LoginUser(arg0 context.Context, arg1 models.UserCredentials) (models.LoginResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoginUser", arg0, arg1)
-	ret0, _ := ret[0].(models.LoginReponse)
+	ret0, _ := ret[0].(models.LoginResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -104,19 +103,19 @@ type MockUseCaseLoginUserCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockUseCaseLoginUserCall) Return(arg0 models.LoginReponse, arg1 error) *MockUseCaseLoginUserCall {
+func (c *MockUseCaseLoginUserCall) Return(arg0 models.LoginResponse, arg1 error) *MockUseCaseLoginUserCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockUseCaseLoginUserCall) Do(f func(context.Context, models.UserCredentials) (models.LoginReponse, error)) *MockUseCaseLoginUserCall {
+func (c *MockUseCaseLoginUserCall) Do(f func(context.Context, models.UserCredentials) (models.LoginResponse, error)) *MockUseCaseLoginUserCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockUseCaseLoginUserCall) DoAndReturn(f func(context.Context, models.UserCredentials) (models.LoginReponse, error)) *MockUseCaseLoginUserCall {
+func (c *MockUseCaseLoginUserCall) DoAndReturn(f func(context.Context, models.UserCredentials) (models.LoginResponse, error)) *MockUseCaseLoginUserCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

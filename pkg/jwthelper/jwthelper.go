@@ -1,4 +1,5 @@
-// Package jwthelper issues and validates RSA-signed JWT access tokens and opaque refresh tokens.
+// Package jwthelper signs access JWTs (RSA) and mints random refresh tokens. Auther issues them;
+// Skeeper validates the access token on each call.
 package jwthelper
 
 import (
@@ -14,6 +15,9 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 )
+
+// DefaultIssuer is set on minted access tokens and required when validating.
+const DefaultIssuer = "skeeper"
 
 type Token struct {
 	Token     string
@@ -36,16 +40,23 @@ type JWTHelper struct {
 
 	atLifetime time.Duration
 	rtLifetime time.Duration
+	// audience is optional; when set it is embedded in access tokens and required on validation.
+	audience string
 }
 
-func newClaims(userID int64, expiresAt time.Time) TokenClaims {
+func (h *JWTHelper) newClaims(userID int64, expiresAt time.Time) TokenClaims {
+	rc := jwt.RegisteredClaims{
+		Issuer:    DefaultIssuer,
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ID:        uuid.NewString(),
+	}
+	if h.audience != "" {
+		rc.Audience = jwt.ClaimStrings{h.audience}
+	}
 	return TokenClaims{
-		UserID: userID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ID:        uuid.NewString(),
-		},
+		UserID:           userID,
+		RegisteredClaims: rc,
 	}
 }
 
@@ -58,8 +69,11 @@ func generateRandomString() (string, error) {
 }
 
 func (h *JWTHelper) NewTokenPair(userID int64) (TokenPair, error) {
+	if h.privateKey == nil {
+		return TokenPair{}, errors.New("jwt: signing key not configured")
+	}
 	accessExpiresAt := time.Now().Add(h.atLifetime)
-	aClaims := newClaims(userID, accessExpiresAt)
+	aClaims := h.newClaims(userID, accessExpiresAt)
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, aClaims).SignedString(h.privateKey)
 	if err != nil {
 		return TokenPair{}, err
@@ -80,7 +94,7 @@ func (h *JWTHelper) NewTokenPair(userID int64) (TokenPair, error) {
 			Token:     refreshToken,
 			ExpiresAt: refreshExpiresAt,
 		},
-	}, err
+	}, nil
 }
 
 func (h *JWTHelper) ValidateToken(encodedToken string) (TokenClaims, error) {
@@ -97,6 +111,14 @@ func (h *JWTHelper) ValidateToken(encodedToken string) (TokenClaims, error) {
 		return claims, errors.New("invalid token")
 	}
 
+	if claims.Issuer != DefaultIssuer {
+		return claims, errors.New("invalid token")
+	}
+
+	if h.audience != "" && !claims.VerifyAudience(h.audience, true) {
+		return claims, errors.New("invalid token")
+	}
+
 	return claims, nil
 }
 
@@ -105,14 +127,18 @@ func New(
 	pubByte []byte,
 	atLifetime time.Duration,
 	rtLifetime time.Duration,
+	audience string,
 ) (*JWTHelper, error) {
-	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(privByte)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse rsa private key")
-	}
 	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubByte)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rsa public key")
+	}
+	var privKey *rsa.PrivateKey
+	if len(privByte) > 0 {
+		privKey, err = jwt.ParseRSAPrivateKeyFromPEM(privByte)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse rsa private key")
+		}
 	}
 	if atLifetime <= 0 {
 		atLifetime = time.Minute * 15
@@ -125,24 +151,31 @@ func New(
 		publicKey:  pubKey,
 		atLifetime: atLifetime,
 		rtLifetime: rtLifetime,
+		audience:   audience,
 	}, nil
 }
 
 type JWTConfig struct {
+	// PrivateKeyFile is required for signing (Auther). Leave empty for validate-only consumers (e.g. Skeeper).
 	PrivateKeyFile       string        `mapstructure:"private_key_file"`
 	PublicKeyFile        string        `mapstructure:"public_key_file"`
 	AccessTokenLifetime  time.Duration `mapstructure:"access_token_lifetime"`
 	RefreshTokenLifetime time.Duration `mapstructure:"refresh_token_lifetime"`
+	// Audience is optional; when non-empty, access tokens include aud and validators require it.
+	Audience string `mapstructure:"audience"`
 }
 
 func NewFromConfig(cfg JWTConfig) (*JWTHelper, error) {
-	privBytes, err := os.ReadFile(cfg.PrivateKeyFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read private key file")
-	}
 	pubBytes, err := os.ReadFile(cfg.PublicKeyFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read public key file")
 	}
-	return New(privBytes, pubBytes, cfg.AccessTokenLifetime, cfg.RefreshTokenLifetime)
+	var privBytes []byte
+	if cfg.PrivateKeyFile != "" {
+		privBytes, err = os.ReadFile(cfg.PrivateKeyFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read private key file")
+		}
+	}
+	return New(privBytes, pubBytes, cfg.AccessTokenLifetime, cfg.RefreshTokenLifetime, cfg.Audience)
 }

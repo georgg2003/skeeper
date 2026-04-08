@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ func TestIntegration_UpsertAndGetUpdatedAfter(t *testing.T) {
 		Version:      1,
 		UpdatedAt:    t1,
 	}
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{e1}); err != nil {
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{e1}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -84,7 +85,7 @@ func TestIntegration_Upsert_VersionIncreases(t *testing.T) {
 
 	id := uuid.New()
 	base := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Version: 1, UpdatedAt: base,
 	}}); err != nil {
@@ -92,7 +93,7 @@ func TestIntegration_Upsert_VersionIncreases(t *testing.T) {
 	}
 
 	t2 := base.Add(time.Hour)
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{9}, Payload: []byte{8},
 		Version: 2, UpdatedAt: t2,
 	}}); err != nil {
@@ -119,7 +120,7 @@ func TestIntegration_Upsert_DoesNotDowngradeVersion(t *testing.T) {
 
 	id := uuid.New()
 	tHigh := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Version: 5, UpdatedAt: tHigh,
 	}}); err != nil {
@@ -127,7 +128,7 @@ func TestIntegration_Upsert_DoesNotDowngradeVersion(t *testing.T) {
 	}
 
 	tLow := tHigh.Add(time.Hour)
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{3}, Payload: []byte{4},
 		Version: 3, UpdatedAt: tLow,
 	}}); err != nil {
@@ -153,11 +154,13 @@ func TestIntegration_UpsertEntries_EmptyNoOp(t *testing.T) {
 		ctx,
 		integrationtest.SkeeperPostgresPool(t),
 	)
-	if err := repo.UpsertEntries(ctx, 1, nil); err != nil {
-		t.Fatal(err)
+	appliedNil, err := repo.UpsertEntries(ctx, 1, nil)
+	if err != nil || len(appliedNil) != 0 {
+		t.Fatalf("nil batch: err=%v applied=%v", err, appliedNil)
 	}
-	if err := repo.UpsertEntries(ctx, 1, []models.Entry{}); err != nil {
-		t.Fatal(err)
+	appliedEmpty, err := repo.UpsertEntries(ctx, 1, []models.Entry{})
+	if err != nil || len(appliedEmpty) != 0 {
+		t.Fatalf("empty batch: err=%v applied=%v", err, appliedEmpty)
 	}
 }
 
@@ -175,13 +178,13 @@ func TestIntegration_GetUpdatedAfter_UserIsolation(t *testing.T) {
 	idA := uuid.New()
 	idB := uuid.New()
 
-	if err := repo.UpsertEntries(ctx, userA, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userA, []models.Entry{{
 		UUID: idA, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Version: 1, UpdatedAt: ts,
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertEntries(ctx, userB, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userB, []models.Entry{{
 		UUID: idB, Type: "TEXT", EncryptedDek: []byte{3}, Payload: []byte{4},
 		Version: 1, UpdatedAt: ts,
 	}}); err != nil {
@@ -230,7 +233,7 @@ func TestIntegration_UpsertEntries_BatchRoundtrip(t *testing.T) {
 		},
 	}
 
-	if err := repo.UpsertEntries(ctx, userID, entries); err != nil {
+	if _, err := repo.UpsertEntries(ctx, userID, entries); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,7 +289,7 @@ func TestIntegration_GetUpdatedAfter_OrderedByUpdatedAtAsc(t *testing.T) {
 	first := base.Add(30 * time.Minute)
 	third := base.Add(90 * time.Minute)
 
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{
 		{UUID: uuid.New(), Type: "A", EncryptedDek: []byte{1}, Payload: []byte{1}, Version: 1, UpdatedAt: second},
 		{UUID: uuid.New(), Type: "B", EncryptedDek: []byte{1}, Payload: []byte{1}, Version: 1, UpdatedAt: first},
 		{UUID: uuid.New(), Type: "C", EncryptedDek: []byte{1}, Payload: []byte{1}, Version: 1, UpdatedAt: third},
@@ -317,7 +320,7 @@ func TestIntegration_GetUpdatedAfter_ExcludesRowsAtExactlyLastSync(t *testing.T)
 	t0 := time.Date(2026, 6, 1, 15, 30, 0, 0, time.UTC)
 	id := uuid.New()
 
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Version: 1, UpdatedAt: t0,
 	}}); err != nil {
@@ -352,18 +355,26 @@ func TestIntegration_Upsert_SameVersion_DoesNotOverwrite(t *testing.T) {
 	id := uuid.New()
 	ts := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	applied1, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{0xaa},
 		Version: 4, UpdatedAt: ts,
-	}}); err != nil {
+	}})
+	if err != nil {
 		t.Fatal(err)
 	}
+	if len(applied1) != 1 || applied1[0] != id {
+		t.Fatalf("first upsert applied %v want [%s]", applied1, id)
+	}
 
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	applied2, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{9}, Payload: []byte{0xbb},
 		Version: 4, UpdatedAt: ts.Add(time.Hour),
-	}}); err != nil {
+	}})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(applied2) != 0 {
+		t.Fatalf("same-version upsert should apply 0 rows, got %v", applied2)
 	}
 
 	got, err := repo.GetUpdatedAfter(ctx, userID, ts.Add(-time.Minute))
@@ -386,7 +397,7 @@ func TestIntegration_Upsert_SoftDeleteRoundtrip(t *testing.T) {
 	id := uuid.New()
 	t1 := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Version: 1, IsDeleted: false, UpdatedAt: t1,
 	}}); err != nil {
@@ -394,7 +405,7 @@ func TestIntegration_Upsert_SoftDeleteRoundtrip(t *testing.T) {
 	}
 
 	t2 := t1.Add(time.Hour)
-	if err := repo.UpsertEntries(ctx, userID, []models.Entry{{
+	if _, err := repo.UpsertEntries(ctx, userID, []models.Entry{{
 		UUID: id, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Version: 2, IsDeleted: true, UpdatedAt: t2,
 	}}); err != nil {
@@ -449,6 +460,47 @@ func TestIntegration_VaultCryptoPutGet(t *testing.T) {
 	otherSalt[0] ^= 0xff
 	if err := repo.PutVaultCrypto(ctx, userID, otherSalt, ver); !errors.Is(err, vaulterror.ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
+	}
+}
+
+func TestIntegration_PutVaultCrypto_ConcurrentFirstInsert(t *testing.T) {
+	ctx := context.Background()
+	repo := newSkeeperRepository(
+		t,
+		ctx,
+		integrationtest.SkeeperPostgresPool(t),
+	)
+	const userID int64 = 602
+	salt := make([]byte, 16)
+	ver := make([]byte, 32)
+	for i := range salt {
+		salt[i] = byte(i + 7)
+	}
+	for i := range ver {
+		ver[i] = byte(i)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var err0, err1 error
+	go func() {
+		defer wg.Done()
+		err0 = repo.PutVaultCrypto(ctx, userID, salt, ver)
+	}()
+	go func() {
+		defer wg.Done()
+		err1 = repo.PutVaultCrypto(ctx, userID, salt, ver)
+	}()
+	wg.Wait()
+	if err0 != nil && err1 != nil {
+		t.Fatalf("both failed: %v %v", err0, err1)
+	}
+	gotSalt, gotVer, err := repo.GetVaultCrypto(ctx, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(gotSalt) != string(salt) || string(gotVer) != string(ver) {
+		t.Fatal("stored vault crypto mismatch after concurrent put")
 	}
 }
 
@@ -552,7 +604,7 @@ func TestIntegration_Upsert_SameUUID_DifferentUsersCannotOverwrite(t *testing.T)
 		UUID: sharedID, Type: "TEXT", EncryptedDek: []byte{1}, Payload: []byte{2},
 		Meta: []byte{3}, Version: 1, UpdatedAt: ts, IsDeleted: false,
 	}
-	if err := repo.UpsertEntries(ctx, userA, []models.Entry{eA}); err != nil {
+	if _, err := repo.UpsertEntries(ctx, userA, []models.Entry{eA}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -560,7 +612,7 @@ func TestIntegration_Upsert_SameUUID_DifferentUsersCannotOverwrite(t *testing.T)
 		UUID: sharedID, Type: "TEXT", EncryptedDek: []byte{9}, Payload: []byte{9},
 		Meta: []byte{9}, Version: 99, UpdatedAt: ts.Add(time.Hour), IsDeleted: false,
 	}
-	if err := repo.UpsertEntries(ctx, userB, []models.Entry{eB}); err != nil {
+	if _, err := repo.UpsertEntries(ctx, userB, []models.Entry{eB}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -1,4 +1,4 @@
-// Package integrationtest provides helpers for Postgres integration tests (Goose migrations).
+// Package integrationtest is small helpers for spinning up Postgres + goose in tests.
 package integrationtest
 
 import (
@@ -10,7 +10,6 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-// GooseMigrate applies embedded SQL migrations from the FS root (files in ".").
 func GooseMigrate(ctx context.Context, pool *pgxpool.Pool, fs embed.FS) error {
 	sqlDB := stdlib.OpenDBFromPool(pool)
 	defer func() { _ = sqlDB.Close() }()

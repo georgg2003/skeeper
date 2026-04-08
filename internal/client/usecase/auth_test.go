@@ -78,7 +78,7 @@ func clientTestJWTHelper(t *testing.T, userID int64) (access string, refresh str
 		t.Fatal(err)
 	}
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
-	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, 24*time.Hour)
+	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, 24*time.Hour, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestAuthUseCase_Register(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
-			err := uc.Register(ctx, "a@b.c", "password")
+			err := uc.Register(ctx, "a@b.c", "password123456")
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")

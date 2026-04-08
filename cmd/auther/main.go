@@ -1,3 +1,4 @@
+// Command auther is the account service: register, login, refresh tokens (Postgres + JWT).
 package main
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/auther/delivery"
 	"github.com/georgg2003/skeeper/internal/auther/pkg/config"
+	autherinterceptors "github.com/georgg2003/skeeper/internal/auther/pkg/interceptors"
 	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/internal/auther/usecase"
 	"github.com/georgg2003/skeeper/internal/pkg/log"
@@ -51,6 +53,9 @@ func main() {
 		func(s *grpc.Server) {
 			api.RegisterAutherServer(s, service)
 		},
+		grpc.ChainUnaryInterceptor(
+			autherinterceptors.NewSensitiveMethodRateLimit(l, cfg.RateLimit),
+		),
 	)
 	if err != nil {
 		l.Error("failed to init grpc server", "err", err)

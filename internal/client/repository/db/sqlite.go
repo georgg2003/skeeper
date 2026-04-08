@@ -1,3 +1,4 @@
+// Package db is the local SQLite vault: entries, session row, crypto metadata, goose migrations.
 package db
 
 import (
@@ -5,6 +6,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	clientmigrate "github.com/georgg2003/skeeper/migrations/client"
@@ -16,11 +18,20 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
+type sqlExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
 type Repository struct {
-	db *sql.DB
+	db         *sql.DB
+	sessionKey []byte
 }
 
 func (r *Repository) SaveEntry(ctx context.Context, e models.Entry, isDirty bool) error {
+	return r.saveEntry(ctx, r.db, e, isDirty)
+}
+
+func (r *Repository) saveEntry(ctx context.Context, ex sqlExecer, e models.Entry, isDirty bool) error {
 	dirtyInt := 0
 	if isDirty {
 		dirtyInt = 1
@@ -45,7 +56,7 @@ func (r *Repository) SaveEntry(ctx context.Context, e models.Entry, isDirty bool
 	if e.UserID != nil {
 		uid = *e.UserID
 	}
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := ex.ExecContext(ctx, query,
 		e.UUID.String(),
 		e.Type,
 		e.EncryptedDek,
@@ -58,6 +69,40 @@ func (r *Repository) SaveEntry(ctx context.Context, e models.Entry, isDirty bool
 		uid,
 	)
 	return err
+}
+
+// PersistSyncResult applies remote updates and marks applied dirty rows clean in one transaction.
+func (r *Repository) PersistSyncResult(
+	ctx context.Context,
+	userID int64,
+	updates []models.Entry,
+	dirty []models.Entry,
+	applied map[uuid.UUID]struct{},
+) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for i := range updates {
+		e := updates[i]
+		u := userID
+		e.UserID = &u
+		if err := r.saveEntry(ctx, tx, e, false); err != nil {
+			return err
+		}
+	}
+	for _, e := range dirty {
+		if _, ok := applied[e.UUID]; !ok {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE entries SET is_dirty = 0 WHERE uuid = ? AND user_id = ?`,
+			e.UUID.String(), userID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (r *Repository) GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error) {
@@ -84,7 +129,10 @@ func (r *Repository) GetDirtyEntries(ctx context.Context, forUserID *int64) ([]m
 		if err != nil {
 			return nil, err
 		}
-		e.UUID, _ = uuid.Parse(uStr)
+		e.UUID, err = uuid.Parse(uStr)
+		if err != nil {
+			return nil, fmt.Errorf("entries uuid %q: %w", uStr, err)
+		}
 		if userID.Valid {
 			v := userID.Int64
 			e.UserID = &v
@@ -94,13 +142,11 @@ func (r *Repository) GetDirtyEntries(ctx context.Context, forUserID *int64) ([]m
 	return entries, nil
 }
 
-func (r *Repository) MarkAsSynced(ctx context.Context, u uuid.UUID) error {
-	query := `UPDATE entries SET is_dirty = 0 WHERE uuid = ?`
-	_, err := r.db.ExecContext(ctx, query, u.String())
+func (r *Repository) MarkAsSynced(ctx context.Context, u uuid.UUID, userID int64) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE entries SET is_dirty = 0 WHERE uuid = ? AND user_id = ?`, u.String(), userID)
 	return err
 }
 
-// GetEntry returns a single entry by id. When forUserID is non-nil, the row must belong to that user.
 func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID, forUserID *int64) (models.Entry, error) {
 	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty, user_id
 	          FROM entries WHERE uuid = ?`
@@ -134,50 +180,57 @@ func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID, forUserID *int6
 
 const kdfSaltSize = 16
 
-// EnsureLocalVaultCrypto returns persisted Argon2 salt and optional master-key verifier (nil if unset).
-// Creates a new salt row if none exists.
-func (r *Repository) EnsureLocalVaultCrypto(ctx context.Context) (salt []byte, masterVerifier []byte, err error) {
-	err = r.db.QueryRowContext(ctx, `SELECT kdf_salt, master_verifier FROM crypto_meta WHERE id = 1`).Scan(&salt, &masterVerifier)
+// EnsureLocalVaultCrypto loads salt (+ verifier) for this Auther user, claims legacy user_id=0 row once, or creates a new row.
+func (r *Repository) EnsureLocalVaultCrypto(ctx context.Context, userID int64) (salt []byte, masterVerifier []byte, err error) {
+	err = r.db.QueryRowContext(ctx, `SELECT kdf_salt, master_verifier FROM crypto_meta WHERE user_id = ?`, userID).
+		Scan(&salt, &masterVerifier)
 	if err == nil {
 		return salt, masterVerifier, nil
 	}
 	if err != sql.ErrNoRows {
 		return nil, nil, err
 	}
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE crypto_meta SET user_id = ?
+		WHERE user_id = 0
+		AND NOT EXISTS (SELECT 1 FROM crypto_meta WHERE user_id = ?)`,
+		userID, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return r.EnsureLocalVaultCrypto(ctx, userID)
+	}
 	salt = make([]byte, kdfSaltSize)
 	if _, err := rand.Read(salt); err != nil {
 		return nil, nil, fmt.Errorf("generate kdf salt: %w", err)
 	}
-	_, err = r.db.ExecContext(ctx, `INSERT INTO crypto_meta (id, kdf_salt, master_verifier) VALUES (1, ?, NULL)`, salt)
+	_, err = r.db.ExecContext(ctx, `INSERT INTO crypto_meta (user_id, kdf_salt, master_verifier) VALUES (?, ?, NULL)`, userID, salt)
 	if err != nil {
 		return nil, nil, err
 	}
 	return salt, nil, nil
 }
 
-// ReplaceLocalVaultCrypto overwrites salt and verifier (e.g. after pulling from the server).
-func (r *Repository) ReplaceLocalVaultCrypto(ctx context.Context, salt, masterVerifier []byte) error {
+func (r *Repository) ReplaceLocalVaultCrypto(ctx context.Context, userID int64, salt, masterVerifier []byte) error {
 	var ver any
 	if len(masterVerifier) > 0 {
 		ver = masterVerifier
 	}
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO crypto_meta (id, kdf_salt, master_verifier) VALUES (1, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
+		INSERT INTO crypto_meta (user_id, kdf_salt, master_verifier) VALUES (?, ?, ?)
+		ON CONFLICT(user_id) DO UPDATE SET
 			kdf_salt = excluded.kdf_salt,
 			master_verifier = excluded.master_verifier
-	`, salt, ver)
+	`, userID, salt, ver)
 	return err
 }
 
-// SetLocalMasterVerifier persists the SHA-256(master key) fingerprint after the first successful encrypt.
-func (r *Repository) SetLocalMasterVerifier(ctx context.Context, masterVerifier []byte) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE crypto_meta SET master_verifier = ? WHERE id = 1`, masterVerifier)
+func (r *Repository) SetLocalMasterVerifier(ctx context.Context, userID int64, masterVerifier []byte) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE crypto_meta SET master_verifier = ? WHERE user_id = ?`, masterVerifier, userID)
 	return err
 }
 
-// ListEntries returns non-deleted rows for local browsing (payload remains ciphertext).
-// When forUserID is non-nil, only rows for that Auther user id are returned.
 func (r *Repository) ListEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error) {
 	query := `SELECT uuid, type, encrypted_dek, payload, meta, version, is_deleted, updated_at, is_dirty, user_id
 	          FROM entries WHERE is_deleted = 0`
@@ -238,10 +291,15 @@ func New(dsn string) (*Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
-	return &Repository{db: db}, nil
+	keyPath := filepath.Join(filepath.Dir(dsn), ".session-key")
+	key, err := loadOrCreateSessionKey(keyPath)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return &Repository{db: db, sessionKey: key}, nil
 }
 
-// Close releases the database handle.
 func (r *Repository) Close() error {
 	return r.db.Close()
 }

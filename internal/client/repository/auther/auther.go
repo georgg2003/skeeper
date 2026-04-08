@@ -1,4 +1,4 @@
-// Package auther implements a gRPC client for the Auther authentication service.
+// Package auther is the gRPC client for register, login, and token refresh.
 package auther
 
 import (
@@ -6,20 +6,17 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// AutherClient wraps the generated gRPC client with domain-oriented helpers.
 type AutherClient struct {
 	conn *grpc.ClientConn
 	api  api.AutherClient
 }
 
-// CreateUser registers a new account on the Auther service.
 func (c *AutherClient) CreateUser(ctx context.Context, email, password string) error {
 	_, err := c.api.CreateUser(ctx, api.CreateUserRequest_builder{
 		Email:    &email,
@@ -31,7 +28,6 @@ func (c *AutherClient) CreateUser(ctx context.Context, email, password string) e
 	return nil
 }
 
-// Login returns JWT session material after successful password verification.
 func (c *AutherClient) Login(ctx context.Context, email, password string) (*models.Session, error) {
 	resp, err := c.api.Login(ctx, api.LoginRequest_builder{
 		Email:    &email,
@@ -53,7 +49,6 @@ func (c *AutherClient) Login(ctx context.Context, email, password string) (*mode
 	}, nil
 }
 
-// Refresh exchanges a refresh token for a new access (and refresh) token pair.
 func (c *AutherClient) Refresh(ctx context.Context, refreshToken string) (*models.Session, error) {
 	resp, err := c.api.ExchangeToken(ctx, api.ExchangeTokenRequest_builder{
 		RefreshToken: &refreshToken,
@@ -74,16 +69,15 @@ func (c *AutherClient) Refresh(ctx context.Context, refreshToken string) (*model
 	}, nil
 }
 
-// NewAutherClient dials the Auther gRPC endpoint (address like "host:port").
-// dialOpts must include transport credentials (e.g. from grpcclient.DialOptions).
+// NewAutherClient connects to addr (host:port). dialOpts must include grpcclient.DialOptions output.
 func NewAutherClient(addr string, dialOpts ...grpc.DialOption) (*AutherClient, error) {
 	if addr == "" {
 		return nil, fmt.Errorf("auther address is required")
 	}
-	opts := append([]grpc.DialOption(nil), dialOpts...)
-	if len(opts) == 0 {
-		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	if len(dialOpts) == 0 {
+		return nil, fmt.Errorf("dial options are required (use grpcclient.DialOptions)")
 	}
+	opts := append([]grpc.DialOption(nil), dialOpts...)
 	conn, err := grpc.NewClient(addr, opts...)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-// Package crypto provides Argon2id-based key derivation and AES-GCM for the local vault.
+// Package crypto derives the master key (Argon2id) and does AES-GCM for the local vault.
 package crypto
 
 import (
@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	KeyLength = 32 // AES-256
+	KeyLength = 32
 	SaltSize  = 16
 )
 
@@ -21,8 +21,8 @@ func DeriveMasterKey(password string, salt []byte) []byte {
 	return argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, KeyLength)
 }
 
-// MasterKeyVerifier returns SHA-256(masterKey) for storing on the server and locally.
-// It does not reveal the master password and allows a constant-time check before encrypt/decrypt.
+// MasterKeyVerifier is SHA-256 of the derived master key—stored so we can check the password
+// without keeping the key itself on disk or sending it over the wire.
 func MasterKeyVerifier(masterKey []byte) []byte {
 	h := sha256.Sum256(masterKey)
 	out := make([]byte, len(h))

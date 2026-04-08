@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// NewUnaryRecoveryInterceptor converts panics into gRPC Internal errors and logs the stack.
+// NewUnaryRecoveryInterceptor turns panics into Internal and logs the stack.
 func NewUnaryRecoveryInterceptor(l *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -32,7 +32,7 @@ func NewUnaryRecoveryInterceptor(l *slog.Logger) grpc.UnaryServerInterceptor {
 	}
 }
 
-// NewStreamRecoveryInterceptor converts panics in stream handlers into gRPC Internal errors.
+// NewStreamRecoveryInterceptor is the streaming version of [NewUnaryRecoveryInterceptor].
 func NewStreamRecoveryInterceptor(l *slog.Logger) grpc.StreamServerInterceptor {
 	return func(
 		srv any,

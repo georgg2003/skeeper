@@ -1,3 +1,5 @@
+// Package server runs a gRPC listener with optional TLS, health checks, reflection, and
+// default interceptors (logging + panic recovery).
 package server
 
 import (
@@ -17,7 +19,6 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// TLSConfig holds server TLS material for gRPC over TLS.
 type TLSConfig struct {
 	Enabled  bool   `mapstructure:"enabled"`
 	CertFile string `mapstructure:"cert_file"`
@@ -25,9 +26,13 @@ type TLSConfig struct {
 }
 
 type ServerConfig struct {
-	ListenAddr      string        `mapstructure:"listen_addr"`
-	GracefulTimeout time.Duration `mapstructure:"graceful_timeout"`
-	TLS             TLSConfig     `mapstructure:"tls"`
+	ListenAddr        string        `mapstructure:"listen_addr"`
+	GracefulTimeout   time.Duration `mapstructure:"graceful_timeout"`
+	TLS               TLSConfig     `mapstructure:"tls"`
+	// DisableReflection defaults to true when unset (nil). Set to false to enable reflection (dev only).
+	DisableReflection *bool `mapstructure:"disable_reflection"`
+	// AllowInsecureTransport must be true when TLS is disabled (local development only).
+	AllowInsecureTransport bool `mapstructure:"allow_insecure_transport"`
 }
 
 type Server struct {
@@ -90,7 +95,7 @@ func (s *Server) Serve(ctx context.Context) error {
 
 type ServerModifyFunc func(*grpc.Server)
 
-// New builds a gRPC server with request logging, panic recovery, and optional TLS.
+// New wires unary/stream interceptors, optional TLS, then calls modifyServer so callers can register services.
 func New(
 	cfg ServerConfig,
 	l *slog.Logger,
@@ -108,6 +113,8 @@ func New(
 			return nil, errors.Wrap(err, "load grpc tls credentials")
 		}
 		serverOpts = append(serverOpts, grpc.Creds(creds))
+	} else if !cfg.AllowInsecureTransport {
+		return nil, errors.New("gRPC TLS is disabled: enable service.tls or set service.allow_insecure_transport for local development only")
 	}
 
 	defaultOpts := []grpc.ServerOption{
@@ -126,7 +133,17 @@ func New(
 
 	grpcSrv := grpc.NewServer(serverOpts...)
 	modifyServer(grpcSrv)
-	reflection.Register(grpcSrv)
+	disableReflection := true
+	if cfg.DisableReflection != nil {
+		disableReflection = *cfg.DisableReflection
+	}
+	if !disableReflection {
+		reflection.Register(grpcSrv)
+	}
+
+	if !cfg.TLS.Enabled {
+		l.Warn("gRPC TLS is disabled: traffic is not encrypted or authenticated at the transport layer")
+	}
 
 	healthService := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(grpcSrv, healthService)

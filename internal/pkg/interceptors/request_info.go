@@ -56,6 +56,7 @@ func (w *wrappedStream) Context() context.Context {
 	return w.ctx
 }
 
+// NewRequestInfoInterceptor fills request id / peer info on the context and logs start + duration.
 func NewRequestInfoInterceptor(l *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -77,6 +78,7 @@ func NewRequestInfoInterceptor(l *slog.Logger) grpc.UnaryServerInterceptor {
 	}
 }
 
+// NewStreamRequestInfoInterceptor is the streaming variant of [NewRequestInfoInterceptor].
 func NewStreamRequestInfoInterceptor(l *slog.Logger) grpc.StreamServerInterceptor {
 	return func(
 		srv any,

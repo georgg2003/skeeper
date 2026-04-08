@@ -1,9 +1,7 @@
-// Package authermigrate exposes embedded Goose SQL files for the Auther Postgres database.
+// Package authermigrate ships embedded goose migrations for the Auther Postgres DB.
 package authermigrate
 
 import "embed"
 
-// GooseFiles contains ordered *.sql migrations from this directory.
-//
 //go:embed *.sql
 var GooseFiles embed.FS

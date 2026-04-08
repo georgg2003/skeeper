@@ -10,28 +10,24 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// SessionStore persists the authenticated session in local storage.
 type SessionStore interface {
 	SaveSession(ctx context.Context, s models.Session) error
 	GetSession(ctx context.Context) (*models.Session, error)
 	ClearSession(ctx context.Context) error
 }
 
-// RemoteAuthenticator talks to the Auther service for signup and JWT lifecycle.
 type RemoteAuthenticator interface {
 	CreateUser(ctx context.Context, email, password string) error
 	Login(ctx context.Context, login, password string) (*models.Session, error)
 	Refresh(ctx context.Context, refreshToken string) (*models.Session, error)
 }
 
-// AuthUseCase coordinates remote authentication with the on-disk session.
 type AuthUseCase struct {
 	local  SessionStore
 	remote RemoteAuthenticator
 	l      *slog.Logger
 }
 
-// NewAuthUseCase constructs an AuthUseCase.
 func NewAuthUseCase(l SessionStore, r RemoteAuthenticator, log *slog.Logger) *AuthUseCase {
 	return &AuthUseCase{
 		local:  l,
@@ -40,7 +36,6 @@ func NewAuthUseCase(l SessionStore, r RemoteAuthenticator, log *slog.Logger) *Au
 	}
 }
 
-// Register creates a remote account and immediately establishes a local session.
 func (uc *AuthUseCase) Register(ctx context.Context, email, password string) error {
 	uc.l.InfoContext(ctx, "registering user", "email", email)
 	if err := uc.remote.CreateUser(ctx, email, password); err != nil {
@@ -50,7 +45,6 @@ func (uc *AuthUseCase) Register(ctx context.Context, email, password string) err
 	return uc.Login(ctx, email, password)
 }
 
-// Login authenticates against Auther and stores tokens locally.
 func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error {
 	uc.l.InfoContext(ctx, "attempting to login", "user", login)
 
@@ -77,7 +71,6 @@ func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error 
 	return nil
 }
 
-// GetValidToken returns a non-expired access token, refreshing when needed.
 func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	session, err := uc.local.GetSession(ctx)
 	if err != nil {
@@ -106,11 +99,10 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 
 	uid, err := jwtuser.UserIDFromAccessTokenUnverified(newSession.AccessToken)
 	if err != nil {
-		uc.l.WarnContext(ctx, "refreshed access token missing user id", "error", err)
-		newSession.UserID = session.UserID
-	} else {
-		newSession.UserID = &uid
+		uc.l.ErrorContext(ctx, "refreshed access token missing user id", "error", err)
+		return "", errors.Wrap(err, "parse refreshed access token user id")
 	}
+	newSession.UserID = &uid
 
 	if err := uc.local.SaveSession(ctx, *newSession); err != nil {
 		uc.l.ErrorContext(ctx, "could not save refreshed session to local db", "err", err)
@@ -121,7 +113,6 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	return newSession.AccessToken, nil
 }
 
-// Logout clears the stored session.
 func (uc *AuthUseCase) Logout(ctx context.Context) error {
 	uc.l.InfoContext(ctx, "logging out and clearing session")
 	return uc.local.ClearSession(ctx)

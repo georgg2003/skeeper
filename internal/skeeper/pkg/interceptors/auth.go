@@ -1,3 +1,4 @@
+// Package interceptors validates Bearer JWTs and attaches the user id to the request context for Skeeper.
 package interceptors
 
 import (
@@ -47,6 +48,7 @@ func (w *wrappedStream) Context() context.Context {
 	return w.ctx
 }
 
+// NewAuthInterceptor requires a valid Bearer JWT and puts UserID on the context.
 func NewAuthInterceptor(jwt *jwthelper.JWTHelper) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -63,6 +65,7 @@ func NewAuthInterceptor(jwt *jwthelper.JWTHelper) grpc.UnaryServerInterceptor {
 	}
 }
 
+// NewStreamAuthInterceptor is the streaming variant of [NewAuthInterceptor].
 func NewStreamAuthInterceptor(jwt *jwthelper.JWTHelper) grpc.StreamServerInterceptor {
 	return func(
 		srv any,

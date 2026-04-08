@@ -11,8 +11,6 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
-// Narrow interfaces keep Cobra commands testable without a live vault or network.
-
 type AuthCommands interface {
 	Register(ctx context.Context, email, password string) error
 	Login(ctx context.Context, login, password string) error

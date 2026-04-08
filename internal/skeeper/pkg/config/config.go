@@ -1,3 +1,4 @@
+// Package config loads skeeper.yaml (Postgres, JWT keys, listen address, TLS).
 package config
 
 import (

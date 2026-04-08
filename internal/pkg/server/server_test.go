@@ -14,6 +14,16 @@ func testServerLog() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
+func TestNew_DisallowsPlaintextWithoutExplicitOptIn(t *testing.T) {
+	_, err := New(ServerConfig{
+		ListenAddr:      "127.0.0.1:0",
+		GracefulTimeout: time.Millisecond * 50,
+	}, testServerLog(), func(*grpc.Server) {})
+	if err == nil {
+		t.Fatal("expected error when TLS is off and allow_insecure_transport is false")
+	}
+}
+
 func TestNew_TLSEnabledMissingCertFiles(t *testing.T) {
 	_, err := New(ServerConfig{
 		ListenAddr:      "127.0.0.1:0",
@@ -27,8 +37,9 @@ func TestNew_TLSEnabledMissingCertFiles(t *testing.T) {
 
 func TestNew_ServeStopsOnCancel(t *testing.T) {
 	srv, err := New(ServerConfig{
-		ListenAddr:      "127.0.0.1:0",
-		GracefulTimeout: time.Millisecond * 100,
+		ListenAddr:               "127.0.0.1:0",
+		GracefulTimeout:          time.Millisecond * 100,
+		AllowInsecureTransport:   true,
 	}, testServerLog(), func(*grpc.Server) {})
 	if err != nil {
 		t.Fatal(err)

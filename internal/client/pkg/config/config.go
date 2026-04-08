@@ -1,4 +1,4 @@
-// Package config loads the CLI client YAML via Viper (env and defaults apply without a file).
+// Package config reads the CLI's YAML (or env only if the default file isn't there).
 package config
 
 import (
@@ -10,28 +10,22 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// GRPCClientTLS configures TLS for both Auther and Skeeper gRPC connections.
 type GRPCClientTLS struct {
 	Enabled bool   `mapstructure:"enabled"`
 	CAFile  string `mapstructure:"ca_file"`
 }
 
-// ClientConfig holds remote service endpoints and local vault location.
 type ClientConfig struct {
-	AutherAddr  string        `mapstructure:"auther_addr"`
-	SkeeperAddr string        `mapstructure:"skeeper_addr"`
-	DataDir     string        `mapstructure:"data_dir"`
-	GRPCTLS     GRPCClientTLS `mapstructure:"grpc_tls"`
+	AutherAddr          string        `mapstructure:"auther_addr"`
+	SkeeperAddr         string        `mapstructure:"skeeper_addr"`
+	DataDir             string        `mapstructure:"data_dir"`
+	AllowInsecureGRPC   bool          `mapstructure:"allow_insecure_grpc"`
+	GRPCTLS             GRPCClientTLS `mapstructure:"grpc_tls"`
 }
 
-// Load reads configPath with Viper when appropriate, then unmarshals.
-//
-// Env prefix is SKEEPERCLI (e.g. SKEEPERCLI_AUTHER_ADDR). Legacy vars
-// SKEEPERCLI_AUTHER, SKEEPERCLI_SKEEPER, and SKEEPERCLI_DATA are also accepted.
-//
-// If configPathExplicit is false and the file is missing, loading continues
-// using defaults and environment only. If configPathExplicit is true, the
-// file must exist and be readable.
+// Load merges file (if present), defaults, and env. Prefix is SKEEPERCLI_*; older names
+// SKEEPERCLI_AUTHER / SKEEPERCLI_SKEEPER / SKEEPERCLI_DATA still work. If configPathExplicit
+// is true, the file must exist; otherwise a missing path just means “env + defaults only”.
 func Load(configPath string, configPathExplicit bool) (*ClientConfig, error) {
 	v := viper.New()
 	v.SetEnvPrefix("SKEEPERCLI")
@@ -43,10 +37,12 @@ func Load(configPath string, configPathExplicit bool) (*ClientConfig, error) {
 	_ = v.BindEnv("data_dir", "SKEEPERCLI_DATA")
 	_ = v.BindEnv("grpc_tls.enabled", "SKEEPERCLI_GRPC_TLS_ENABLED")
 	_ = v.BindEnv("grpc_tls.ca_file", "SKEEPERCLI_GRPC_CA_FILE")
+	_ = v.BindEnv("allow_insecure_grpc", "SKEEPERCLI_ALLOW_INSECURE_GRPC")
 
 	v.SetDefault("auther_addr", "127.0.0.1:50051")
 	v.SetDefault("skeeper_addr", "127.0.0.1:50052")
 	v.SetDefault("data_dir", "~/.skeepercli")
+	v.SetDefault("allow_insecure_grpc", false)
 	v.SetDefault("grpc_tls.enabled", false)
 	v.SetDefault("grpc_tls.ca_file", "config/keys/grpc_server.crt")
 

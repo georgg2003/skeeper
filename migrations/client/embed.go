@@ -1,3 +1,4 @@
+// Package clientmigrate embeds goose SQL for the CLI's local SQLite schema.
 package clientmigrate
 
 import (

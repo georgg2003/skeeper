@@ -87,10 +87,15 @@ func bootstrap(cmd *cobra.Command) error {
 		return fmt.Errorf("migrations: %w", err)
 	}
 
+	if !fileCfg.GRPCTLS.Enabled && !fileCfg.AllowInsecureGRPC {
+		_ = dbRepo.Close()
+		return fmt.Errorf("gRPC TLS is off: set allow_insecure_grpc: true for local dev only, or enable grpc_tls in config")
+	}
+
 	dialOpts, err := grpcclient.DialOptions(grpcclient.TLSConfig{
 		Enabled: fileCfg.GRPCTLS.Enabled,
 		CAFile:  fileCfg.GRPCTLS.CAFile,
-	})
+	}, fileCfg.AllowInsecureGRPC)
 	if err != nil {
 		_ = dbRepo.Close()
 		return fmt.Errorf("grpc dial options: %w", err)

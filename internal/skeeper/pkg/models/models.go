@@ -1,3 +1,4 @@
+// Package models is the domain layer between protobuf and Skeeper usecase (entries, sync DTOs).
 package models
 
 import (
@@ -12,10 +13,10 @@ import (
 
 type Entry struct {
 	UUID         uuid.UUID
-	Type         string // "credentials", "card", ...
-	EncryptedDek []byte // Data encryption key, зашифрованный мастер-ключом.
-	Payload      []byte // Зашифрованные данные (логин:пароль, текст и т.д.).
-	Meta         []byte // Зашифрованные метаданные.
+	Type         string
+	EncryptedDek []byte // DEK, encrypted with the user's master key.
+	Payload      []byte // Ciphertext (password blob, text, etc.).
+	Meta         []byte // Encrypted metadata JSON.
 	Version      int64
 	IsDeleted    bool
 	UpdatedAt    time.Time
@@ -84,8 +85,9 @@ func NewSyncRequestFromProto(r *api.SyncRequest) (SyncRequest, error) {
 }
 
 type SyncResponse struct {
-	CurrentSyncAt time.Time
-	Updates       []Entry
+	CurrentSyncAt      time.Time
+	Updates            []Entry
+	AppliedUpdateUUIDs []uuid.UUID
 }
 
 func (s *SyncResponse) ToProto() *api.SyncResponse {
@@ -95,8 +97,14 @@ func (s *SyncResponse) ToProto() *api.SyncResponse {
 		protoUpdates = append(protoUpdates, s.Updates[i].ToProto())
 	}
 
+	applied := make([]string, 0, len(s.AppliedUpdateUUIDs))
+	for i := range s.AppliedUpdateUUIDs {
+		applied = append(applied, s.AppliedUpdateUUIDs[i].String())
+	}
+
 	return api.SyncResponse_builder{
-		CurrentSyncAt: timestamppb.New(s.CurrentSyncAt),
-		Updates:       protoUpdates,
+		CurrentSyncAt:      timestamppb.New(s.CurrentSyncAt),
+		Updates:            protoUpdates,
+		AppliedUpdateUuids: applied,
 	}.Build()
 }

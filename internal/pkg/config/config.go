@@ -1,3 +1,4 @@
+// Package config loads a single YAML file with Viper and unmarshals into a generic struct.
 package config
 
 import (
@@ -9,7 +10,6 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
-// New loads configPath with Viper, applies envPrefix for AutomaticEnv, unmarshals into T.
 func New[T any](configPath string, envPrefix string) (*T, error) {
 	if configPath == "" {
 		return nil, fmt.Errorf("config path is empty")

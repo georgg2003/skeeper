@@ -1,14 +1,18 @@
 # Skeeper gRPC service (encrypted entry sync). Override with env SKEEPER_*.
-# Use the same JWT public/private key pair as Auther so access tokens validate here.
+# JWT: only the public key is required here (same PEM as Auther). Do not deploy the private key on this service.
 
 service:
   listen_addr: "0.0.0.0:50052"
   graceful_timeout: 30s
+  # Reflection exposes the API; disable in production.
+  disable_reflection: true
+  allow_insecure_transport: true
   tls:
     enabled: false
     cert_file: "config/keys/grpc_server.crt"
     key_file: "config/keys/grpc_server.key"
 
+# Dev-only credentials; use secrets management in real deployments.
 postgres:
   host: "127.0.0.1"
   port: 5432
@@ -17,7 +21,7 @@ postgres:
   database: "skeeper_db"
 
 jwt:
-  private_key_file: "config/keys/jwt_private.pem"
   public_key_file: "config/keys/jwt_public.pem"
   access_token_lifetime: 15m
   refresh_token_lifetime: 720h
+  # audience: "skeeper-api"

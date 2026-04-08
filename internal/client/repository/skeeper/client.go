@@ -1,4 +1,4 @@
-// Package skeeper implements a gRPC client for the Skeeper secrets sync service.
+// Package skeeper is the gRPC client for vault sync and server-side vault crypto RPCs.
 package skeeper
 
 import (
@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -19,15 +18,13 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
-// ErrVaultCryptoNotFound is returned by GetVaultCrypto when the server has no profile for this user.
+// ErrVaultCryptoNotFound is returned when the server has no vault row for this user yet.
 var ErrVaultCryptoNotFound = errors.New("vault crypto not found on server")
 
-// TokenProvider supplies a bearer access token for authenticated RPCs.
 type TokenProvider interface {
 	GetValidToken(ctx context.Context) (string, error)
 }
 
-// SkeeperClient performs encrypted entry sync against the Skeeper service.
 type SkeeperClient struct {
 	conn *grpc.ClientConn
 	api  api.SkeeperClient
@@ -52,8 +49,7 @@ func newAuthInterceptor(provider TokenProvider) grpc.UnaryClientInterceptor {
 	}
 }
 
-// Sync uploads local dirty entries and returns server-side updates since lastSyncAt.
-func (c *SkeeperClient) Sync(ctx context.Context, entries []models.Entry, lastSyncAt time.Time) ([]models.Entry, error) {
+func (c *SkeeperClient) Sync(ctx context.Context, entries []models.Entry, lastSyncAt time.Time) ([]models.Entry, []uuid.UUID, error) {
 	updates := make([]*api.Entry, 0, len(entries))
 	for i := range entries {
 		updates = append(updates, clientEntryToProto(&entries[i]))
@@ -64,18 +60,29 @@ func (c *SkeeperClient) Sync(ctx context.Context, entries []models.Entry, lastSy
 		LastSyncAt: timestamppb.New(lastSyncAt),
 	}.Build())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	out := make([]models.Entry, 0, len(resp.GetUpdates()))
 	for _, pe := range resp.GetUpdates() {
 		e, err := protoToClientEntry(pe)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		out = append(out, e)
 	}
-	return out, nil
+
+	rawApplied := resp.GetAppliedUpdateUuids()
+	applied := make([]uuid.UUID, 0, len(rawApplied))
+	for _, s := range rawApplied {
+		id, err := uuid.Parse(s)
+		if err != nil {
+			return nil, nil, fmt.Errorf("sync applied_update_uuids: %w", err)
+		}
+		applied = append(applied, id)
+	}
+
+	return out, applied, nil
 }
 
 func clientEntryToProto(e *models.Entry) *api.Entry {
@@ -112,16 +119,16 @@ func protoToClientEntry(pe *api.Entry) (models.Entry, error) {
 	}, nil
 }
 
-// NewSkeeperClient dials Skeeper with a token-attaching unary interceptor.
-// dialOpts must include transport credentials (e.g. from grpcclient.DialOptions).
+// NewSkeeperClient dials addr and attaches the access token on every unary call. dialOpts must
+// include transport credentials from grpcclient.DialOptions.
 func NewSkeeperClient(addr string, provider TokenProvider, dialOpts ...grpc.DialOption) (*SkeeperClient, error) {
 	if addr == "" {
 		return nil, fmt.Errorf("skeeper address is required")
 	}
-	opts := append([]grpc.DialOption(nil), dialOpts...)
-	if len(opts) == 0 {
-		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	if len(dialOpts) == 0 {
+		return nil, fmt.Errorf("dial options are required (use grpcclient.DialOptions)")
 	}
+	opts := append([]grpc.DialOption(nil), dialOpts...)
 	opts = append(opts, grpc.WithUnaryInterceptor(newAuthInterceptor(provider)))
 	conn, err := grpc.NewClient(addr, opts...)
 	if err != nil {
@@ -134,7 +141,6 @@ func NewSkeeperClient(addr string, provider TokenProvider, dialOpts ...grpc.Dial
 	}, nil
 }
 
-// GetVaultCrypto returns the server-stored KDF salt and master-key verifier for the authenticated user.
 func (c *SkeeperClient) GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier []byte, err error) {
 	resp, err := c.api.GetVaultCrypto(ctx, api.GetVaultCryptoRequest_builder{}.Build())
 	if err != nil {
@@ -150,7 +156,6 @@ func (c *SkeeperClient) GetVaultCrypto(ctx context.Context) (kdfSalt, masterVeri
 	return v.GetKdfSalt(), v.GetMasterVerifier(), nil
 }
 
-// PutVaultCrypto uploads salt and verifier; the server treats identical repeats as success.
 func (c *SkeeperClient) PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier []byte) error {
 	_, err := c.api.PutVaultCrypto(ctx, api.PutVaultCryptoRequest_builder{
 		Vault: api.VaultCrypto_builder{

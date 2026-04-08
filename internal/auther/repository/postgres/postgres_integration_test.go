@@ -173,7 +173,7 @@ func TestIntegration_InsertRefreshToken_ContextCanceled(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "failed to insert new refresh token") {
+	if !strings.Contains(err.Error(), "failed to insert") {
 		t.Fatalf("unexpected: %v", err)
 	}
 }
@@ -187,7 +187,105 @@ func TestIntegration_DeleteRefreshTokenAndReturnUser_ContextCanceled(t *testing.
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "failed to delete token") {
+	if !strings.Contains(err.Error(), "refresh token") {
 		t.Fatalf("unexpected: %v", err)
+	}
+}
+
+func TestIntegration_RefreshTokenReuseRevokesActiveTokens(t *testing.T) {
+	ctx := context.Background()
+	repo := newAutherRepository(
+		t,
+		ctx,
+		integrationtest.AutherTestPool(t),
+	)
+	email := "reuse-" + uuid.NewString() + "@example.com"
+	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	raw1 := "refresh-one-" + uuid.NewString()
+	hash1 := utils.HashToken(raw1)
+	raw2 := "refresh-two-" + uuid.NewString()
+	hash2 := utils.HashToken(raw2)
+	exp := time.Now().Add(time.Hour).UTC()
+	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+		Token: jwthelper.Token{Token: "t1", ExpiresAt: exp},
+		Hash:  hash1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	uid, err := repo.DeleteRefreshTokenAndReturnUser(ctx, hash1)
+	if err != nil || uid != user.ID {
+		t.Fatalf("first consume: uid=%d err=%v", uid, err)
+	}
+	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+		Token: jwthelper.Token{Token: "t2", ExpiresAt: exp},
+		Hash:  hash2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash1)
+	if !errors.Is(err, postgres.ErrInvalidToken) {
+		t.Fatalf("reuse stale token: %v", err)
+	}
+	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash2)
+	if !errors.Is(err, postgres.ErrInvalidToken) {
+		t.Fatalf("valid token should be revoked after reuse; got %v", err)
+	}
+}
+
+func TestIntegration_RotateRefreshToken_RollsBackWhenMintFails(t *testing.T) {
+	ctx := context.Background()
+	repo := newAutherRepository(t, ctx, integrationtest.AutherTestPool(t))
+	email := "rot-" + uuid.NewString() + "@example.com"
+	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := "plain-refresh-" + uuid.NewString()
+	hash := utils.HashToken(raw)
+	exp := time.Now().Add(time.Hour).UTC()
+	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+		Token: jwthelper.Token{Token: raw, ExpiresAt: exp},
+		Hash:  hash,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = repo.RotateRefreshToken(ctx, raw, func(int64) (jwthelper.TokenPair, error) {
+		return jwthelper.TokenPair{}, errors.New("mint fail")
+	})
+	if err == nil {
+		t.Fatal("expected mint error")
+	}
+	newRT := "new-rt-" + uuid.NewString()
+	pair, err := repo.RotateRefreshToken(ctx, raw, func(int64) (jwthelper.TokenPair, error) {
+		return jwthelper.TokenPair{
+			AccessToken:  jwthelper.Token{Token: "at", ExpiresAt: exp},
+			RefreshToken: jwthelper.Token{Token: newRT, ExpiresAt: exp},
+		}, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pair.RefreshToken.Token != newRT {
+		t.Fatalf("got %+v", pair.RefreshToken)
+	}
+	_, err = repo.RotateRefreshToken(ctx, newRT, func(int64) (jwthelper.TokenPair, error) {
+		return jwthelper.TokenPair{
+			AccessToken:  jwthelper.Token{Token: "at2", ExpiresAt: exp},
+			RefreshToken: jwthelper.Token{Token: "rt3", ExpiresAt: exp},
+		}, nil
+	})
+	if err != nil {
+		t.Fatalf("second rotation with new refresh: %v", err)
+	}
+	// Replaying the original refresh after it was marked used revokes the whole family (reuse detection).
+	_, err = repo.RotateRefreshToken(ctx, raw, func(int64) (jwthelper.TokenPair, error) {
+		return jwthelper.TokenPair{}, errors.New("should not run")
+	})
+	if !errors.Is(err, postgres.ErrInvalidToken) {
+		t.Fatalf("stale refresh reuse: %v", err)
 	}
 }

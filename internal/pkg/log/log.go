@@ -1,3 +1,4 @@
+// Package log builds the app's slog logger: JSON to stdout, plus request id / user id from context when present.
 package log
 
 import (

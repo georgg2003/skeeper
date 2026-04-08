@@ -1,4 +1,4 @@
-// Package models defines client-side domain types for sessions and encrypted entries.
+// Package models is the CLI’s view of sessions, encrypted entries, and small payloads (e.g. cards).
 package models
 
 import (
@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Entry type constants sent to Skeeper (cleartext type label only; payload stays encrypted).
 const (
 	EntryTypePassword = "PASSWORD"
 	EntryTypeText     = "TEXT"
@@ -15,7 +14,6 @@ const (
 	EntryTypeCard     = "CARD"
 )
 
-// Entry is one ciphertext blob cached locally and synchronized with the server.
 type Entry struct {
 	UUID         uuid.UUID
 	Type         string
@@ -28,25 +26,22 @@ type Entry struct {
 
 	IsDirty bool
 
-	UserID *int64 // auther user id this row belongs to; nil for legacy rows before user scoping
+	UserID *int64 // nil on old rows before per-user scoping
 }
 
-// Session holds JWT material returned by Auther.
 type Session struct {
 	AccessToken      string
 	RefreshToken     string
-	ExpiresAt        time.Time // access token expiry
-	RefreshExpiresAt time.Time // refresh token expiry
-	UserID           *int64    // auther user id (from access JWT); nil if unknown / legacy row
+	ExpiresAt        time.Time
+	RefreshExpiresAt time.Time
+	UserID           *int64 // parsed from JWT when we can; nil on legacy sessions
 }
 
-// User is a minimal account projection (used after registration).
 type User struct {
 	ID    int64
 	Email string
 }
 
-// CardPayload is serialized into the ciphertext payload for CARD entries.
 type CardPayload struct {
 	Holder string `json:"holder,omitempty"`
 	Number string `json:"number,omitempty"`

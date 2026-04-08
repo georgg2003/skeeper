@@ -30,7 +30,7 @@ func testJWTHelper(t *testing.T) *jwthelper.JWTHelper {
 		t.Fatal(err)
 	}
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
-	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, time.Hour)
+	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, time.Hour, "")
 	if err != nil {
 		t.Fatal(err)
 	}

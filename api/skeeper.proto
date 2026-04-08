@@ -26,6 +26,9 @@ message SyncRequest {
 message SyncResponse {
     repeated Entry updates = 1;
     google.protobuf.Timestamp current_sync_at = 2;
+    // UUIDs of client updates that were inserted or version-upgraded on this call.
+    // Omitted entries were not applied (e.g. stale version). Empty when no updates were sent.
+    repeated string applied_update_uuids = 3;
 }
 
 // VaultCrypto carries Argon2id KDF salt and a verifier so all devices derive the same master key

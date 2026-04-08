@@ -1,4 +1,4 @@
-// Command skeepercli is the skeeper CLI client (Windows, Linux, macOS).
+// Command skeepercli is the desktop CLI: local encrypted vault, talks to auther and skeeper over gRPC.
 package main
 
 import (

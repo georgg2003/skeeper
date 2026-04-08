@@ -23,7 +23,7 @@ func testLogger() *slog.Logger {
 }
 
 func TestAutherServer_CreateUser(t *testing.T) {
-	emailOK, passOK := "ok@example.com", "secret"
+	emailOK, passOK := "ok@example.com", "okpassword1234"
 	valErr := errors.NewValidationError("email", "invalid")
 
 	tests := []struct {
@@ -43,6 +43,16 @@ func TestAutherServer_CreateUser(t *testing.T) {
 			},
 			email:    "bad",
 			password: "x",
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "already_exists",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().CreateUser(gomock.Any(), models.UserCredentials{Email: emailOK, Password: passOK}).
+					Return(models.UserInfo{}, usecase.ErrUserExists)
+			},
+			email:    emailOK,
+			password: passOK,
 			wantCode: codes.InvalidArgument,
 		},
 		{
@@ -112,15 +122,23 @@ func TestAutherServer_Login(t *testing.T) {
 			loginPw: "",
 			setup: func(m *MockUseCase) {
 				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: "bad", Password: ""}).
-					Return(models.LoginReponse{}, errors.NewValidationError("password", "empty"))
+					Return(models.LoginResponse{}, errors.NewValidationError("password", "empty"))
 			},
 			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "unauthenticated_invalid_credentials",
+			setup: func(m *MockUseCase) {
+				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: email, Password: pass}).
+					Return(models.LoginResponse{}, usecase.ErrUserNotExist)
+			},
+			wantCode: codes.Unauthenticated,
 		},
 		{
 			name: "internal_on_usecase_error",
 			setup: func(m *MockUseCase) {
 				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: email, Password: pass}).
-					Return(models.LoginReponse{}, errors.New("any"))
+					Return(models.LoginResponse{}, errors.New("any"))
 			},
 			wantCode: codes.Internal,
 		},
@@ -130,7 +148,7 @@ func TestAutherServer_Login(t *testing.T) {
 				at := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 				rt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
 				m.EXPECT().LoginUser(gomock.Any(), models.UserCredentials{Email: email, Password: pass}).
-					Return(models.LoginReponse{
+					Return(models.LoginResponse{
 						User: models.UserInfo{ID: 9, Email: email},
 						TokenPair: jwthelper.TokenPair{
 							AccessToken:  jwthelper.Token{Token: "access-jwt", ExpiresAt: at},

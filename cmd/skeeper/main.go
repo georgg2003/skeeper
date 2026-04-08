@@ -1,3 +1,4 @@
+// Command skeeper is the vault sync service: gRPC API for encrypted entries and per-user vault crypto.
 package main
 
 import (

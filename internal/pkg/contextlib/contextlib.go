@@ -1,3 +1,5 @@
+// Package contextlib stores request metadata and the authenticated user id on [context.Context]
+// for handlers and logging.
 package contextlib
 
 import (

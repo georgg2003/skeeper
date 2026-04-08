@@ -1,4 +1,4 @@
-// Package postgres provides shared pgxpool connection configuration for service repositories.
+// Package postgres builds a pgx connection pool from host, user, password, and the usual knobs.
 package postgres
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Config holds libpq-style parameters for building a pgx pool DSN.
+// Config is the connection block you’d put in YAML (host, port, user, password, database, ssl).
 type Config struct {
 	Host     string `mapstructure:"host"`
 	Port     uint16 `mapstructure:"port"`
@@ -21,7 +21,7 @@ type Config struct {
 	SSLMode  string `mapstructure:"ssl_mode"`
 }
 
-// PoolConfig returns a pgx pool config built via url.URL (safe escaping for user/password/database).
+// PoolConfig turns Config into something pgx can open (URL-escaped user/password/db name).
 func (c Config) PoolConfig() (*pgxpool.Config, error) {
 	ssl := c.SSLMode
 	if ssl == "" {
@@ -39,7 +39,6 @@ func (c Config) PoolConfig() (*pgxpool.Config, error) {
 	return pgxpool.ParseConfig(u.String())
 }
 
-// NewPool opens a pool from Config.
 func NewPool(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	pc, err := cfg.PoolConfig()
 	if err != nil {
@@ -48,7 +47,7 @@ func NewPool(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	return pgxpool.NewWithConfig(ctx, pc)
 }
 
-// NewPoolFromConnString opens a pool from a libpq connection string (e.g. testcontainers output).
+// NewPoolFromConnString is handy for tests (e.g. a libpq string from testcontainers).
 func NewPoolFromConnString(ctx context.Context, connStr string) (*pgxpool.Pool, error) {
 	pc, err := pgxpool.ParseConfig(connStr)
 	if err != nil {

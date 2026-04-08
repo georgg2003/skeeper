@@ -7,12 +7,11 @@
 package api
 
 import (
-	reflect "reflect"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	unsafe "unsafe"
 )
 
 const (
@@ -282,11 +281,12 @@ func (b0 SyncRequest_builder) Build() *SyncRequest {
 }
 
 type SyncResponse struct {
-	state                    protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Updates       *[]*Entry              `protobuf:"bytes,1,rep,name=updates,proto3"`
-	xxx_hidden_CurrentSyncAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=current_sync_at,json=currentSyncAt,proto3"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Updates            *[]*Entry              `protobuf:"bytes,1,rep,name=updates,proto3"`
+	xxx_hidden_CurrentSyncAt      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=current_sync_at,json=currentSyncAt,proto3"`
+	xxx_hidden_AppliedUpdateUuids []string               `protobuf:"bytes,3,rep,name=applied_update_uuids,json=appliedUpdateUuids,proto3"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *SyncResponse) Reset() {
@@ -330,12 +330,23 @@ func (x *SyncResponse) GetCurrentSyncAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SyncResponse) GetAppliedUpdateUuids() []string {
+	if x != nil {
+		return x.xxx_hidden_AppliedUpdateUuids
+	}
+	return nil
+}
+
 func (x *SyncResponse) SetUpdates(v []*Entry) {
 	x.xxx_hidden_Updates = &v
 }
 
 func (x *SyncResponse) SetCurrentSyncAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_CurrentSyncAt = v
+}
+
+func (x *SyncResponse) SetAppliedUpdateUuids(v []string) {
+	x.xxx_hidden_AppliedUpdateUuids = v
 }
 
 func (x *SyncResponse) HasCurrentSyncAt() bool {
@@ -354,6 +365,9 @@ type SyncResponse_builder struct {
 
 	Updates       []*Entry
 	CurrentSyncAt *timestamppb.Timestamp
+	// UUIDs of client updates that were inserted or version-upgraded on this call.
+	// Omitted entries were not applied (e.g. stale version). Empty when no updates were sent.
+	AppliedUpdateUuids []string
 }
 
 func (b0 SyncResponse_builder) Build() *SyncResponse {
@@ -362,6 +376,7 @@ func (b0 SyncResponse_builder) Build() *SyncResponse {
 	_, _ = b, x
 	x.xxx_hidden_Updates = &b.Updates
 	x.xxx_hidden_CurrentSyncAt = b.CurrentSyncAt
+	x.xxx_hidden_AppliedUpdateUuids = b.AppliedUpdateUuids
 	return m0
 }
 
@@ -1071,10 +1086,11 @@ const file_skeeper_proto_rawDesc = "" +
 	"\vSyncRequest\x12(\n" +
 	"\aupdates\x18\x01 \x03(\v2\x0e.skeeper.EntryR\aupdates\x12<\n" +
 	"\flast_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"lastSyncAt\"|\n" +
+	"lastSyncAt\"\xae\x01\n" +
 	"\fSyncResponse\x12(\n" +
 	"\aupdates\x18\x01 \x03(\v2\x0e.skeeper.EntryR\aupdates\x12B\n" +
-	"\x0fcurrent_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\rcurrentSyncAt\"Q\n" +
+	"\x0fcurrent_sync_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\rcurrentSyncAt\x120\n" +
+	"\x14applied_update_uuids\x18\x03 \x03(\tR\x12appliedUpdateUuids\"Q\n" +
 	"\vVaultCrypto\x12\x19\n" +
 	"\bkdf_salt\x18\x01 \x01(\fR\akdfSalt\x12'\n" +
 	"\x0fmaster_verifier\x18\x02 \x01(\fR\x0emasterVerifier\"\x17\n" +

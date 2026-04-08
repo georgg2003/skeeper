@@ -6,8 +6,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	stderrors "errors"
 	"io"
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,7 +19,6 @@ import (
 	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
-	"github.com/georgg2003/skeeper/pkg/utils"
 )
 
 func testJWTHelper(t *testing.T) *jwthelper.JWTHelper {
@@ -32,7 +33,7 @@ func testJWTHelper(t *testing.T) *jwthelper.JWTHelper {
 		t.Fatal(err)
 	}
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
-	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, 24*time.Hour)
+	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, 24*time.Hour, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +46,7 @@ func discardLogger() *slog.Logger {
 
 func TestUseCase_CreateUser(t *testing.T) {
 	ctx := context.Background()
-	good := models.UserCredentials{Email: "u@example.com", Password: "valid-pass"}
+	good := models.UserCredentials{Email: "u@example.com", Password: "valid-pass-12chars"}
 
 	tests := []struct {
 		name    string
@@ -55,7 +56,7 @@ func TestUseCase_CreateUser(t *testing.T) {
 	}{
 		{
 			name:    "invalid_email",
-			creds:   models.UserCredentials{Email: "nope", Password: "x"},
+			creds:   models.UserCredentials{Email: "nope", Password: "long-password-ok"},
 			setup:   func(m *MockRepository) {},
 			wantErr: true,
 		},
@@ -63,6 +64,15 @@ func TestUseCase_CreateUser(t *testing.T) {
 			name:    "empty_password",
 			creds:   models.UserCredentials{Email: "a@b.c", Password: ""},
 			setup:   func(m *MockRepository) {},
+			wantErr: true,
+		},
+		{
+			name:  "user_exists",
+			creds: good,
+			setup: func(m *MockRepository) {
+				m.EXPECT().InsertUser(gomock.Any(), gomock.AssignableToTypeOf(models.DBUserCredentials{})).
+					Return(models.UserInfo{}, postgres.ErrUserExists)
+			},
 			wantErr: true,
 		},
 		{
@@ -99,6 +109,9 @@ func TestUseCase_CreateUser(t *testing.T) {
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
+				}
+				if tt.name == "user_exists" && !stderrors.Is(err, ErrUserExists) {
+					t.Fatalf("expected ErrUserExists, got %v", err)
 				}
 				return
 			}
@@ -156,11 +169,11 @@ func TestUseCase_LoginUser(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:  "insert_refresh_fails",
+			name:  "replace_refresh_fails",
 			creds: models.UserCredentials{Email: email, Password: pass},
 			setup: func(m *MockRepository) {
 				m.EXPECT().SelectUserByEmail(gomock.Any(), email).Return(userRow, nil)
-				m.EXPECT().InsertRefreshToken(gomock.Any(), userRow.ID, gomock.Any()).Return(errors.New("db"))
+				m.EXPECT().ReplaceUserRefreshTokens(gomock.Any(), userRow.ID, gomock.Any()).Return(errors.New("db"))
 			},
 			wantErr: true,
 		},
@@ -169,7 +182,7 @@ func TestUseCase_LoginUser(t *testing.T) {
 			creds: models.UserCredentials{Email: email, Password: pass},
 			setup: func(m *MockRepository) {
 				m.EXPECT().SelectUserByEmail(gomock.Any(), email).Return(userRow, nil)
-				m.EXPECT().InsertRefreshToken(gomock.Any(), userRow.ID, gomock.Any()).Return(nil)
+				m.EXPECT().ReplaceUserRefreshTokens(gomock.Any(), userRow.ID, gomock.Any()).Return(nil)
 			},
 		},
 	}
@@ -198,7 +211,6 @@ func TestUseCase_RotateToken(t *testing.T) {
 	ctx := context.Background()
 	jh := testJWTHelper(t)
 	rawRefresh := "opaque-refresh-token"
-	hash := utils.HashToken(rawRefresh)
 	userID := int64(100)
 
 	tests := []struct {
@@ -209,24 +221,36 @@ func TestUseCase_RotateToken(t *testing.T) {
 		{
 			name: "invalid_token",
 			setup: func(m *MockRepository) {
-				m.EXPECT().DeleteRefreshTokenAndReturnUser(gomock.Any(), gomock.Any()).
-					Return(int64(0), postgres.ErrInvalidToken)
+				m.EXPECT().RotateRefreshToken(gomock.Any(), rawRefresh, gomock.Any()).
+					Return(jwthelper.TokenPair{}, postgres.ErrInvalidToken)
 			},
 			wantErr: true,
 		},
 		{
-			name: "insert_new_refresh_fails",
+			name: "rotate_db_error",
 			setup: func(m *MockRepository) {
-				m.EXPECT().DeleteRefreshTokenAndReturnUser(gomock.Any(), hash).Return(userID, nil)
-				m.EXPECT().InsertRefreshToken(gomock.Any(), userID, gomock.Any()).Return(errors.New("db"))
+				m.EXPECT().RotateRefreshToken(gomock.Any(), rawRefresh, gomock.Any()).
+					Return(jwthelper.TokenPair{}, errors.New("db down"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "mint_fails_inside_rotate",
+			setup: func(m *MockRepository) {
+				m.EXPECT().RotateRefreshToken(gomock.Any(), rawRefresh, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ string, _ func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error) {
+						return jwthelper.TokenPair{}, errors.New("mint failed")
+					})
 			},
 			wantErr: true,
 		},
 		{
 			name: "success",
 			setup: func(m *MockRepository) {
-				m.EXPECT().DeleteRefreshTokenAndReturnUser(gomock.Any(), hash).Return(userID, nil)
-				m.EXPECT().InsertRefreshToken(gomock.Any(), userID, gomock.Any()).Return(nil)
+				m.EXPECT().RotateRefreshToken(gomock.Any(), rawRefresh, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ string, mint func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error) {
+						return mint(userID)
+					})
 			},
 		},
 	}
@@ -251,5 +275,62 @@ func TestUseCase_RotateToken(t *testing.T) {
 				t.Fatal("expected new refresh token")
 			}
 		})
+	}
+}
+
+type singleFlightRepoStub struct {
+	mu    sync.Mutex
+	calls int
+}
+
+func (s *singleFlightRepoStub) InsertUser(context.Context, models.DBUserCredentials) (models.UserInfo, error) {
+	panic("unexpected")
+}
+
+func (s *singleFlightRepoStub) ReplaceUserRefreshTokens(context.Context, int64, jwthelper.TokenPair) error {
+	panic("unexpected")
+}
+
+func (s *singleFlightRepoStub) RotateRefreshToken(_ context.Context, _ string, mint func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error) {
+	s.mu.Lock()
+	s.calls++
+	s.mu.Unlock()
+	time.Sleep(25 * time.Millisecond)
+	return mint(42)
+}
+
+func (s *singleFlightRepoStub) SelectUserByEmail(context.Context, string) (models.UserInfo, error) {
+	panic("unexpected")
+}
+
+func (*singleFlightRepoStub) Close() {}
+
+func TestUseCase_RotateToken_SingleFlight(t *testing.T) {
+	ctx := context.Background()
+	jh := testJWTHelper(t)
+	rawRefresh := "shared-refresh-token"
+	repo := &singleFlightRepoStub{}
+	uc := New(discardLogger(), repo, jh)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var err0, err1 error
+	go func() {
+		defer wg.Done()
+		_, err0 = uc.RotateToken(ctx, rawRefresh)
+	}()
+	go func() {
+		defer wg.Done()
+		_, err1 = uc.RotateToken(ctx, rawRefresh)
+	}()
+	wg.Wait()
+	if err0 != nil || err1 != nil {
+		t.Fatalf("errs %v %v", err0, err1)
+	}
+	repo.mu.Lock()
+	n := repo.calls
+	repo.mu.Unlock()
+	if n != 1 {
+		t.Fatalf("RotateRefreshToken calls = %d, want 1", n)
 	}
 }

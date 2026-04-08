@@ -1,4 +1,4 @@
-// Package cli defines Cobra commands for the skeeper client.
+// Package cli is the skeepercli command tree (Cobra).
 package cli
 
 import (
@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Version and BuildTime are injected at link time (e.g. -ldflags).
 var (
 	Version   = "dev"
 	BuildTime = "unknown"
@@ -20,7 +19,6 @@ var (
 	syncUC   SyncCommands
 )
 
-// SetUseCases wires use cases (used from tests or after bootstrap).
 func SetUseCases(a AuthCommands, s SecretCommands, y SyncCommands) {
 	authUC, secretUC, syncUC = a, s, y
 }
@@ -39,7 +37,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// Execute runs the root command tree.
 func Execute() {
 	rootCmd.Version = fmt.Sprintf("%s (built %s)", Version, BuildTime)
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
@@ -49,8 +46,7 @@ func Execute() {
 	}
 }
 
-// Run executes the root command with explicit stdio and argv (e.g. integration tests). Args should not include the program name.
-// Nil readers/writers fall back to [os.Stdin], [os.Stdout], and [os.Stderr].
+// Run is like Execute but with injected argv and stdio (tests). Args must not include argv[0].
 func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	rootCmd.SetArgs(args)
 	if stdin != nil {

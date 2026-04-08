@@ -1,3 +1,4 @@
+// Package delivery is the gRPC layer for Auther: register, login, token exchange.
 package delivery
 
 //go:generate go tool mockgen -typed -destination=mock_usecase_test.go -package=delivery -source=delivery.go UseCase
@@ -17,10 +18,9 @@ import (
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
-// UseCase is implemented by the auther use case layer.
 type UseCase interface {
 	CreateUser(context.Context, models.UserCredentials) (models.UserInfo, error)
-	LoginUser(context.Context, models.UserCredentials) (models.LoginReponse, error)
+	LoginUser(context.Context, models.UserCredentials) (models.LoginResponse, error)
 	RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error)
 }
 
@@ -42,6 +42,9 @@ func (s autherServer) CreateUser(ctx context.Context, req *api.CreateUserRequest
 
 	if valErr, ok := errors.AsType[*errors.ValidationError](err); ok {
 		return nil, status.Error(codes.InvalidArgument, valErr.Error())
+	}
+	if errors.Is(err, usecase.ErrUserExists) {
+		return nil, status.Error(codes.InvalidArgument, "unable to register with the given credentials")
 	}
 	if err != nil {
 		s.l.ErrorContext(ctx, "failed to create user", "err", err)
@@ -67,6 +70,9 @@ func (s autherServer) Login(ctx context.Context, req *api.LoginRequest) (*api.Lo
 
 	if valErr, ok := errors.AsType[*errors.ValidationError](err); ok {
 		return nil, status.Error(codes.InvalidArgument, valErr.Error())
+	}
+	if errors.Is(err, usecase.ErrUserNotExist) {
+		return nil, status.Error(codes.Unauthenticated, "invalid email or password")
 	}
 	if err != nil {
 		s.l.ErrorContext(ctx, "failed to login user", "err", err)

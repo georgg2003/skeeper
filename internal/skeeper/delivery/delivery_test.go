@@ -99,8 +99,9 @@ func TestSkeeperServer_Sync(t *testing.T) {
 							t.Fatalf("unexpected request: %+v", got)
 						}
 						return models.SyncResponse{
-							CurrentSyncAt: syncAt,
-							Updates:       []models.Entry{{UUID: entryID, Type: "TEXT", Version: 2, UpdatedAt: syncAt}},
+							CurrentSyncAt:      syncAt,
+							Updates:            []models.Entry{{UUID: entryID, Type: "TEXT", Version: 2, UpdatedAt: syncAt}},
+							AppliedUpdateUUIDs: []uuid.UUID{entryID},
 						}, nil
 					})
 			},
@@ -135,6 +136,10 @@ func TestSkeeperServer_Sync(t *testing.T) {
 				}
 				if len(resp.GetUpdates()) != 1 || resp.GetUpdates()[0].GetUuid() != entryID.String() {
 					t.Fatalf("updates %+v", resp.GetUpdates())
+				}
+				applied := resp.GetAppliedUpdateUuids()
+				if len(applied) != 1 || applied[0] != entryID.String() {
+					t.Fatalf("applied_update_uuids %+v", applied)
 				}
 				return
 			}

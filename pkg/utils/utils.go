@@ -1,3 +1,4 @@
+// Package utils is a few tiny helpers shared by services (e.g. hashing refresh tokens for storage).
 package utils
 
 import (

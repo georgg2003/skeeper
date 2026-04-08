@@ -1,9 +1,7 @@
-// Package skeepermigrate exposes embedded Goose SQL files for the Skeeper Postgres database.
+// Package skeepermigrate ships embedded goose migrations for the Skeeper Postgres DB.
 package skeepermigrate
 
 import "embed"
 
-// GooseFiles contains ordered *.sql migrations from this directory.
-//
 //go:embed *.sql
 var GooseFiles embed.FS
