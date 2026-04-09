@@ -13,11 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	uuid "github.com/google/uuid"
-	gomock "go.uber.org/mock/gomock"
-
 	models "github.com/georgg2003/skeeper/internal/client/pkg/models"
 	usecase "github.com/georgg2003/skeeper/internal/client/usecase"
+	uuid "github.com/google/uuid"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAuthCommands is a mock of AuthCommands interface.
@@ -222,13 +221,14 @@ func (m *MockSecretCommands) EXPECT() *MockSecretCommandsMockRecorder {
 }
 
 // GetDecryptedEntry mocks base method.
-func (m *MockSecretCommands) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *usecase.EntryMetadata, error) {
+func (m *MockSecretCommands) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *usecase.EntryMetadata, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDecryptedEntry", ctx, id, masterPass)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(*usecase.EntryMetadata)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // GetDecryptedEntry indicates an expected call of GetDecryptedEntry.
@@ -244,19 +244,19 @@ type MockSecretCommandsGetDecryptedEntryCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockSecretCommandsGetDecryptedEntryCall) Return(arg0 []byte, arg1 *usecase.EntryMetadata, arg2 error) *MockSecretCommandsGetDecryptedEntryCall {
-	c.Call = c.Call.Return(arg0, arg1, arg2)
+func (c *MockSecretCommandsGetDecryptedEntryCall) Return(arg0 []byte, arg1 *usecase.EntryMetadata, arg2 string, arg3 error) *MockSecretCommandsGetDecryptedEntryCall {
+	c.Call = c.Call.Return(arg0, arg1, arg2, arg3)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsGetDecryptedEntryCall) Do(f func(context.Context, uuid.UUID, string) ([]byte, *usecase.EntryMetadata, error)) *MockSecretCommandsGetDecryptedEntryCall {
+func (c *MockSecretCommandsGetDecryptedEntryCall) Do(f func(context.Context, uuid.UUID, string) ([]byte, *usecase.EntryMetadata, string, error)) *MockSecretCommandsGetDecryptedEntryCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsGetDecryptedEntryCall) DoAndReturn(f func(context.Context, uuid.UUID, string) ([]byte, *usecase.EntryMetadata, error)) *MockSecretCommandsGetDecryptedEntryCall {
+func (c *MockSecretCommandsGetDecryptedEntryCall) DoAndReturn(f func(context.Context, uuid.UUID, string) ([]byte, *usecase.EntryMetadata, string, error)) *MockSecretCommandsGetDecryptedEntryCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -339,44 +339,6 @@ func (c *MockSecretCommandsListLocalCall) DoAndReturn(f func(context.Context) ([
 	return c
 }
 
-// SetBinary mocks base method.
-func (m *MockSecretCommands) SetBinary(ctx context.Context, meta usecase.EntryMetadata, data []byte, masterPass string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetBinary", ctx, meta, data, masterPass)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetBinary indicates an expected call of SetBinary.
-func (mr *MockSecretCommandsMockRecorder) SetBinary(ctx, meta, data, masterPass any) *MockSecretCommandsSetBinaryCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBinary", reflect.TypeOf((*MockSecretCommands)(nil).SetBinary), ctx, meta, data, masterPass)
-	return &MockSecretCommandsSetBinaryCall{Call: call}
-}
-
-// MockSecretCommandsSetBinaryCall wrap *gomock.Call
-type MockSecretCommandsSetBinaryCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockSecretCommandsSetBinaryCall) Return(arg0 error) *MockSecretCommandsSetBinaryCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsSetBinaryCall) Do(f func(context.Context, usecase.EntryMetadata, []byte, string) error) *MockSecretCommandsSetBinaryCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsSetBinaryCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, []byte, string) error) *MockSecretCommandsSetBinaryCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // SetCard mocks base method.
 func (m *MockSecretCommands) SetCard(ctx context.Context, meta usecase.EntryMetadata, card models.CardPayload, masterPass string) error {
 	m.ctrl.T.Helper()
@@ -411,6 +373,44 @@ func (c *MockSecretCommandsSetCardCall) Do(f func(context.Context, usecase.Entry
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockSecretCommandsSetCardCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsSetCardCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// SetFile mocks base method.
+func (m *MockSecretCommands) SetFile(ctx context.Context, meta usecase.EntryMetadata, originalFilename string, data []byte, masterPass string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetFile", ctx, meta, originalFilename, data, masterPass)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetFile indicates an expected call of SetFile.
+func (mr *MockSecretCommandsMockRecorder) SetFile(ctx, meta, originalFilename, data, masterPass any) *MockSecretCommandsSetFileCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFile", reflect.TypeOf((*MockSecretCommands)(nil).SetFile), ctx, meta, originalFilename, data, masterPass)
+	return &MockSecretCommandsSetFileCall{Call: call}
+}
+
+// MockSecretCommandsSetFileCall wrap *gomock.Call
+type MockSecretCommandsSetFileCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockSecretCommandsSetFileCall) Return(arg0 error) *MockSecretCommandsSetFileCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockSecretCommandsSetFileCall) Do(f func(context.Context, usecase.EntryMetadata, string, []byte, string) error) *MockSecretCommandsSetFileCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockSecretCommandsSetFileCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, string, []byte, string) error) *MockSecretCommandsSetFileCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

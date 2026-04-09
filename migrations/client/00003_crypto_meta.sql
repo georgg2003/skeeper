@@ -1,8 +1,8 @@
 -- +goose Up
 CREATE TABLE crypto_meta (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
+  user_id INTEGER NOT NULL PRIMARY KEY,
   kdf_salt BLOB NOT NULL,
-  master_verifier BLOB NULL
+  master_verifier BLOB
 );
 -- +goose Down
 DROP TABLE IF EXISTS crypto_meta;

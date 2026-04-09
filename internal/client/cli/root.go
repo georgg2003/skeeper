@@ -88,7 +88,6 @@ func init() {
 		"",
 		"Local vault directory (overrides config and SKEEPERCLI_DATA)",
 	)
-
 	rootCmd.AddCommand(
 		loginCmd,
 		registerCmd,
@@ -96,7 +95,7 @@ func init() {
 		syncCmd,
 		addPasswordCmd,
 		addTextCmd,
-		addBinaryCmd,
+		addFileCmd,
 		addCardCmd,
 		listCmd,
 		getCmd,

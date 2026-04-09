@@ -44,6 +44,8 @@ func displayType(t string) string {
 		return "text"
 	case models.EntryTypeBinary:
 		return "binary"
+	case models.EntryTypeFile:
+		return "file"
 	case models.EntryTypeCard:
 		return "card"
 	default:

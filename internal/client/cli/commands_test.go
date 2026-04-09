@@ -257,7 +257,7 @@ func TestCLI_Get(t *testing.T) {
 			name: "password_entry",
 			setup: func(secret *MockSecretCommands) {
 				secret.EXPECT().GetLocalEntry(gomock.Any(), id).Return(models.Entry{Type: models.EntryTypePassword}, nil)
-				secret.EXPECT().GetDecryptedEntry(gomock.Any(), id, "master").Return([]byte("secret"), meta, nil)
+				secret.EXPECT().GetDecryptedEntry(gomock.Any(), id, "master").Return([]byte("secret"), meta, "", nil)
 			},
 			args:    []string{"get", id.String()},
 			stdin:   "master\n",
@@ -348,12 +348,12 @@ func TestCLI_AddBinary(t *testing.T) {
 	meta := usecase.EntryMetadata{Name: "bin", Notes: ""}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
-	secret.EXPECT().SetBinary(gomock.Any(), meta, []byte{1, 2, 3}, "m").Return(nil)
-	out, _, err := runCLITest(t, NewMockAuthCommands(ctrl), secret, NewMockSyncCommands(ctrl), "bin\n\nm\n", "add-binary", path)
+	secret.EXPECT().SetFile(gomock.Any(), meta, "blob.bin", []byte{1, 2, 3}, "m").Return(nil)
+	out, _, err := runCLITest(t, NewMockAuthCommands(ctrl), secret, NewMockSyncCommands(ctrl), "bin\n\nm\n", "add-file", path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "Encrypted binary saved locally") {
+	if !strings.Contains(out, "Encrypted file saved") {
 		t.Fatalf("stdout %q", out)
 	}
 }

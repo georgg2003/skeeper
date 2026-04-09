@@ -21,10 +21,10 @@ type AuthCommands interface {
 type SecretCommands interface {
 	ListLocal(ctx context.Context) ([]models.Entry, error)
 	GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error)
-	GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *usecase.EntryMetadata, error)
+	GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *usecase.EntryMetadata, string, error)
 	SetPassword(ctx context.Context, meta usecase.EntryMetadata, password, masterPass string) error
 	SetText(ctx context.Context, meta usecase.EntryMetadata, text, masterPass string) error
-	SetBinary(ctx context.Context, meta usecase.EntryMetadata, data []byte, masterPass string) error
+	SetFile(ctx context.Context, meta usecase.EntryMetadata, originalFilename string, data []byte, masterPass string) error
 	SetCard(ctx context.Context, meta usecase.EntryMetadata, card models.CardPayload, masterPass string) error
 }
 

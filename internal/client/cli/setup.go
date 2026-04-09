@@ -70,6 +70,8 @@ func bootstrap(cmd *cobra.Command) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("data dir: %w", err)
 	}
+
+	maxFileBytes := fileCfg.MaxFileBytes
 	dbPath, err := filepath.Abs(filepath.Join(dir, "local.db"))
 	if err != nil {
 		return err
@@ -115,7 +117,7 @@ func bootstrap(cmd *cobra.Command) error {
 		return fmt.Errorf("skeeper client: %w", err)
 	}
 
-	secretUC := usecase.NewSecretUseCase(dbRepo, dbRepo, skeeperCLI, l)
+	secretUC := usecase.NewSecretUseCase(dbRepo, dbRepo, skeeperCLI, l, maxFileBytes)
 	syncUC := usecase.NewSyncUseCase(dbRepo, skeeperCLI, dbRepo, l)
 
 	SetUseCases(authUC, secretUC, syncUC)

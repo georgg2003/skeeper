@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,10 +20,14 @@ import (
 
 var ErrWrongMasterPassword = errors.New("wrong master password")
 
+// DefaultMaxFileBytes caps stored file attachments when max is not set (or <= 0) in config.
+const DefaultMaxFileBytes = 10 << 20
+
 type EntryMetadata struct {
-	Name      string            `json:"name"`
-	Notes     string            `json:"notes,omitempty"`
-	ExtraTags map[string]string `json:"tags,omitempty"`
+	Name             string            `json:"name"`
+	Notes            string            `json:"notes,omitempty"`
+	OriginalFilename string            `json:"original_filename,omitempty"` // FILE entries: basename for `get` output
+	ExtraTags        map[string]string `json:"tags,omitempty"`
 }
 
 type LocalSecretStore interface {
@@ -47,20 +52,34 @@ type VaultRemote interface {
 }
 
 type SecretUseCase struct {
-	local    LocalSecretStore
-	sessions SessionReader
-	remote   VaultRemote
-	log      *slog.Logger
+	local        LocalSecretStore
+	sessions     SessionReader
+	remote       VaultRemote
+	log          *slog.Logger
+	maxFileBytes int64
 }
 
 // NewSecretUseCase remote can be nil if you never sync vault crypto to the server.
-func NewSecretUseCase(local LocalSecretStore, sessions SessionReader, remote VaultRemote, log *slog.Logger) *SecretUseCase {
-	return &SecretUseCase{
-		local:    local,
-		sessions: sessions,
-		remote:   remote,
-		log:      log.With("component", "secret_usecase"),
+// maxFileBytes <= 0 uses DefaultMaxFileBytes.
+func NewSecretUseCase(local LocalSecretStore, sessions SessionReader, remote VaultRemote, log *slog.Logger, maxFileBytes int64) *SecretUseCase {
+	if maxFileBytes <= 0 {
+		maxFileBytes = DefaultMaxFileBytes
 	}
+	return &SecretUseCase{
+		local:        local,
+		sessions:     sessions,
+		remote:       remote,
+		log:          log.With("component", "secret_usecase"),
+		maxFileBytes: maxFileBytes,
+	}
+}
+
+func sanitizeOriginalFilename(name string) string {
+	base := filepath.Base(name)
+	if base == "." || base == string(filepath.Separator) || base == "" {
+		return "file"
+	}
+	return base
 }
 
 func (uc *SecretUseCase) activeAutherUserID(ctx context.Context) *int64 {
@@ -194,8 +213,76 @@ func (uc *SecretUseCase) SetText(ctx context.Context, meta EntryMetadata, text s
 	return uc.setBlob(ctx, models.EntryTypeText, meta, []byte(text), masterPass)
 }
 
-func (uc *SecretUseCase) SetBinary(ctx context.Context, meta EntryMetadata, data []byte, masterPass string) error {
-	return uc.setBlob(ctx, models.EntryTypeBinary, meta, data, masterPass)
+// SetFile encrypts file bytes into entry.Payload (same as other entry types) so sync persists ciphertext in Postgres.
+func (uc *SecretUseCase) SetFile(ctx context.Context, meta EntryMetadata, originalFilename string, data []byte, masterPass string) error {
+	if uc.maxFileBytes > 0 && int64(len(data)) > uc.maxFileBytes {
+		return fmt.Errorf("file too large (%d bytes); max is %d bytes", len(data), uc.maxFileBytes)
+	}
+
+	uid, err := uc.requireAutherUserID(ctx)
+	if err != nil {
+		return err
+	}
+	orig := sanitizeOriginalFilename(originalFilename)
+	uc.log.Info("creating encrypted file entry", "name", meta.Name, "orig_name", orig, "bytes", len(data))
+
+	salt, storedVerifier, err := uc.materializeVaultCrypto(ctx)
+	if err != nil {
+		return err
+	}
+
+	masterKey, err := uc.deriveAndCheckMasterKey(salt, storedVerifier, masterPass)
+	if err != nil {
+		return err
+	}
+
+	dek := make([]byte, 32)
+	if _, err := rand.Read(dek); err != nil {
+		return fmt.Errorf("generate dek: %w", err)
+	}
+
+	encryptedPayload, err := crypto.EncryptAESGCM(data, dek)
+	if err != nil {
+		return fmt.Errorf("encrypt file: %w", err)
+	}
+
+	metaForStore := meta
+	metaForStore.OriginalFilename = orig
+	metaBytes, err := json.Marshal(metaForStore)
+	if err != nil {
+		return fmt.Errorf("marshal meta: %w", err)
+	}
+	encryptedMeta, err := crypto.EncryptAESGCM(metaBytes, dek)
+	if err != nil {
+		return fmt.Errorf("encrypt meta: %w", err)
+	}
+
+	encryptedDEK, err := crypto.EncryptAESGCM(dek, masterKey)
+	if err != nil {
+		return fmt.Errorf("encrypt dek: %w", err)
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("new entry id: %w", err)
+	}
+	u := uid
+	entry := models.Entry{
+		UUID:         id,
+		Type:         models.EntryTypeFile,
+		Payload:      encryptedPayload,
+		EncryptedDek: encryptedDEK,
+		Meta:         encryptedMeta,
+		Version:      1,
+		UpdatedAt:    time.Now(),
+		IsDeleted:    false,
+		UserID:       &u,
+	}
+
+	if err := uc.local.SaveEntry(ctx, entry, true); err != nil {
+		return err
+	}
+	return uc.finalizeVaultVerifier(ctx, uid, salt, storedVerifier, masterKey)
 }
 
 func (uc *SecretUseCase) SetCard(ctx context.Context, meta EntryMetadata, card models.CardPayload, masterPass string) error {
@@ -296,45 +383,54 @@ func (uc *SecretUseCase) GetLocalEntry(ctx context.Context, id uuid.UUID) (model
 	return uc.local.GetEntry(ctx, id, &uid)
 }
 
-func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *EntryMetadata, error) {
+// GetDecryptedEntry returns plaintext payload, decrypted metadata, and for FILE entries the original base filename.
+func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *EntryMetadata, string, error) {
 	uid, err := uc.requireAutherUserID(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	entry, err := uc.local.GetEntry(ctx, id, &uid)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	salt, storedVerifier, err := uc.materializeVaultCrypto(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	masterKey, err := uc.deriveAndCheckMasterKey(salt, storedVerifier, masterPass)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	dek, err := crypto.DecryptAESGCM(entry.EncryptedDek, masterKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("decryption failed (wrong master pass?): %w", err)
+		return nil, nil, "", fmt.Errorf("decryption failed (wrong master pass?): %w", err)
 	}
 
 	payload, err := crypto.DecryptAESGCM(entry.Payload, dek)
 	if err != nil {
-		return nil, nil, fmt.Errorf("decrypt payload: %w", err)
+		return nil, nil, "", fmt.Errorf("decrypt payload: %w", err)
 	}
 
 	metaBytes, err := crypto.DecryptAESGCM(entry.Meta, dek)
 	if err != nil {
-		return nil, nil, fmt.Errorf("decrypt meta: %w", err)
+		return nil, nil, "", fmt.Errorf("decrypt meta: %w", err)
 	}
 
 	var meta EntryMetadata
 	if err := json.Unmarshal(metaBytes, &meta); err != nil {
-		return nil, nil, fmt.Errorf("unmarshal meta: %w", err)
+		return nil, nil, "", fmt.Errorf("unmarshal meta: %w", err)
 	}
 
-	return payload, &meta, nil
+	if entry.Type == models.EntryTypeFile {
+		orig := meta.OriginalFilename
+		if orig == "" {
+			orig = "file"
+		}
+		return payload, &meta, orig, nil
+	}
+
+	return payload, &meta, "", nil
 }

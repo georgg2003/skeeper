@@ -11,6 +11,7 @@ const (
 	EntryTypePassword = "PASSWORD"
 	EntryTypeText     = "TEXT"
 	EntryTypeBinary   = "BINARY"
+	EntryTypeFile     = "FILE"
 	EntryTypeCard     = "CARD"
 )
 

@@ -75,7 +75,7 @@ func (f *fakeSecretStore) ListEntries(ctx context.Context, _ *int64) ([]models.E
 func TestSecretUseCase_PasswordRoundTrip(t *testing.T) {
 	st := &fakeSecretStore{}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log)
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "svc", Notes: "n"}
 	if err := uc.SetPassword(ctx, meta, "secret-pw", "master!!"); err != nil {
@@ -92,19 +92,68 @@ func TestSecretUseCase_PasswordRoundTrip(t *testing.T) {
 	if raw.Type != models.EntryTypePassword {
 		t.Fatal(raw.Type)
 	}
-	payload, gotMeta, err := uc.GetDecryptedEntry(ctx, id, "master!!")
+	payload, gotMeta, orig, err := uc.GetDecryptedEntry(ctx, id, "master!!")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if orig != "" {
+		t.Fatalf("unexpected orig name %q", orig)
 	}
 	if string(payload) != "secret-pw" || gotMeta.Name != "svc" {
 		t.Fatalf("%q %+v", payload, gotMeta)
 	}
 }
 
+func TestSecretUseCase_FileRoundTrip(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, 1<<20)
+	ctx := context.Background()
+	meta := EntryMetadata{Name: "doc", Notes: "n"}
+	content := []byte("hello skeeper")
+	if err := uc.SetFile(ctx, meta, "notes.txt", content, "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.entries) != 1 {
+		t.Fatal("not saved")
+	}
+	id := st.entries[0].UUID
+	if st.entries[0].Type != models.EntryTypeFile {
+		t.Fatalf("type %s", st.entries[0].Type)
+	}
+	if len(st.entries[0].Payload) < 16 {
+		t.Fatalf("expected ciphertext in payload, got len %d", len(st.entries[0].Payload))
+	}
+	payload, gotMeta, orig, err := uc.GetDecryptedEntry(ctx, id, "master!!")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if orig != "notes.txt" {
+		t.Fatalf("orig %q", orig)
+	}
+	if gotMeta.OriginalFilename != "notes.txt" {
+		t.Fatalf("meta original_filename %q", gotMeta.OriginalFilename)
+	}
+	if string(payload) != string(content) || gotMeta.Name != "doc" {
+		t.Fatalf("%q %+v", payload, gotMeta)
+	}
+}
+
+func TestSecretUseCase_FileTooLarge(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, 4)
+	ctx := context.Background()
+	err := uc.SetFile(ctx, EntryMetadata{Name: "x"}, "a.bin", []byte("12345"), "m")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestSecretUseCase_RejectsOtherMasterPasswordAfterFirstEntry(t *testing.T) {
 	st := &fakeSecretStore{}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log)
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "a"}
 	if err := uc.SetPassword(ctx, meta, "pw", "master-one"); err != nil {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ var getCmd = &cobra.Command{
 			return err
 		}
 
-		payload, meta, err := secretUC.GetDecryptedEntry(ctx, id, masterStr)
+		payload, meta, origFileName, err := secretUC.GetDecryptedEntry(ctx, id, masterStr)
 		if err != nil {
 			return err
 		}
@@ -56,6 +57,16 @@ var getCmd = &cobra.Command{
 			_, _ = fmt.Fprintf(out, "Text:\n%s\n", string(payload))
 		case models.EntryTypeBinary:
 			outPath := fmt.Sprintf("%s.bin", id.String())
+			if err := os.WriteFile(outPath, payload, 0o600); err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(out, "Wrote %d bytes to %s\n", len(payload), outPath)
+		case models.EntryTypeFile:
+			base := filepath.Base(origFileName)
+			if base == "." || base == string(filepath.Separator) || base == "" {
+				base = "file"
+			}
+			outPath := fmt.Sprintf("%s_%s", id.String(), base)
 			if err := os.WriteFile(outPath, payload, 0o600); err != nil {
 				return err
 			}
