@@ -11,8 +11,8 @@ var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "Clear the local Auther session",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if authUC == nil {
-			return fmt.Errorf("client not initialized")
+		if err := requireAuthUC(); err != nil {
+			return err
 		}
 		if err := authUC.Logout(context.Background()); err != nil {
 			return err

@@ -5,43 +5,31 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 var addPasswordCmd = &cobra.Command{
 	Use:   "add-password",
 	Short: "Add an encrypted login/password entry",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if secretUC == nil {
-			return fmt.Errorf("client not initialized")
+		if err := requireSecretUC(); err != nil {
+			return err
 		}
-		writePrompt(cmd, "Entry name (e.g. Gmail): ")
-		name, err := readLine(cmd)
+		meta, err := promptEntryMetadata(cmd, "Entry name (e.g. Gmail): ")
 		if err != nil {
 			return err
 		}
-		writePrompt(cmd, "Notes (optional): ")
-		notes, _ := readLine(cmd)
-
-		writePrompt(cmd, "Password to store: ")
-		secretStr, err := readPasswordLine(cmd)
+		secretStr, err := promptPasswordValue(cmd, "Password to store: ")
 		if err != nil {
 			return err
 		}
-
-		writePrompt(cmd, "Master password: ")
-		masterStr, err := readPasswordLine(cmd)
+		masterStr, err := promptMasterPassword(cmd)
 		if err != nil {
 			return err
 		}
-
 		ctx := context.Background()
-		meta := usecase.EntryMetadata{Name: name, Notes: notes}
 		if err := secretUC.SetPassword(ctx, meta, secretStr, masterStr); err != nil {
 			return fmt.Errorf("save secret: %w", err)
 		}
-
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Encrypted entry saved locally (run `sync` to upload).")
 		return nil
 	},

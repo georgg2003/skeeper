@@ -13,8 +13,8 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List local entries (uuid, type, updated time; ciphertext only)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if secretUC == nil {
-			return fmt.Errorf("client not initialized")
+		if err := requireSecretUC(); err != nil {
+			return err
 		}
 		entries, err := secretUC.ListLocal(context.Background())
 		if err != nil {
@@ -42,8 +42,6 @@ func displayType(t string) string {
 		return "password"
 	case models.EntryTypeText:
 		return "text"
-	case models.EntryTypeBinary:
-		return "binary"
 	case models.EntryTypeFile:
 		return "file"
 	case models.EntryTypeCard:

@@ -11,8 +11,8 @@ var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Authenticate with the Auther service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if authUC == nil {
-			return fmt.Errorf("client not initialized")
+		if err := requireAuthUC(); err != nil {
+			return err
 		}
 		writePrompt(cmd, "Email: ")
 		username, err := readLine(cmd)

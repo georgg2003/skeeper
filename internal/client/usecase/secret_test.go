@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"os"
@@ -30,7 +31,15 @@ func (f *fakeSecretStore) MarkAsSynced(ctx context.Context, id uuid.UUID, userID
 }
 
 func (f *fakeSecretStore) SaveEntry(ctx context.Context, e models.Entry, isDirty bool) error {
-	f.entries = append(f.entries, e)
+	ne := e
+	ne.IsDirty = isDirty
+	for i := range f.entries {
+		if f.entries[i].UUID == ne.UUID {
+			f.entries[i] = ne
+			return nil
+		}
+	}
+	f.entries = append(f.entries, ne)
 	return nil
 }
 
@@ -44,7 +53,7 @@ func (f *fakeSecretStore) GetEntry(ctx context.Context, id uuid.UUID, _ *int64) 
 			return e, nil
 		}
 	}
-	return models.Entry{}, context.Canceled
+	return models.Entry{}, sql.ErrNoRows
 }
 
 func (f *fakeSecretStore) EnsureLocalVaultCrypto(ctx context.Context, userID int64) ([]byte, []byte, error) {
@@ -163,5 +172,95 @@ func TestSecretUseCase_RejectsOtherMasterPasswordAfterFirstEntry(t *testing.T) {
 		t.Fatal("expected wrong master password")
 	} else if !errors.Is(err, ErrWrongMasterPassword) {
 		t.Fatalf("want ErrWrongMasterPassword, got %v", err)
+	}
+}
+
+func TestSecretUseCase_UpdatePassword_BumpsVersion(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
+	ctx := context.Background()
+	if err := uc.SetPassword(ctx, EntryMetadata{Name: "n"}, "pw1", "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	id := st.entries[0].UUID
+	if st.entries[0].Version != 1 {
+		t.Fatalf("version %d", st.entries[0].Version)
+	}
+	if err := uc.UpdatePassword(ctx, id, EntryMetadata{Name: "n2"}, "pw2", "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.entries) != 1 {
+		t.Fatalf("entries %d", len(st.entries))
+	}
+	if st.entries[0].Version != 2 {
+		t.Fatalf("version %d", st.entries[0].Version)
+	}
+	payload, meta, _, err := uc.GetDecryptedEntry(ctx, id, "master!!")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(payload) != "pw2" || meta.Name != "n2" {
+		t.Fatalf("%q %+v", payload, meta)
+	}
+}
+
+func TestSecretUseCase_DeleteSoft(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
+	ctx := context.Background()
+	if err := uc.SetPassword(ctx, EntryMetadata{Name: "x"}, "pw", "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	id := st.entries[0].UUID
+	if err := uc.DeleteEntry(ctx, id, "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	if !st.entries[0].IsDeleted || st.entries[0].Version != 2 {
+		t.Fatalf("%+v", st.entries[0])
+	}
+	if _, _, _, err := uc.GetDecryptedEntry(ctx, id, "master!!"); !errors.Is(err, ErrEntryDeleted) {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestSecretUseCase_UpdateFile_MetaOnly(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, 1<<20)
+	ctx := context.Background()
+	content := []byte("payload-bytes")
+	if err := uc.SetFile(ctx, EntryMetadata{Name: "doc"}, "a.txt", content, "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	id := st.entries[0].UUID
+	if err := uc.UpdateFile(ctx, id, EntryMetadata{Name: "doc2"}, "master!!", false, nil, ""); err != nil {
+		t.Fatal(err)
+	}
+	pl, meta, orig, err := uc.GetDecryptedEntry(ctx, id, "master!!")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(pl) != string(content) || meta.Name != "doc2" || orig != "a.txt" {
+		t.Fatalf("%q %+v %q", pl, meta, orig)
+	}
+	if st.entries[0].Version != 2 {
+		t.Fatalf("version %d", st.entries[0].Version)
+	}
+}
+
+func TestSecretUseCase_UpdateWrongEntryType(t *testing.T) {
+	st := &fakeSecretStore{}
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
+	ctx := context.Background()
+	if err := uc.SetPassword(ctx, EntryMetadata{Name: "p"}, "pw", "master!!"); err != nil {
+		t.Fatal(err)
+	}
+	id := st.entries[0].UUID
+	err := uc.UpdateText(ctx, id, EntryMetadata{Name: "t"}, "hello", "master!!")
+	if !errors.Is(err, ErrWrongEntryType) {
+		t.Fatalf("got %v", err)
 	}
 }

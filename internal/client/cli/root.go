@@ -97,6 +97,8 @@ func init() {
 		addTextCmd,
 		addFileCmd,
 		addCardCmd,
+		updateCmd,
+		deleteCmd,
 		listCmd,
 		getCmd,
 	)

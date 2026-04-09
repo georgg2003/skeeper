@@ -13,7 +13,6 @@ func TestDisplayType(t *testing.T) {
 	}{
 		{models.EntryTypePassword, "password"},
 		{models.EntryTypeText, "text"},
-		{models.EntryTypeBinary, "binary"},
 		{models.EntryTypeFile, "file"},
 		{models.EntryTypeCard, "card"},
 		{"CUSTOM", "CUSTOM"},

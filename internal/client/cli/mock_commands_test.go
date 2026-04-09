@@ -220,6 +220,44 @@ func (m *MockSecretCommands) EXPECT() *MockSecretCommandsMockRecorder {
 	return m.recorder
 }
 
+// DeleteEntry mocks base method.
+func (m *MockSecretCommands) DeleteEntry(ctx context.Context, id uuid.UUID, masterPass string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEntry", ctx, id, masterPass)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEntry indicates an expected call of DeleteEntry.
+func (mr *MockSecretCommandsMockRecorder) DeleteEntry(ctx, id, masterPass any) *MockSecretCommandsDeleteEntryCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntry", reflect.TypeOf((*MockSecretCommands)(nil).DeleteEntry), ctx, id, masterPass)
+	return &MockSecretCommandsDeleteEntryCall{Call: call}
+}
+
+// MockSecretCommandsDeleteEntryCall wrap *gomock.Call
+type MockSecretCommandsDeleteEntryCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockSecretCommandsDeleteEntryCall) Return(arg0 error) *MockSecretCommandsDeleteEntryCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockSecretCommandsDeleteEntryCall) Do(f func(context.Context, uuid.UUID, string) error) *MockSecretCommandsDeleteEntryCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockSecretCommandsDeleteEntryCall) DoAndReturn(f func(context.Context, uuid.UUID, string) error) *MockSecretCommandsDeleteEntryCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // GetDecryptedEntry mocks base method.
 func (m *MockSecretCommands) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *usecase.EntryMetadata, string, error) {
 	m.ctrl.T.Helper()
@@ -487,6 +525,158 @@ func (c *MockSecretCommandsSetTextCall) Do(f func(context.Context, usecase.Entry
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockSecretCommandsSetTextCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, string, string) error) *MockSecretCommandsSetTextCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UpdateCard mocks base method.
+func (m *MockSecretCommands) UpdateCard(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, card models.CardPayload, masterPass string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCard", ctx, id, meta, card, masterPass)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateCard indicates an expected call of UpdateCard.
+func (mr *MockSecretCommandsMockRecorder) UpdateCard(ctx, id, meta, card, masterPass any) *MockSecretCommandsUpdateCardCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCard", reflect.TypeOf((*MockSecretCommands)(nil).UpdateCard), ctx, id, meta, card, masterPass)
+	return &MockSecretCommandsUpdateCardCall{Call: call}
+}
+
+// MockSecretCommandsUpdateCardCall wrap *gomock.Call
+type MockSecretCommandsUpdateCardCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockSecretCommandsUpdateCardCall) Return(arg0 error) *MockSecretCommandsUpdateCardCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockSecretCommandsUpdateCardCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsUpdateCardCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockSecretCommandsUpdateCardCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsUpdateCardCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UpdateFile mocks base method.
+func (m *MockSecretCommands) UpdateFile(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, masterPass string, replacePayload bool, newFile []byte, newOrigName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFile", ctx, id, meta, masterPass, replacePayload, newFile, newOrigName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFile indicates an expected call of UpdateFile.
+func (mr *MockSecretCommandsMockRecorder) UpdateFile(ctx, id, meta, masterPass, replacePayload, newFile, newOrigName any) *MockSecretCommandsUpdateFileCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFile", reflect.TypeOf((*MockSecretCommands)(nil).UpdateFile), ctx, id, meta, masterPass, replacePayload, newFile, newOrigName)
+	return &MockSecretCommandsUpdateFileCall{Call: call}
+}
+
+// MockSecretCommandsUpdateFileCall wrap *gomock.Call
+type MockSecretCommandsUpdateFileCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockSecretCommandsUpdateFileCall) Return(arg0 error) *MockSecretCommandsUpdateFileCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockSecretCommandsUpdateFileCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, bool, []byte, string) error) *MockSecretCommandsUpdateFileCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockSecretCommandsUpdateFileCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, bool, []byte, string) error) *MockSecretCommandsUpdateFileCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UpdatePassword mocks base method.
+func (m *MockSecretCommands) UpdatePassword(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, password, masterPass string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePassword", ctx, id, meta, password, masterPass)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePassword indicates an expected call of UpdatePassword.
+func (mr *MockSecretCommandsMockRecorder) UpdatePassword(ctx, id, meta, password, masterPass any) *MockSecretCommandsUpdatePasswordCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockSecretCommands)(nil).UpdatePassword), ctx, id, meta, password, masterPass)
+	return &MockSecretCommandsUpdatePasswordCall{Call: call}
+}
+
+// MockSecretCommandsUpdatePasswordCall wrap *gomock.Call
+type MockSecretCommandsUpdatePasswordCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockSecretCommandsUpdatePasswordCall) Return(arg0 error) *MockSecretCommandsUpdatePasswordCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockSecretCommandsUpdatePasswordCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdatePasswordCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockSecretCommandsUpdatePasswordCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdatePasswordCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UpdateText mocks base method.
+func (m *MockSecretCommands) UpdateText(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, text, masterPass string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateText", ctx, id, meta, text, masterPass)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateText indicates an expected call of UpdateText.
+func (mr *MockSecretCommandsMockRecorder) UpdateText(ctx, id, meta, text, masterPass any) *MockSecretCommandsUpdateTextCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateText", reflect.TypeOf((*MockSecretCommands)(nil).UpdateText), ctx, id, meta, text, masterPass)
+	return &MockSecretCommandsUpdateTextCall{Call: call}
+}
+
+// MockSecretCommandsUpdateTextCall wrap *gomock.Call
+type MockSecretCommandsUpdateTextCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockSecretCommandsUpdateTextCall) Return(arg0 error) *MockSecretCommandsUpdateTextCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockSecretCommandsUpdateTextCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdateTextCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockSecretCommandsUpdateTextCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdateTextCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
