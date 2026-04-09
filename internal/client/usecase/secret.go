@@ -1,3 +1,4 @@
+// Package usecase implements the CLI application layer: vault crypto, entry CRUD, auth, and sync orchestration.
 package usecase
 
 import (
@@ -20,6 +21,7 @@ import (
 )
 
 var (
+	// ErrWrongMasterPassword is returned when the derived key does not match the stored verifier.
 	ErrWrongMasterPassword = errors.New("wrong master password")
 	// ErrEntryNotFound is returned when no row exists for the UUID (and user).
 	ErrEntryNotFound = errors.New("entry not found")
@@ -29,9 +31,10 @@ var (
 	ErrWrongEntryType = errors.New("entry type does not match this operation")
 )
 
-// DefaultMaxFileBytes caps stored file attachments when max is not set (or <= 0) in config.
+// DefaultMaxFileBytes is the FILE payload cap when config does not set a positive limit.
 const DefaultMaxFileBytes = 10 << 20
 
+// EntryMetadata is cleartext JSON encrypted with the entry DEK alongside the payload.
 type EntryMetadata struct {
 	Name             string            `json:"name"`
 	Notes            string            `json:"notes,omitempty"`
@@ -39,6 +42,7 @@ type EntryMetadata struct {
 	ExtraTags        map[string]string `json:"tags,omitempty"`
 }
 
+// LocalSecretStore abstracts the SQLite vault: entries, dirty flags, and vault KDF salt/verifier.
 type LocalSecretStore interface {
 	GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
 	MarkAsSynced(ctx context.Context, id uuid.UUID, userID int64) error
@@ -51,15 +55,18 @@ type LocalSecretStore interface {
 	ListEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
 }
 
+// SessionReader reads the persisted Auther session (for user id and auth state).
 type SessionReader interface {
 	GetSession(ctx context.Context) (*models.Session, error)
 }
 
+// VaultRemote publishes or fetches KDF salt and master-key verifier for the logged-in user.
 type VaultRemote interface {
 	GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier []byte, err error)
 	PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier []byte) error
 }
 
+// SecretUseCase encrypts and decrypts vault entries on the client and persists them locally.
 type SecretUseCase struct {
 	local        LocalSecretStore
 	sessions     SessionReader
@@ -68,8 +75,8 @@ type SecretUseCase struct {
 	maxFileBytes int64
 }
 
-// NewSecretUseCase remote can be nil if you never sync vault crypto to the server.
-// maxFileBytes <= 0 uses DefaultMaxFileBytes.
+// NewSecretUseCase builds a vault use case. Remote may be nil if vault crypto is never uploaded.
+// maxFileBytes <= 0 uses DefaultMaxFileBytes for FILE payloads.
 func NewSecretUseCase(local LocalSecretStore, sessions SessionReader, remote VaultRemote, log *slog.Logger, maxFileBytes int64) *SecretUseCase {
 	if maxFileBytes <= 0 {
 		maxFileBytes = DefaultMaxFileBytes
@@ -326,6 +333,7 @@ func (uc *SecretUseCase) finalizeVaultVerifier(ctx context.Context, userID int64
 	return uc.publishVaultCrypto(ctx, salt, masterKey)
 }
 
+// ListLocal returns ciphertext entries for the current session’s user.
 func (uc *SecretUseCase) ListLocal(ctx context.Context) ([]models.Entry, error) {
 	uid, err := uc.requireAutherUserID(ctx)
 	if err != nil {
@@ -334,6 +342,7 @@ func (uc *SecretUseCase) ListLocal(ctx context.Context) ([]models.Entry, error) 
 	return uc.local.ListEntries(ctx, &uid)
 }
 
+// GetLocalEntry loads one ciphertext row by UUID or returns ErrEntryNotFound.
 func (uc *SecretUseCase) GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error) {
 	uid, err := uc.requireAutherUserID(ctx)
 	if err != nil {
@@ -349,7 +358,7 @@ func (uc *SecretUseCase) GetLocalEntry(ctx context.Context, id uuid.UUID) (model
 	return e, nil
 }
 
-// unlockEntry loads a non-deleted entry and decrypts its DEK with the master password.
+// unlockEntry loads a non-deleted entry and unwraps its DEK using the vault master password.
 func (uc *SecretUseCase) unlockEntry(ctx context.Context, id uuid.UUID, masterPass string) (e models.Entry, uid int64, masterKey, dek []byte, err error) {
 	uid, err = uc.requireAutherUserID(ctx)
 	if err != nil {

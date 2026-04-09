@@ -18,6 +18,7 @@ import (
 	pkgerrors "github.com/georgg2003/skeeper/pkg/errors"
 )
 
+// UseCase is the Skeeper business API exposed over gRPC.
 type UseCase interface {
 	Sync(context.Context, models.SyncRequest) (models.SyncResponse, error)
 	GetVaultCrypto(context.Context) ([]byte, []byte, error)
@@ -102,6 +103,7 @@ func (s *skeeperServer) PutVaultCrypto(
 	return &api.PutVaultCryptoResponse{}, nil
 }
 
+// New returns a gRPC server implementation backed by uc.
 func New(l *slog.Logger, uc UseCase) api.SkeeperServer {
 	return &skeeperServer{l: l, uc: uc}
 }

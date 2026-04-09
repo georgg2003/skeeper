@@ -12,6 +12,7 @@ import (
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
+// UserCredentials is wire or handler input before normalization and bcrypt hashing.
 type UserCredentials struct {
 	Email    string
 	Password string
@@ -24,6 +25,7 @@ const (
 	MaxPasswordBytes = 72
 )
 
+// ErrEmptyPassword is returned by helpers that require a non-empty secret.
 var ErrEmptyPassword = errors.New("password should not be empty")
 
 func normalizeEmail(raw string) (string, error) {
@@ -56,6 +58,7 @@ func (creds *UserCredentials) validatePassword() error {
 	return nil
 }
 
+// Validate enforces email shape and password length bounds for registration.
 func (creds *UserCredentials) Validate() error {
 	if err := creds.validatePassword(); err != nil {
 		return err
@@ -75,6 +78,7 @@ func (creds *UserCredentials) ValidateForLogin() error {
 	return creds.validateEmail()
 }
 
+// HashPassword returns a bcrypt hash of the plaintext password.
 func (creds *UserCredentials) HashPassword() ([]byte, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -83,26 +87,31 @@ func (creds *UserCredentials) HashPassword() ([]byte, error) {
 	return hash, nil
 }
 
+// CheckPassword compares the credentials’ password to a stored bcrypt hash.
 func (creds *UserCredentials) CheckPassword(passwordHash []byte) error {
 	return bcrypt.CompareHashAndPassword(passwordHash, []byte(creds.Password))
 }
 
+// DBUserCredentials is the row shape written to Postgres on signup.
 type DBUserCredentials struct {
 	Email        string
 	PasswordHash []byte
 }
 
+// UserInfo is a user row including the hash (for login path inside the service).
 type UserInfo struct {
 	ID           int64
 	Email        string
 	PasswordHash []byte
 }
 
+// RefreshTokenHashed pairs a refresh token’s metadata with its stored hash.
 type RefreshTokenHashed struct {
 	jwthelper.Token
 	Hash string
 }
 
+// LoginResponse bundles JWTs and the authenticated user record.
 type LoginResponse struct {
 	TokenPair jwthelper.TokenPair
 	User      UserInfo

@@ -1,4 +1,4 @@
-// Package cli is the skeepercli command tree (Cobra).
+// Package cli is the skeepercli command tree (Cobra). Commands depend on small interfaces in usecase_ports.go for testing.
 package cli
 
 import (
@@ -11,7 +11,9 @@ import (
 )
 
 var (
-	Version   = "dev"
+	// Version is the CLI release label (overridden via -ldflags from main).
+	Version = "dev"
+	// BuildTime is an optional build timestamp string (overridden via -ldflags from main).
 	BuildTime = "unknown"
 
 	authUC   AuthCommands
@@ -19,6 +21,7 @@ var (
 	syncUC   SyncCommands
 )
 
+// SetUseCases injects application use cases before commands run (used from cmd/client).
 func SetUseCases(a AuthCommands, s SecretCommands, y SyncCommands) {
 	authUC, secretUC, syncUC = a, s, y
 }
@@ -37,6 +40,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// Execute runs the root Cobra command and exits the process on error.
 func Execute() {
 	rootCmd.Version = fmt.Sprintf("%s (built %s)", Version, BuildTime)
 	rootCmd.SetVersionTemplate("{{.Version}}\n")

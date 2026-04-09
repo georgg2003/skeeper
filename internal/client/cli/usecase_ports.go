@@ -11,6 +11,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
+// AuthCommands is the subset of auth use-case operations exposed to CLI commands.
 type AuthCommands interface {
 	Register(ctx context.Context, email, password string) error
 	Login(ctx context.Context, login, password string) error
@@ -18,6 +19,7 @@ type AuthCommands interface {
 	GetValidToken(ctx context.Context) (string, error)
 }
 
+// SecretCommands is the vault CRUD surface used by add/update/delete/get/list commands.
 type SecretCommands interface {
 	ListLocal(ctx context.Context) ([]models.Entry, error)
 	GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error)
@@ -33,6 +35,7 @@ type SecretCommands interface {
 	DeleteEntry(ctx context.Context, id uuid.UUID, masterPass string) error
 }
 
+// SyncCommands pushes and pulls ciphertext with the Skeeper service.
 type SyncCommands interface {
 	Sync(ctx context.Context) error
 }

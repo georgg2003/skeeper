@@ -16,13 +16,19 @@ import (
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
+// ErrUserNotExist is returned for failed login or unknown email paths.
 var ErrUserNotExist = errors.New("user not exists")
+
+// ErrInvalidToken is returned when refresh rotation does not match stored state.
 var ErrInvalidToken = errors.New("refresh token is invalid")
+
+// ErrUserExists is returned when registration hits a duplicate email.
 var ErrUserExists = errors.New("user already exists")
 
 // bcryptDummyHash is a valid bcrypt hash used only to normalize login timing when the email is unknown.
 var bcryptDummyHash = []byte("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy")
 
+// Repository persists users and refresh tokens for the Auther service.
 type Repository interface {
 	InsertUser(context.Context, models.DBUserCredentials) (models.UserInfo, error)
 	ReplaceUserRefreshTokens(ctx context.Context, userID int64, pair jwthelper.TokenPair) error
@@ -31,6 +37,7 @@ type Repository interface {
 	Close()
 }
 
+// UseCase implements registration, login, and refresh-token rotation.
 type UseCase struct {
 	repository Repository
 	jwtHelper  *jwthelper.JWTHelper
@@ -38,6 +45,7 @@ type UseCase struct {
 	refreshSF  singleflight.Group
 }
 
+// CreateUser validates credentials, bcrypt-hashes the password, and inserts the user row.
 func (uc *UseCase) CreateUser(ctx context.Context, creds models.UserCredentials) (models.UserInfo, error) {
 	if err := creds.Validate(); err != nil {
 		return models.UserInfo{}, errors.Wrap(err, "user credentials are invalid")
@@ -57,6 +65,7 @@ func (uc *UseCase) CreateUser(ctx context.Context, creds models.UserCredentials)
 	return info, err
 }
 
+// LoginUser verifies the password, mints JWTs, and stores the refresh token server-side.
 func (uc *UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginResponse, error) {
 	if err := creds.ValidateForLogin(); err != nil {
 		return models.LoginResponse{}, errors.Wrap(err, "user credentials are invalid")
@@ -90,6 +99,7 @@ func (uc *UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) 
 	}, nil
 }
 
+// RotateToken validates the refresh token and issues a new access/refresh pair (singleflight deduped).
 func (uc *UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
 	v, err, _ := uc.refreshSF.Do(refreshToken, func() (interface{}, error) {
 		pair, rotErr := uc.repository.RotateRefreshToken(ctx, refreshToken, uc.jwtHelper.NewTokenPair)
@@ -104,6 +114,7 @@ func (uc *UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthel
 	return v.(jwthelper.TokenPair), nil
 }
 
+// New constructs the Auther business layer.
 func New(
 	l *slog.Logger,
 	repo Repository,

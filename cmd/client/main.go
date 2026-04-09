@@ -5,7 +5,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/cli"
 )
 
-// Injected via: -ldflags "-X main.version=... -X main.buildTime=..."
+// version and buildTime are injected with: -ldflags "-X main.version=... -X main.buildTime=..."
 var (
 	version   = "dev"
 	buildTime = "unknown"

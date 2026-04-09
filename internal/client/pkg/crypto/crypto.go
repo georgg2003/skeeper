@@ -13,10 +13,13 @@ import (
 )
 
 const (
+	// KeyLength is the AES-256 key size in bytes for master keys and DEKs.
 	KeyLength = 32
-	SaltSize  = 16
+	// SaltSize is the KDF salt length in bytes for vault Argon2id derivation.
+	SaltSize = 16
 )
 
+// DeriveMasterKey returns a 32-byte key from the vault master password and salt using Argon2id.
 func DeriveMasterKey(password string, salt []byte) []byte {
 	return argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, KeyLength)
 }
@@ -30,6 +33,7 @@ func MasterKeyVerifier(masterKey []byte) []byte {
 	return out
 }
 
+// EncryptAESGCM encrypts data with AES-GCM; the ciphertext prefix is the random nonce.
 func EncryptAESGCM(data []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -49,6 +53,7 @@ func EncryptAESGCM(data []byte, key []byte) ([]byte, error) {
 	return gcm.Seal(nonce, nonce, data, nil), nil
 }
 
+// DecryptAESGCM decrypts a blob produced by EncryptAESGCM.
 func DecryptAESGCM(cipherText []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {

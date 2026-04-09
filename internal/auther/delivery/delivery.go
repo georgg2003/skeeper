@@ -18,6 +18,7 @@ import (
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
+// UseCase is the Auther business API exposed over gRPC.
 type UseCase interface {
 	CreateUser(context.Context, models.UserCredentials) (models.UserInfo, error)
 	LoginUser(context.Context, models.UserCredentials) (models.LoginResponse, error)
@@ -121,6 +122,7 @@ func (s autherServer) ExchangeToken(ctx context.Context, req *api.ExchangeTokenR
 	}.Build(), nil
 }
 
+// New returns a gRPC server implementation backed by uc.
 func New(l *slog.Logger, uc UseCase) api.AutherServer {
 	return &autherServer{l: l, uc: uc}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
+// LocalSyncRepo reads dirty entries and applies post-sync merges from the server.
 type LocalSyncRepo interface {
 	GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
 	PersistSyncResult(ctx context.Context, userID int64, updates []models.Entry, dirty []models.Entry, applied map[uuid.UUID]struct{}) error
@@ -19,10 +20,12 @@ type LocalSyncRepo interface {
 	GetLastUpdate(ctx context.Context, forUserID *int64) (time.Time, error)
 }
 
+// RemoteSyncRepo calls the Skeeper Sync RPC with ciphertext entries only.
 type RemoteSyncRepo interface {
 	Sync(ctx context.Context, entries []models.Entry, lastUpdate time.Time) ([]models.Entry, []uuid.UUID, error)
 }
 
+// SyncUseCase pushes local changes and merges server updates into the vault DB.
 type SyncUseCase struct {
 	local   LocalSyncRepo
 	remote  RemoteSyncRepo
@@ -30,6 +33,7 @@ type SyncUseCase struct {
 	log     *slog.Logger
 }
 
+// NewSyncUseCase wires the local vault store to the Skeeper gRPC client.
 func NewSyncUseCase(local LocalSyncRepo, remote RemoteSyncRepo, session SessionReader, log *slog.Logger) *SyncUseCase {
 	return &SyncUseCase{
 		local:   local,
@@ -47,6 +51,7 @@ func (uc *SyncUseCase) requireAutherUserID(ctx context.Context) (int64, error) {
 	return *s.UserID, nil
 }
 
+// Sync uploads dirty entries, downloads newer remote rows, and updates local state.
 func (uc *SyncUseCase) Sync(ctx context.Context) error {
 	uid, err := uc.requireAutherUserID(ctx)
 	if err != nil {

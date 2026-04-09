@@ -19,21 +19,25 @@ import (
 // DefaultIssuer is set on minted access tokens and required when validating.
 const DefaultIssuer = "skeeper"
 
+// Token is a bearer string with wall-clock expiry metadata.
 type Token struct {
 	Token     string
 	ExpiresAt time.Time
 }
 
+// TokenPair is issued on login: signed access JWT plus opaque refresh token.
 type TokenPair struct {
 	AccessToken  Token
 	RefreshToken Token
 }
 
+// TokenClaims is the signed payload of an access token (RS256).
 type TokenClaims struct {
 	jwt.RegisteredClaims
 	UserID int64
 }
 
+// JWTHelper mints and validates access JWTs and generates refresh token strings.
 type JWTHelper struct {
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
@@ -68,6 +72,7 @@ func generateRandomString() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// NewTokenPair creates a fresh access JWT and refresh secret for the given user id.
 func (h *JWTHelper) NewTokenPair(userID int64) (TokenPair, error) {
 	if h.privateKey == nil {
 		return TokenPair{}, errors.New("jwt: signing key not configured")
@@ -97,6 +102,7 @@ func (h *JWTHelper) NewTokenPair(userID int64) (TokenPair, error) {
 	}, nil
 }
 
+// ValidateToken parses and verifies an access JWT and returns its claims.
 func (h *JWTHelper) ValidateToken(encodedToken string) (TokenClaims, error) {
 	claims := TokenClaims{}
 
@@ -122,6 +128,7 @@ func (h *JWTHelper) ValidateToken(encodedToken string) (TokenClaims, error) {
 	return claims, nil
 }
 
+// New builds a helper from PEM-encoded RSA keys. Empty privByte enables verify-only mode.
 func New(
 	privByte,
 	pubByte []byte,
@@ -155,6 +162,7 @@ func New(
 	}, nil
 }
 
+// JWTConfig maps YAML/mapstructure fields to key paths and token lifetimes.
 type JWTConfig struct {
 	// PrivateKeyFile is required for signing (Auther). Leave empty for validate-only consumers (e.g. Skeeper).
 	PrivateKeyFile       string        `mapstructure:"private_key_file"`
@@ -165,6 +173,7 @@ type JWTConfig struct {
 	Audience string `mapstructure:"audience"`
 }
 
+// NewFromConfig loads PEM files from disk and calls New with defaults for lifetimes.
 func NewFromConfig(cfg JWTConfig) (*JWTHelper, error) {
 	pubBytes, err := os.ReadFile(cfg.PublicKeyFile)
 	if err != nil {

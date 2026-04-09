@@ -8,6 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+// UserIDFromAccessTokenUnverified extracts UserID/user_id from a JWT without signature verification.
+// The CLI uses this only to tag local rows; Skeeper still validates tokens on RPCs.
 func UserIDFromAccessTokenUnverified(token string) (int64, error) {
 	p := jwt.NewParser()
 	t, _, err := p.ParseUnverified(token, jwt.MapClaims{})

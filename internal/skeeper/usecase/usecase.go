@@ -16,6 +16,7 @@ import (
 
 const vaultKDFSaltSize = 16
 
+// Repository is the Skeeper persistence port: encrypted entries and vault crypto blobs.
 type Repository interface {
 	UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) ([]uuid.UUID, error)
 	GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error)
@@ -23,11 +24,13 @@ type Repository interface {
 	PutVaultCrypto(ctx context.Context, userID int64, kdfSalt, masterVerifier []byte) error
 }
 
+// UseCase applies sync and vault-crypto rules for the authenticated user.
 type UseCase struct {
 	repo Repository
 	l    *slog.Logger
 }
 
+// Sync merges client updates (version-gated) and returns server-side changes since lastSyncAt.
 func (uc *UseCase) Sync(
 	ctx context.Context,
 	req models.SyncRequest,
@@ -59,6 +62,7 @@ func (uc *UseCase) Sync(
 	}, nil
 }
 
+// GetVaultCrypto returns stored KDF salt and master-key verifier for the JWT user.
 func (uc *UseCase) GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier []byte, err error) {
 	userID, ok := contextlib.GetUserID(ctx)
 	if !ok {
@@ -67,6 +71,7 @@ func (uc *UseCase) GetVaultCrypto(ctx context.Context) (kdfSalt, masterVerifier 
 	return uc.repo.GetVaultCrypto(ctx, userID)
 }
 
+// PutVaultCrypto stores or replaces vault crypto metadata with size validation.
 func (uc *UseCase) PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier []byte) error {
 	if len(kdfSalt) != vaultKDFSaltSize {
 		return errors.NewValidationError("kdf_salt", fmt.Sprintf("must be exactly %d bytes", vaultKDFSaltSize))
@@ -81,6 +86,7 @@ func (uc *UseCase) PutVaultCrypto(ctx context.Context, kdfSalt, masterVerifier [
 	return uc.repo.PutVaultCrypto(ctx, userID, kdfSalt, masterVerifier)
 }
 
+// New constructs the Skeeper business layer.
 func New(
 	l *slog.Logger,
 	repo Repository,

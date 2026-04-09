@@ -11,6 +11,7 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
+// Entry is the server-side mirror of a client vault row (opaque ciphertext).
 type Entry struct {
 	UUID         uuid.UUID
 	Type         string
@@ -22,6 +23,7 @@ type Entry struct {
 	UpdatedAt    time.Time
 }
 
+// ToProto maps the domain entry to the protobuf wire type.
 func (e *Entry) ToProto() *api.Entry {
 	return api.Entry_builder{
 		Uuid:         e.UUID.String(),
@@ -35,6 +37,7 @@ func (e *Entry) ToProto() *api.Entry {
 	}.Build()
 }
 
+// NewEntryFromProto parses and validates a protobuf Entry into the domain model.
 func NewEntryFromProto(e *api.Entry) (Entry, error) {
 	parsedUUID, err := uuid.Parse(e.GetUuid())
 	if err != nil {
@@ -56,11 +59,13 @@ func NewEntryFromProto(e *api.Entry) (Entry, error) {
 	return out, nil
 }
 
+// SyncRequest is the usecase input for one sync round-trip.
 type SyncRequest struct {
 	LastSyncAt time.Time
 	Updates    []Entry
 }
 
+// NewSyncRequestFromProto converts the gRPC request into validated domain entries.
 func NewSyncRequestFromProto(r *api.SyncRequest) (SyncRequest, error) {
 	var lastSyncAt time.Time
 	if r.GetLastSyncAt() != nil {
@@ -84,12 +89,14 @@ func NewSyncRequestFromProto(r *api.SyncRequest) (SyncRequest, error) {
 	}, nil
 }
 
+// SyncResponse is returned to the delivery layer to build SyncResponse protobuf.
 type SyncResponse struct {
 	CurrentSyncAt      time.Time
 	Updates            []Entry
 	AppliedUpdateUUIDs []uuid.UUID
 }
 
+// ToProto maps the sync result to the protobuf wire type.
 func (s *SyncResponse) ToProto() *api.SyncResponse {
 	protoUpdates := make([]*api.Entry, 0, len(s.Updates))
 

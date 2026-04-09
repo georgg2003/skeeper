@@ -10,24 +10,28 @@ import (
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
+// SessionStore persists Auther tokens in the local SQLite DB.
 type SessionStore interface {
 	SaveSession(ctx context.Context, s models.Session) error
 	GetSession(ctx context.Context) (*models.Session, error)
 	ClearSession(ctx context.Context) error
 }
 
+// RemoteAuthenticator talks to the Auther gRPC service for account lifecycle.
 type RemoteAuthenticator interface {
 	CreateUser(ctx context.Context, email, password string) error
 	Login(ctx context.Context, login, password string) (*models.Session, error)
 	Refresh(ctx context.Context, refreshToken string) (*models.Session, error)
 }
 
+// AuthUseCase orchestrates registration, login, logout, and access-token refresh.
 type AuthUseCase struct {
 	local  SessionStore
 	remote RemoteAuthenticator
 	l      *slog.Logger
 }
 
+// NewAuthUseCase wires local session storage to the remote Auther client.
 func NewAuthUseCase(l SessionStore, r RemoteAuthenticator, log *slog.Logger) *AuthUseCase {
 	return &AuthUseCase{
 		local:  l,
@@ -36,6 +40,7 @@ func NewAuthUseCase(l SessionStore, r RemoteAuthenticator, log *slog.Logger) *Au
 	}
 }
 
+// Register creates the remote account and immediately logs in, saving tokens locally.
 func (uc *AuthUseCase) Register(ctx context.Context, email, password string) error {
 	uc.l.InfoContext(ctx, "registering user", "email", email)
 	if err := uc.remote.CreateUser(ctx, email, password); err != nil {
@@ -45,6 +50,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, email, password string) err
 	return uc.Login(ctx, email, password)
 }
 
+// Login exchanges credentials for JWTs and stores them in the local session.
 func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error {
 	uc.l.InfoContext(ctx, "attempting to login", "user", login)
 
@@ -71,6 +77,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, login, password string) error 
 	return nil
 }
 
+// GetValidToken returns a usable access token, refreshing via Auther when near expiry.
 func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	session, err := uc.local.GetSession(ctx)
 	if err != nil {
@@ -113,6 +120,7 @@ func (uc *AuthUseCase) GetValidToken(ctx context.Context) (string, error) {
 	return newSession.AccessToken, nil
 }
 
+// Logout clears the local session; remote tokens are not revoked server-side.
 func (uc *AuthUseCase) Logout(ctx context.Context) error {
 	uc.l.InfoContext(ctx, "logging out and clearing session")
 	return uc.local.ClearSession(ctx)
