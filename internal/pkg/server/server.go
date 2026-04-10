@@ -29,10 +29,7 @@ type ServerConfig struct {
 	ListenAddr        string        `mapstructure:"listen_addr"`
 	GracefulTimeout   time.Duration `mapstructure:"graceful_timeout"`
 	TLS               TLSConfig     `mapstructure:"tls"`
-	// DisableReflection defaults to true when unset (nil). Set to false to enable reflection (dev only).
-	DisableReflection *bool `mapstructure:"disable_reflection"`
-	// AllowInsecureTransport must be true when TLS is disabled (local development only).
-	AllowInsecureTransport bool `mapstructure:"allow_insecure_transport"`
+	ReflectionEnabled bool          `mapstructure:"reflection_enabled"`
 }
 
 type Server struct {
@@ -113,8 +110,6 @@ func New(
 			return nil, errors.Wrap(err, "load grpc tls credentials")
 		}
 		serverOpts = append(serverOpts, grpc.Creds(creds))
-	} else if !cfg.AllowInsecureTransport {
-		return nil, errors.New("gRPC TLS is disabled: enable service.tls or set service.allow_insecure_transport for local development only")
 	}
 
 	defaultOpts := []grpc.ServerOption{
@@ -133,11 +128,7 @@ func New(
 
 	grpcSrv := grpc.NewServer(serverOpts...)
 	modifyServer(grpcSrv)
-	disableReflection := true
-	if cfg.DisableReflection != nil {
-		disableReflection = *cfg.DisableReflection
-	}
-	if !disableReflection {
+	if cfg.ReflectionEnabled {
 		reflection.Register(grpcSrv)
 	}
 

@@ -17,7 +17,7 @@ type TLSConfig struct {
 	CAFile  string `mapstructure:"ca_file"`
 }
 
-func DialOptions(cfg TLSConfig, allowInsecure bool) ([]grpc.DialOption, error) {
+func DialOptions(cfg TLSConfig) ([]grpc.DialOption, error) {
 	if cfg.Enabled {
 		if cfg.CAFile == "" {
 			return nil, fmt.Errorf("grpc tls enabled but ca_file is empty")
@@ -35,9 +35,6 @@ func DialOptions(cfg TLSConfig, allowInsecure bool) ([]grpc.DialOption, error) {
 			MinVersion: tls.VersionTLS12,
 		}
 		return []grpc.DialOption{grpc.WithTransportCredentials(credentials.NewTLS(tlsConf))}, nil
-	}
-	if !allowInsecure {
-		return nil, fmt.Errorf("grpc TLS is disabled: enable grpc_tls in config or set allow_insecure_grpc: true for local development only")
 	}
 	return []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}, nil
 }

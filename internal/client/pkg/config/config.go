@@ -16,12 +16,11 @@ type GRPCClientTLS struct {
 }
 
 type ClientConfig struct {
-	AutherAddr        string        `mapstructure:"auther_addr"`
-	SkeeperAddr       string        `mapstructure:"skeeper_addr"`
-	DataDir           string        `mapstructure:"data_dir"`
-	MaxFileBytes      int64         `mapstructure:"max_file_bytes"`
-	AllowInsecureGRPC bool          `mapstructure:"allow_insecure_grpc"`
-	GRPCTLS           GRPCClientTLS `mapstructure:"grpc_tls"`
+	AutherAddr   string        `mapstructure:"auther_addr"`
+	SkeeperAddr  string        `mapstructure:"skeeper_addr"`
+	DataDir      string        `mapstructure:"data_dir"`
+	MaxFileBytes int64         `mapstructure:"max_file_bytes"`
+	GRPCTLS      GRPCClientTLS `mapstructure:"grpc_tls"`
 }
 
 // Load merges file (if present), defaults, and env. Prefix is SKEEPERCLI_*; older names
@@ -39,13 +38,11 @@ func Load(configPath string, configPathExplicit bool) (*ClientConfig, error) {
 	_ = v.BindEnv("max_file_bytes", "SKEEPERCLI_MAX_FILE_BYTES")
 	_ = v.BindEnv("grpc_tls.enabled", "SKEEPERCLI_GRPC_TLS_ENABLED")
 	_ = v.BindEnv("grpc_tls.ca_file", "SKEEPERCLI_GRPC_CA_FILE")
-	_ = v.BindEnv("allow_insecure_grpc", "SKEEPERCLI_ALLOW_INSECURE_GRPC")
 
 	v.SetDefault("auther_addr", "127.0.0.1:50051")
 	v.SetDefault("skeeper_addr", "127.0.0.1:50052")
 	v.SetDefault("data_dir", "~/.skeepercli")
 	v.SetDefault("max_file_bytes", int64(10<<20)) // 10 MiB cap for FILE entry payload
-	v.SetDefault("allow_insecure_grpc", false)
 	v.SetDefault("grpc_tls.enabled", false)
 	v.SetDefault("grpc_tls.ca_file", "config/keys/grpc_server.crt")
 

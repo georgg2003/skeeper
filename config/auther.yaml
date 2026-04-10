@@ -5,9 +5,7 @@
 service:
   listen_addr: "0.0.0.0:50051"
   graceful_timeout: 30s
-  disable_reflection: true
-  # Required when tls.enabled is false (local dev only).
-  allow_insecure_transport: true
+  reflection_enabled: true
   tls:
     enabled: false
     cert_file: "config/keys/grpc_server.crt"
@@ -21,17 +19,9 @@ postgres:
   password: "auther_password"
   database: "auther_db"
 
-# Per-client rate limits for Login, ExchangeToken, CreateUser (in-process; not shared across replicas).
-# trust_forwarded_for: use only behind a trusted reverse proxy that sets x-forwarded-for correctly.
-rate_limit:
-  trust_forwarded_for: false
-  # max_tracked_clients: 4096
-  # stale_client_ttl: 30m
-
 jwt:
   private_key_file: "config/keys/jwt_private.pem"
   public_key_file: "config/keys/jwt_public.pem"
   access_token_lifetime: 15m
   refresh_token_lifetime: 720h
-  # Optional; must match Skeeper when set (e.g. audience: "skeeper-api").
-  # audience: "skeeper-api"
+  audience: "skeeper-api"

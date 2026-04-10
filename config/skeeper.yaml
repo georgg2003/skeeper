@@ -5,8 +5,7 @@ service:
   listen_addr: "0.0.0.0:50052"
   graceful_timeout: 30s
   # Reflection exposes the API; disable in production.
-  disable_reflection: true
-  allow_insecure_transport: true
+  reflection_enabled: true
   tls:
     enabled: false
     cert_file: "config/keys/grpc_server.crt"
@@ -24,4 +23,4 @@ jwt:
   public_key_file: "config/keys/jwt_public.pem"
   access_token_lifetime: 15m
   refresh_token_lifetime: 720h
-  # audience: "skeeper-api"
+  audience: "skeeper-api"

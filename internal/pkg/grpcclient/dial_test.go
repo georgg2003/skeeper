@@ -13,7 +13,7 @@ import (
 )
 
 func TestDialOptions_InsecureWhenAllowed(t *testing.T) {
-	opts, err := DialOptions(TLSConfig{Enabled: false}, true)
+	opts, err := DialOptions(TLSConfig{Enabled: false})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,15 +22,8 @@ func TestDialOptions_InsecureWhenAllowed(t *testing.T) {
 	}
 }
 
-func TestDialOptions_InsecureRejectedWithoutFlag(t *testing.T) {
-	_, err := DialOptions(TLSConfig{Enabled: false}, false)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
 func TestDialOptions_TLSMissingCA(t *testing.T) {
-	_, err := DialOptions(TLSConfig{Enabled: true, CAFile: ""}, false)
+	_, err := DialOptions(TLSConfig{Enabled: true, CAFile: ""})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -60,7 +53,7 @@ func TestDialOptions_TLSWithPEMFile(t *testing.T) {
 	if err := os.WriteFile(path, pemData, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	opts, err := DialOptions(TLSConfig{Enabled: true, CAFile: path}, false)
+	opts, err := DialOptions(TLSConfig{Enabled: true, CAFile: path})
 	if err != nil {
 		t.Fatal(err)
 	}
