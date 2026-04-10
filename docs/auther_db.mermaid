@@ -6,10 +6,11 @@ erDiagram
         timestamp created_at
         timestamp last_login_at
     }
-    TOKENS {
+    REFRESH_TOKENS {
         int id PK
-        string hash
-        string expires_at FK
-
+        int user_id FK
+        string token_hash
+        timestamp expires_at
+        timestamp created_at
     }
 

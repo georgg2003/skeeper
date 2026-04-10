@@ -1,13 +1,19 @@
 erDiagram
     ENTRY {
-        int id PK
+        string uuid PK
         int user_id "user id in auther service"
         string dek "data encryption key"
-        string type "account|text|binary|bank_card"
+        string type "account|text|file|bank_card"
         text payload "aes encrypted with master key json data"
         text meta "custom jsonb meta, not encrypted"
         bool is_deleted
         timestamp created_at
         timestamp updated_at
         int version
+    }
+    VAULT_CRYPTO {
+        int user_id PK
+        bytes kdf_salt
+        bytes master_verifier
+        timestamp updated_at
     }

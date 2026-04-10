@@ -5,9 +5,12 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     token_hash TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    used_at TIMESTAMPTZ,
     CONSTRAINT fk_user_tokens FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON refresh_tokens(user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_hash ON refresh_tokens(token_hash);
 -- +goose Down
 DROP TABLE IF EXISTS refresh_tokens;
+DROP INDEX IF EXISTS idx_tokens_user_id;
+DROP INDEX IF EXISTS idx_tokens_hash;
