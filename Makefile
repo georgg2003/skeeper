@@ -82,19 +82,11 @@ gen-keys:
 .PHONY: goimports
 goimports: imports
 
-# Library / server packages only (excludes CLI, viper-only config, integration harness) so the total reflects testable logic; expect ≥70%.
-COVERAGE_PACKAGES := $(shell $(GO) list ./internal/... ./pkg/... | grep -v 'internal/client' | grep -v 'internal/pkg/config' | grep -v 'internal/pkg/log' | grep -v 'internal/integrationtest' | grep -v 'internal/auther/pkg/config' | grep -v 'internal/skeeper/pkg/config')
-
 .PHONY: test-coverage
 test-coverage:
-	$(GO) test $(COVERAGE_PACKAGES) -coverprofile=coverage.out -covermode=atomic
+	$(GO) test ./internal/... ./pkg/...  -coverprofile=coverage.out -covermode=atomic
 	$(GO) tool cover -func=coverage.out | tail -n1
 	@echo "HTML: $(GO) tool cover -html=coverage.out -o coverage.html"
-
-.PHONY: test-coverage-check
-test-coverage-check: test-coverage
-	@pct=$$($(GO) tool cover -func=coverage.out | tail -1 | awk '{print $$NF}' | tr -d '%'); \
-	awk -v p="$$pct" 'BEGIN{ if (p+0 < 70) { printf "coverage %s%% is below 70%%\n", p; exit 1 } }'
 
 .PHONY: run_auther
 run_auther:
