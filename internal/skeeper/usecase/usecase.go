@@ -1,6 +1,8 @@
 // Package usecase is Skeeper’s core logic: sync encrypted entries and read/write vault salt + verifier for the logged-in user.
 package usecase
 
+//go:generate go tool mockgen -typed -destination=mock_repository_test.go -package=usecase -source=usecase.go Repository
+
 import (
 	"context"
 	"fmt"
