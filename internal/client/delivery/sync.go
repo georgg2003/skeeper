@@ -1,14 +1,13 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
 func (d *Delivery) Sync(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.sync.Sync(ctx); err != nil {
 		return fmt.Errorf("sync failed: %w", err)
 	}

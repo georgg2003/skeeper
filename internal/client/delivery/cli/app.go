@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -185,8 +186,16 @@ func (a *App) ensureHandlers(cmd *cobra.Command) error {
 	return a.wireErr
 }
 
-// Execute runs the root command and exits the process on error.
+// Execute runs the root command and exits the process on error (no cancellation on signals).
 func (a *App) Execute() {
+	a.ExecuteContext(context.Background())
+}
+
+// ExecuteContext runs the root with ctx propagated to handlers ([cobra.Command.Context]); cancel on SIGINT/SIGTERM from [main] via [signal.NotifyContext].
+func (a *App) ExecuteContext(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	ver := a.cfg.Version
 	if ver == "" {
 		ver = "dev"
@@ -197,7 +206,7 @@ func (a *App) Execute() {
 	}
 	a.root.Version = fmt.Sprintf("%s (built %s)", ver, bt)
 	a.root.SetVersionTemplate("{{.Version}}\n")
-	if err := a.root.Execute(); err != nil {
+	if err := a.root.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -221,5 +230,5 @@ func (a *App) Run(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 	} else {
 		a.root.SetErr(os.Stderr)
 	}
-	return a.root.Execute()
+	return a.root.ExecuteContext(context.Background())
 }

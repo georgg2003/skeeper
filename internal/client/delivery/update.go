@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -24,7 +23,7 @@ func (d *Delivery) UpdatePassword(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.UpdatePassword(ctx, id, meta, secretStr, masterStr); err != nil {
 		return fmt.Errorf("update password entry: %w", err)
 	}
@@ -49,7 +48,7 @@ func (d *Delivery) UpdateText(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.UpdateText(ctx, id, meta, body, masterStr); err != nil {
 		return fmt.Errorf("update text entry: %w", err)
 	}
@@ -74,7 +73,7 @@ func (d *Delivery) UpdateCard(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.UpdateCard(ctx, id, meta, card, masterStr); err != nil {
 		return fmt.Errorf("update card entry: %w", err)
 	}
@@ -99,7 +98,7 @@ func (d *Delivery) UpdateFile(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.UpdateFile(ctx, id, meta, masterStr, replace, data, orig); err != nil {
 		return fmt.Errorf("update file entry: %w", err)
 	}

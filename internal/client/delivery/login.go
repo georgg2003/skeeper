@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -20,7 +19,7 @@ func (d *Delivery) Login(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read password: %w", err)
 	}
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.auth.Login(ctx, username, password); err != nil {
 		return fmt.Errorf("login failed: %w", err)
 	}

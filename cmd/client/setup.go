@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -103,7 +102,7 @@ func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
-	if err := dbRepo.RunMigrations(context.Background()); err != nil {
+	if err := dbRepo.RunMigrations(cmd.Context()); err != nil {
 		_ = dbRepo.Close()
 		return nil, fmt.Errorf("migrations: %w", err)
 	}

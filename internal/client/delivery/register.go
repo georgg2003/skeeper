@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -28,7 +27,7 @@ func (d *Delivery) Register(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("passwords do not match")
 	}
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.auth.Register(ctx, email, pw1); err != nil {
 		return fmt.Errorf("register failed: %w", err)
 	}

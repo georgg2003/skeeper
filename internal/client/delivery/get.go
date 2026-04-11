@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,7 +16,7 @@ func (d *Delivery) Get(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	row, err := d.secret.GetLocalEntry(ctx, id)
 	if err != nil {
 		return err

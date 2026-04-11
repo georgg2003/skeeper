@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -16,7 +15,7 @@ func (d *Delivery) Delete(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.DeleteEntry(ctx, id, masterStr); err != nil {
 		return fmt.Errorf("delete entry: %w", err)
 	}

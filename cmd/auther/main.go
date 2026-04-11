@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"google.golang.org/grpc"
 
@@ -33,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	repo, err := postgres.New(ctx, cfg.Postgres)

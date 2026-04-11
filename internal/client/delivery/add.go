@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,7 +21,7 @@ func (d *Delivery) AddPassword(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.SetPassword(ctx, meta, secretStr, masterStr); err != nil {
 		return fmt.Errorf("save secret: %w", err)
 	}
@@ -43,7 +42,7 @@ func (d *Delivery) AddText(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.SetText(ctx, meta, body, masterStr); err != nil {
 		return fmt.Errorf("save text: %w", err)
 	}
@@ -65,7 +64,7 @@ func (d *Delivery) AddFile(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	origName := filepath.Base(path)
 	if err := d.secret.SetFile(ctx, meta, origName, data, masterStr); err != nil {
 		return fmt.Errorf("save file: %w", err)
@@ -87,7 +86,7 @@ func (d *Delivery) AddCard(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx := cmd.Context()
 	if err := d.secret.SetCard(ctx, meta, card, masterStr); err != nil {
 		return fmt.Errorf("save card: %w", err)
 	}

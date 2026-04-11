@@ -1,14 +1,13 @@
 package delivery
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
 func (d *Delivery) List(cmd *cobra.Command, args []string) error {
-	entries, err := d.secret.ListLocal(context.Background())
+	entries, err := d.secret.ListLocal(cmd.Context())
 	if err != nil {
 		return err
 	}
