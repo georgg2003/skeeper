@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
@@ -66,13 +65,6 @@ func (r *Repository) GetSession(ctx context.Context) (*models.Session, error) {
 	s.RefreshToken, err = decryptSessionToken(rtRaw, r.sessionKey)
 	if err != nil {
 		return nil, err
-	}
-	legacy := (atRaw != "" && !strings.HasPrefix(atRaw, sessionTokenPrefix)) ||
-		(rtRaw != "" && !strings.HasPrefix(rtRaw, sessionTokenPrefix))
-	if legacy {
-		if err := r.SaveSession(ctx, s); err != nil {
-			return nil, fmt.Errorf("migrate session tokens to encrypted form: %w", err)
-		}
 	}
 	return &s, nil
 }

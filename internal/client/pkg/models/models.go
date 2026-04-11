@@ -28,7 +28,7 @@ type Entry struct {
 
 	IsDirty bool // True when local changes are not yet confirmed by sync.
 
-	UserID *int64 // Owning account; nil on legacy rows before per-user scoping.
+	UserID *int64 // Owning Auther account; nil if not associated yet.
 }
 
 // Session holds Auther tokens persisted on disk after login or refresh.
@@ -37,7 +37,7 @@ type Session struct {
 	RefreshToken     string
 	ExpiresAt        time.Time
 	RefreshExpiresAt time.Time
-	UserID           *int64 // Parsed from the access JWT for local filtering; nil on legacy sessions.
+	UserID           *int64 // Auther user id when known; nil if absent.
 }
 
 // User is a minimal account record returned from registration/login flows.

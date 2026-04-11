@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/crypto"
 )
-
-const sessionTokenPrefix = "v1."
 
 func loadOrCreateSessionKey(keyPath string) ([]byte, error) {
 	b, err := os.ReadFile(keyPath)
@@ -34,6 +31,7 @@ func loadOrCreateSessionKey(keyPath string) ([]byte, error) {
 	return key, nil
 }
 
+// encryptSessionToken stores ciphertext as raw std base64 (no version prefix).
 func encryptSessionToken(plaintext string, key []byte) (string, error) {
 	if plaintext == "" {
 		return "", nil
@@ -42,17 +40,14 @@ func encryptSessionToken(plaintext string, key []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return sessionTokenPrefix + base64.RawStdEncoding.EncodeToString(out), nil
+	return base64.RawStdEncoding.EncodeToString(out), nil
 }
 
 func decryptSessionToken(encoded string, key []byte) (string, error) {
 	if encoded == "" {
 		return "", nil
 	}
-	if !strings.HasPrefix(encoded, sessionTokenPrefix) {
-		return encoded, nil
-	}
-	raw, err := base64.RawStdEncoding.DecodeString(strings.TrimPrefix(encoded, sessionTokenPrefix))
+	raw, err := base64.RawStdEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", fmt.Errorf("session token decode: %w", err)
 	}

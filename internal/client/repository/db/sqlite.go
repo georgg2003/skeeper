@@ -180,7 +180,7 @@ func (r *Repository) GetEntry(ctx context.Context, id uuid.UUID, forUserID *int6
 
 const kdfSaltSize = 16
 
-// EnsureLocalVaultCrypto loads salt (+ verifier) for this Auther user, claims legacy user_id=0 row once, or creates a new row.
+// EnsureLocalVaultCrypto loads salt (+ verifier) for this Auther user, or creates a new row.
 func (r *Repository) EnsureLocalVaultCrypto(ctx context.Context, userID int64) (salt []byte, masterVerifier []byte, err error) {
 	err = r.db.QueryRowContext(ctx, `SELECT kdf_salt, master_verifier FROM crypto_meta WHERE user_id = ?`, userID).
 		Scan(&salt, &masterVerifier)
@@ -189,17 +189,6 @@ func (r *Repository) EnsureLocalVaultCrypto(ctx context.Context, userID int64) (
 	}
 	if err != sql.ErrNoRows {
 		return nil, nil, err
-	}
-	res, err := r.db.ExecContext(ctx, `
-		UPDATE crypto_meta SET user_id = ?
-		WHERE user_id = 0
-		AND NOT EXISTS (SELECT 1 FROM crypto_meta WHERE user_id = ?)`,
-		userID, userID)
-	if err != nil {
-		return nil, nil, err
-	}
-	if n, _ := res.RowsAffected(); n > 0 {
-		return r.EnsureLocalVaultCrypto(ctx, userID)
 	}
 	salt = make([]byte, kdfSaltSize)
 	if _, err := rand.Read(salt); err != nil {
