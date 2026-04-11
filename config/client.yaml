@@ -7,3 +7,10 @@ max_file_bytes: 10485760
 grpc_tls:
   enabled: false
   ca_file: "config/keys/grpc_server.crt"
+
+# Optional slog output. If file is non-empty, logs append there (0600); "~" is expanded.
+# level: debug | info | warn | error — format: json | text
+logging:
+  file: ""
+  level: info
+  format: json

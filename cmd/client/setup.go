@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -30,6 +32,46 @@ func expandPath(p string) (string, error) {
 	return p, nil
 }
 
+func parseSlogLevel(s string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "err", "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
+func newClientLogger(cmd *cobra.Command, logCfg clientcfg.ClientLogging) (*slog.Logger, error) {
+	opts := &slog.HandlerOptions{Level: parseSlogLevel(logCfg.Level)}
+	out := io.Writer(cmd.Root().OutOrStdout())
+	if path := strings.TrimSpace(logCfg.File); path != "" {
+		p, err := expandPath(path)
+		if err != nil {
+			return nil, fmt.Errorf("log file path: %w", err)
+		}
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			return nil, fmt.Errorf("log file dir: %w", err)
+		}
+		f, err := os.OpenFile(p, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			return nil, fmt.Errorf("open log file: %w", err)
+		}
+		out = f
+	}
+	var h slog.Handler
+	switch strings.ToLower(strings.TrimSpace(logCfg.Format)) {
+	case "text":
+		h = slog.NewTextHandler(out, opts)
+	default:
+		h = slog.NewJSONHandler(out, opts)
+	}
+	return slog.New(h), nil
+}
+
 // BuildDelivery loads settings through Viper (YAML + env), opens local DB and gRPC clients, and returns [cli.Handlers].
 func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 	fileCfg, err := clientcfg.Load(cmd)
@@ -51,7 +93,10 @@ func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 		return nil, err
 	}
 
-	l := slog.New(slog.NewJSONHandler(cmd.Root().OutOrStdout(), nil))
+	l, err := newClientLogger(cmd, fileCfg.Logging)
+	if err != nil {
+		return nil, err
+	}
 
 	dbRepo, err := db.New(dbPath)
 	if err != nil {

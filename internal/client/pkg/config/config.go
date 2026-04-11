@@ -16,12 +16,24 @@ type GRPCClientTLS struct {
 	CAFile  string `mapstructure:"ca_file"`
 }
 
+// ClientLogging configures slog for the CLI process (use cases and repositories).
+// If File is empty, logs go to the process stdout (wired in cmd/client).
+type ClientLogging struct {
+	// File is a path to append logs to; "~/" is expanded. Empty means stdout only.
+	File string `mapstructure:"file"`
+	// Level is one of: debug, info, warn, error (case-insensitive). Default info.
+	Level string `mapstructure:"level"`
+	// Format is json or text (case-insensitive). Default json.
+	Format string `mapstructure:"format"`
+}
+
 type ClientConfig struct {
 	AutherAddr   string        `mapstructure:"auther_addr"`
 	SkeeperAddr  string        `mapstructure:"skeeper_addr"`
 	DataDir      string        `mapstructure:"data_dir"`
 	MaxFileBytes int64         `mapstructure:"max_file_bytes"`
 	GRPCTLS      GRPCClientTLS `mapstructure:"grpc_tls"`
+	Logging      ClientLogging `mapstructure:"logging"`
 }
 
 // Load builds a single Viper instance: defaults, env (SKEEPERCLI_*), optional YAML file, and optional Cobra --config.
@@ -39,6 +51,9 @@ func Load(cmd *cobra.Command) (*ClientConfig, error) {
 	_ = v.BindEnv("grpc_tls.enabled", "SKEEPERCLI_GRPC_TLS_ENABLED")
 	_ = v.BindEnv("grpc_tls.ca_file", "SKEEPERCLI_GRPC_CA_FILE")
 	_ = v.BindEnv("client_config_file", "SKEEPERCLI_CONFIG")
+	_ = v.BindEnv("logging.file", "SKEEPERCLI_LOG_FILE")
+	_ = v.BindEnv("logging.level", "SKEEPERCLI_LOG_LEVEL")
+	_ = v.BindEnv("logging.format", "SKEEPERCLI_LOG_FORMAT")
 
 	v.SetDefault("auther_addr", "127.0.0.1:50051")
 	v.SetDefault("skeeper_addr", "127.0.0.1:50052")
@@ -47,6 +62,8 @@ func Load(cmd *cobra.Command) (*ClientConfig, error) {
 	v.SetDefault("grpc_tls.enabled", false)
 	v.SetDefault("grpc_tls.ca_file", "config/keys/grpc_server.crt")
 	v.SetDefault("client_config_file", "config/client.yaml")
+	v.SetDefault("logging.level", "info")
+	v.SetDefault("logging.format", "json")
 
 	if cmd != nil {
 		if f := cmd.Root().PersistentFlags().Lookup("config"); f != nil {
