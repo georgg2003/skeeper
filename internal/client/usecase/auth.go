@@ -1,5 +1,7 @@
 package usecase
 
+//go:generate go tool mockgen -typed -destination=mock_auth_test.go -package=usecase -source=auth.go SessionStore,RemoteAuthenticator
+
 import (
 	"context"
 	"log/slog"

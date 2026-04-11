@@ -14,59 +14,11 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
-
-type memSession struct {
-	s       *models.Session
-	saveErr error
-}
-
-func (m *memSession) SaveSession(ctx context.Context, s models.Session) error {
-	if m.saveErr != nil {
-		return m.saveErr
-	}
-	cp := s
-	m.s = &cp
-	return nil
-}
-
-func (m *memSession) GetSession(ctx context.Context) (*models.Session, error) {
-	return m.s, nil
-}
-
-func (m *memSession) ClearSession(ctx context.Context) error {
-	m.s = nil
-	return nil
-}
-
-type stubRemote struct {
-	createErr  error
-	loginOut   *models.Session
-	loginErr   error
-	refreshOut *models.Session
-	refreshErr error
-}
-
-func (s *stubRemote) CreateUser(ctx context.Context, email, password string) error {
-	return s.createErr
-}
-
-func (s *stubRemote) Login(ctx context.Context, login, password string) (*models.Session, error) {
-	if s.loginErr != nil {
-		return nil, s.loginErr
-	}
-	return s.loginOut, nil
-}
-
-func (s *stubRemote) Refresh(ctx context.Context, refreshToken string) (*models.Session, error) {
-	if s.refreshErr != nil {
-		return nil, s.refreshErr
-	}
-	return s.refreshOut, nil
-}
 
 func clientTestJWTHelper(t *testing.T, userID int64) (access string, refresh string) {
 	t.Helper()
@@ -100,34 +52,47 @@ func TestAuthUseCase_Register(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		local   *memSession
-		remote  *stubRemote
+		setup   func(local *MockSessionStore, remote *MockRemoteAuthenticator)
 		wantErr bool
 	}{
 		{
-			name:    "create_user_fails",
-			local:   &memSession{},
-			remote:  &stubRemote{createErr: context.Canceled},
+			name: "create_user_fails",
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				remote.EXPECT().CreateUser(gomock.Any(), "a@b.c", "password123456").Return(context.Canceled)
+			},
 			wantErr: true,
 		},
 		{
-			name:   "success",
-			local:  &memSession{},
-			remote: &stubRemote{loginOut: sess},
+			name: "success",
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				gomock.InOrder(
+					remote.EXPECT().CreateUser(gomock.Any(), "a@b.c", "password123456").Return(nil),
+					remote.EXPECT().Login(gomock.Any(), "a@b.c", "password123456").Return(sess, nil),
+					local.EXPECT().SaveSession(gomock.Any(), gomock.AssignableToTypeOf(models.Session{})).DoAndReturn(
+						func(_ context.Context, got models.Session) error {
+							assert.Equal(t, at, got.AccessToken)
+							assert.NotNil(t, got.UserID)
+							assert.Equal(t, uid, *got.UserID)
+							return nil
+						}),
+				)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
+			ctrl := gomock.NewController(t)
+			local := NewMockSessionStore(ctrl)
+			remote := NewMockRemoteAuthenticator(ctrl)
+			tt.setup(local, remote)
+			uc := NewAuthUseCase(local, remote, discardClientLog())
 			err := uc.Register(ctx, "a@b.c", "password123456")
 			if tt.wantErr {
-				require.Error(t, err, "expected error")
+				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			require.NotNil(t, tt.local.s, "session not saved")
-			assert.Equal(t, at, tt.local.s.AccessToken)
 		})
 	}
 }
@@ -145,35 +110,44 @@ func TestAuthUseCase_Login(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		local   *memSession
-		remote  *stubRemote
+		setup   func(local *MockSessionStore, remote *MockRemoteAuthenticator)
 		wantErr bool
 	}{
 		{
-			name:    "remote_error",
-			local:   &memSession{},
-			remote:  &stubRemote{loginErr: context.Canceled},
+			name: "remote_error",
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				remote.EXPECT().Login(gomock.Any(), "u@x.y", "pw").Return(nil, context.Canceled)
+			},
 			wantErr: true,
 		},
 		{
-			name:   "success",
-			local:  &memSession{},
-			remote: &stubRemote{loginOut: sess},
+			name: "success",
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				gomock.InOrder(
+					remote.EXPECT().Login(gomock.Any(), "u@x.y", "pw").Return(sess, nil),
+					local.EXPECT().SaveSession(gomock.Any(), gomock.AssignableToTypeOf(models.Session{})).DoAndReturn(
+						func(_ context.Context, got models.Session) error {
+							assert.Equal(t, uid, *got.UserID)
+							return nil
+						}),
+				)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
+			ctrl := gomock.NewController(t)
+			local := NewMockSessionStore(ctrl)
+			remote := NewMockRemoteAuthenticator(ctrl)
+			tt.setup(local, remote)
+			uc := NewAuthUseCase(local, remote, discardClientLog())
 			err := uc.Login(ctx, "u@x.y", "pw")
 			if tt.wantErr {
-				require.Error(t, err, "expected error")
+				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			require.NotNil(t, tt.local.s)
-			require.NotNil(t, tt.local.s.UserID)
-			assert.Equal(t, uid, *tt.local.s.UserID)
 		})
 	}
 }
@@ -185,94 +159,107 @@ func TestAuthUseCase_GetValidToken(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		local   *memSession
-		remote  *stubRemote
+		setup   func(local *MockSessionStore, remote *MockRemoteAuthenticator)
 		wantErr bool
 	}{
 		{
-			name:    "no_session",
-			local:   &memSession{s: nil},
-			remote:  &stubRemote{},
+			name: "no_session",
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				local.EXPECT().GetSession(gomock.Any()).Return(nil, nil)
+			},
 			wantErr: true,
 		},
 		{
 			name: "valid_access_returns_token",
-			local: &memSession{s: &models.Session{
-				AccessToken:      at,
-				RefreshToken:     rt,
-				ExpiresAt:        time.Now().Add(10 * time.Minute),
-				RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-				UserID:           &uid,
-			}},
-			remote: &stubRemote{},
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				local.EXPECT().GetSession(gomock.Any()).Return(&models.Session{
+					AccessToken:      at,
+					RefreshToken:     rt,
+					ExpiresAt:        time.Now().Add(10 * time.Minute),
+					RefreshExpiresAt: time.Now().Add(24 * time.Hour),
+					UserID:           &uid,
+				}, nil)
+			},
 		},
 		{
 			name: "refresh_path",
-			local: &memSession{s: &models.Session{
-				AccessToken:      "old",
-				RefreshToken:     rt,
-				ExpiresAt:        time.Now().Add(30 * time.Second),
-				RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-				UserID:           &uid,
-			}},
-			remote: &stubRemote{
-				refreshOut: func() *models.Session {
-					at2, rt2 := clientTestJWTHelper(t, uid)
-					return &models.Session{
-						AccessToken:      at2,
-						RefreshToken:     rt2,
-						ExpiresAt:        time.Now().Add(time.Hour),
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				at2, rt2 := clientTestJWTHelper(t, uid)
+				refreshed := &models.Session{
+					AccessToken:      at2,
+					RefreshToken:     rt2,
+					ExpiresAt:        time.Now().Add(time.Hour),
+					RefreshExpiresAt: time.Now().Add(24 * time.Hour),
+				}
+				gomock.InOrder(
+					local.EXPECT().GetSession(gomock.Any()).Return(&models.Session{
+						AccessToken:      "old",
+						RefreshToken:     rt,
+						ExpiresAt:        time.Now().Add(30 * time.Second),
 						RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-					}
-				}(),
+						UserID:           &uid,
+					}, nil),
+					remote.EXPECT().Refresh(gomock.Any(), rt).Return(refreshed, nil),
+					local.EXPECT().SaveSession(gomock.Any(), gomock.AssignableToTypeOf(models.Session{})).DoAndReturn(
+						func(_ context.Context, got models.Session) error {
+							assert.Equal(t, at2, got.AccessToken)
+							assert.NotNil(t, got.UserID)
+							assert.Equal(t, uid, *got.UserID)
+							return nil
+						}),
+				)
 			},
 		},
 		{
 			name: "refresh_token_expired",
-			local: &memSession{s: &models.Session{
-				AccessToken:      "x",
-				RefreshToken:     rt,
-				ExpiresAt:        time.Now().Add(-time.Hour),
-				RefreshExpiresAt: time.Now().Add(-time.Minute),
-				UserID:           &uid,
-			}},
-			remote:  &stubRemote{},
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				local.EXPECT().GetSession(gomock.Any()).Return(&models.Session{
+					AccessToken:      "x",
+					RefreshToken:     rt,
+					ExpiresAt:        time.Now().Add(-time.Hour),
+					RefreshExpiresAt: time.Now().Add(-time.Minute),
+					UserID:           &uid,
+				}, nil)
+			},
 			wantErr: true,
 		},
 		{
 			name: "refresh_remote_error",
-			local: &memSession{s: &models.Session{
-				AccessToken:      "x",
-				RefreshToken:     rt,
-				ExpiresAt:        time.Now().Add(30 * time.Second),
-				RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-				UserID:           &uid,
-			}},
-			remote:  &stubRemote{refreshErr: context.Canceled},
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				gomock.InOrder(
+					local.EXPECT().GetSession(gomock.Any()).Return(&models.Session{
+						AccessToken:      "x",
+						RefreshToken:     rt,
+						ExpiresAt:        time.Now().Add(30 * time.Second),
+						RefreshExpiresAt: time.Now().Add(24 * time.Hour),
+						UserID:           &uid,
+					}, nil),
+					remote.EXPECT().Refresh(gomock.Any(), rt).Return(nil, context.Canceled),
+				)
+			},
 			wantErr: true,
 		},
 		{
 			name: "refresh_save_session_error",
-			local: &memSession{
-				saveErr: context.Canceled,
-				s: &models.Session{
-					AccessToken:      "old",
-					RefreshToken:     rt,
-					ExpiresAt:        time.Now().Add(30 * time.Second),
+			setup: func(local *MockSessionStore, remote *MockRemoteAuthenticator) {
+				at2, rt2 := clientTestJWTHelper(t, uid)
+				refreshed := &models.Session{
+					AccessToken:      at2,
+					RefreshToken:     rt2,
+					ExpiresAt:        time.Now().Add(time.Hour),
 					RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-					UserID:           &uid,
-				},
-			},
-			remote: &stubRemote{
-				refreshOut: func() *models.Session {
-					at2, rt2 := clientTestJWTHelper(t, uid)
-					return &models.Session{
-						AccessToken:      at2,
-						RefreshToken:     rt2,
-						ExpiresAt:        time.Now().Add(time.Hour),
+				}
+				gomock.InOrder(
+					local.EXPECT().GetSession(gomock.Any()).Return(&models.Session{
+						AccessToken:      "old",
+						RefreshToken:     rt,
+						ExpiresAt:        time.Now().Add(30 * time.Second),
 						RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-					}
-				}(),
+						UserID:           &uid,
+					}, nil),
+					remote.EXPECT().Refresh(gomock.Any(), rt).Return(refreshed, nil),
+					local.EXPECT().SaveSession(gomock.Any(), gomock.AssignableToTypeOf(models.Session{})).Return(context.Canceled),
+				)
 			},
 			wantErr: true,
 		},
@@ -280,10 +267,14 @@ func TestAuthUseCase_GetValidToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
+			ctrl := gomock.NewController(t)
+			local := NewMockSessionStore(ctrl)
+			remote := NewMockRemoteAuthenticator(ctrl)
+			tt.setup(local, remote)
+			uc := NewAuthUseCase(local, remote, discardClientLog())
 			tok, err := uc.GetValidToken(ctx)
 			if tt.wantErr {
-				require.Error(t, err, "expected error")
+				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
@@ -294,10 +285,11 @@ func TestAuthUseCase_GetValidToken(t *testing.T) {
 
 func TestAuthUseCase_Logout(t *testing.T) {
 	ctx := context.Background()
-	local := &memSession{s: &models.Session{AccessToken: "x"}}
-	uc := NewAuthUseCase(local, &stubRemote{}, discardClientLog())
+	ctrl := gomock.NewController(t)
+	local := NewMockSessionStore(ctrl)
+	local.EXPECT().ClearSession(gomock.Any()).Return(nil)
+	uc := NewAuthUseCase(local, NewMockRemoteAuthenticator(ctrl), discardClientLog())
 	require.NoError(t, uc.Logout(ctx))
-	assert.Nil(t, local.s, "expected cleared session")
 }
 
 // Ensures jwtuser can read claims from tokens produced by jwthelper (regression for Login/Register).
