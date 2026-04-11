@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -262,9 +263,10 @@ func TestUseCase_RotateToken(t *testing.T) {
 	}
 }
 
+// singleFlightRepoStub counts RotateRefreshToken calls for TestUseCase_RotateToken_SingleFlight.
+// Other repository methods panic so the test cannot accidentally use them.
 type singleFlightRepoStub struct {
-	mu    sync.Mutex
-	calls int
+	rotateCalls atomic.Int64
 }
 
 func (s *singleFlightRepoStub) InsertUser(context.Context, models.DBUserCredentials) (models.UserInfo, error) {
@@ -276,9 +278,7 @@ func (s *singleFlightRepoStub) ReplaceUserRefreshTokens(context.Context, int64, 
 }
 
 func (s *singleFlightRepoStub) RotateRefreshToken(_ context.Context, _ string, mint func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error) {
-	s.mu.Lock()
-	s.calls++
-	s.mu.Unlock()
+	s.rotateCalls.Add(1)
 	time.Sleep(25 * time.Millisecond)
 	return mint(42)
 }
@@ -310,8 +310,5 @@ func TestUseCase_RotateToken_SingleFlight(t *testing.T) {
 	wg.Wait()
 	require.NoError(t, err0)
 	require.NoError(t, err1)
-	repo.mu.Lock()
-	n := repo.calls
-	repo.mu.Unlock()
-	assert.Equal(t, 1, n, "RotateRefreshToken calls")
+	assert.Equal(t, int64(1), repo.rotateCalls.Load(), "RotateRefreshToken calls")
 }
