@@ -1,5 +1,7 @@
 package usecase
 
+//go:generate go tool mockgen -typed -destination=mock_token_test.go -package=usecase -source=token.go AuthProvider
+
 import (
 	"context"
 	"log/slog"
