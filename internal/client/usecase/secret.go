@@ -1,6 +1,8 @@
 // Package usecase implements the CLI application layer: vault crypto, entry CRUD, auth, and sync orchestration.
 package usecase
 
+//go:generate go tool mockgen -typed -destination=mock_secret_test.go -package=usecase -source=secret.go LocalSecretStore,SessionReader,VaultRemote
+
 import (
 	"context"
 	"crypto/rand"
