@@ -1,5 +1,7 @@
 package usecase
 
+//go:generate go tool mockgen -typed -destination=mock_sync_test.go -package=usecase -source=sync.go LocalSyncRepo,RemoteSyncRepo
+
 import (
 	"context"
 	"errors"
