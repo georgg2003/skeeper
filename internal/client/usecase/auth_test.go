@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
@@ -69,23 +71,15 @@ func (s *stubRemote) Refresh(ctx context.Context, refreshToken string) (*models.
 func clientTestJWTHelper(t *testing.T, userID int64) (access string, refresh string) {
 	t.Helper()
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	privPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
 	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, 24*time.Hour, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pair, err := h.NewTokenPair(userID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return pair.AccessToken.Token, pair.RefreshToken.Token
 }
 
@@ -128,17 +122,12 @@ func TestAuthUseCase_Register(t *testing.T) {
 			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
 			err := uc.Register(ctx, "a@b.c", "password123456")
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err, "expected error")
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tt.local.s == nil || tt.local.s.AccessToken != at {
-				t.Fatal("session not saved")
-			}
+			require.NoError(t, err)
+			require.NotNil(t, tt.local.s, "session not saved")
+			assert.Equal(t, at, tt.local.s.AccessToken)
 		})
 	}
 }
@@ -178,17 +167,13 @@ func TestAuthUseCase_Login(t *testing.T) {
 			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
 			err := uc.Login(ctx, "u@x.y", "pw")
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err, "expected error")
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tt.local.s == nil || tt.local.s.UserID == nil || *tt.local.s.UserID != uid {
-				t.Fatalf("session %+v", tt.local.s)
-			}
+			require.NoError(t, err)
+			require.NotNil(t, tt.local.s)
+			require.NotNil(t, tt.local.s.UserID)
+			assert.Equal(t, uid, *tt.local.s.UserID)
 		})
 	}
 }
@@ -298,14 +283,11 @@ func TestAuthUseCase_GetValidToken(t *testing.T) {
 			uc := NewAuthUseCase(tt.local, tt.remote, discardClientLog())
 			tok, err := uc.GetValidToken(ctx)
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err, "expected error")
 				return
 			}
-			if err != nil || tok == "" {
-				t.Fatalf("token %q err %v", tok, err)
-			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, tok)
 		})
 	}
 }
@@ -314,12 +296,8 @@ func TestAuthUseCase_Logout(t *testing.T) {
 	ctx := context.Background()
 	local := &memSession{s: &models.Session{AccessToken: "x"}}
 	uc := NewAuthUseCase(local, &stubRemote{}, discardClientLog())
-	if err := uc.Logout(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if local.s != nil {
-		t.Fatal("expected cleared session")
-	}
+	require.NoError(t, uc.Logout(ctx))
+	assert.Nil(t, local.s, "expected cleared session")
 }
 
 // Ensures jwtuser can read claims from tokens produced by jwthelper (regression for Login/Register).
@@ -329,10 +307,8 @@ func TestJWTUserClaimRoundTrip(t *testing.T) {
 	p := jwt.NewParser()
 	claims := jwt.MapClaims{}
 	_, _, err := p.ParseUnverified(at, claims)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v, ok := claims["UserID"].(float64); !ok || int64(v) != uid {
-		t.Fatalf("claims %+v", claims)
-	}
+	require.NoError(t, err)
+	v, ok := claims["UserID"].(float64)
+	require.True(t, ok)
+	assert.Equal(t, uid, int64(v))
 }

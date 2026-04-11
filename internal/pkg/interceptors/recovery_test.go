@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,13 +24,10 @@ func TestUnaryRecoveryInterceptor_RecoversPanic(t *testing.T) {
 			panic("boom")
 		},
 	)
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, err, "expected error")
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.Internal {
-		t.Fatalf("got %v", err)
-	}
+	require.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
 }
 
 func TestUnaryRecoveryInterceptor_Passthrough(t *testing.T) {
@@ -38,9 +37,8 @@ func TestUnaryRecoveryInterceptor_Passthrough(t *testing.T) {
 			return "out", nil
 		},
 	)
-	if err != nil || out != "out" {
-		t.Fatalf("got %v %v", out, err)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "out", out)
 }
 
 func TestStreamRecoveryInterceptor_RecoversPanic(t *testing.T) {
@@ -50,12 +48,8 @@ func TestStreamRecoveryInterceptor_RecoversPanic(t *testing.T) {
 		func(any, grpc.ServerStream) error {
 			panic("stream boom")
 		})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if status.Code(err) != codes.Internal {
-		t.Fatalf("got %v", err)
-	}
+	require.Error(t, err, "expected error")
+	assert.Equal(t, codes.Internal, status.Code(err))
 }
 
 type fakeStream struct {

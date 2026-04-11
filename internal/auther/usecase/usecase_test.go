@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
@@ -24,19 +26,13 @@ import (
 func testJWTHelper(t *testing.T) *jwthelper.JWTHelper {
 	t.Helper()
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	privPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
 	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, 24*time.Hour, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return h
 }
 
@@ -90,9 +86,8 @@ func TestUseCase_CreateUser(t *testing.T) {
 			setup: func(m *MockRepository) {
 				m.EXPECT().InsertUser(gomock.Any(), gomock.AssignableToTypeOf(models.DBUserCredentials{})).
 					DoAndReturn(func(_ context.Context, db models.DBUserCredentials) (models.UserInfo, error) {
-						if db.Email != good.Email || len(db.PasswordHash) == 0 {
-							t.Fatalf("bad insert payload %+v", db)
-						}
+						require.Equal(t, good.Email, db.Email)
+						require.NotEmpty(t, db.PasswordHash)
 						return models.UserInfo{ID: 3, Email: good.Email}, nil
 					})
 			},
@@ -107,17 +102,14 @@ func TestUseCase_CreateUser(t *testing.T) {
 			uc := New(discardLogger(), repo, testJWTHelper(t))
 			info, err := uc.CreateUser(ctx, tt.creds)
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				if tt.name == "user_exists" && !stderrors.Is(err, ErrUserExists) {
-					t.Fatalf("expected ErrUserExists, got %v", err)
+				require.Error(t, err, "expected error")
+				if tt.name == "user_exists" {
+					assert.True(t, stderrors.Is(err, ErrUserExists))
 				}
 				return
 			}
-			if err != nil || info.ID != 3 {
-				t.Fatalf("got %+v %v", info, err)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, int64(3), info.ID)
 		})
 	}
 }
@@ -128,9 +120,7 @@ func TestUseCase_LoginUser(t *testing.T) {
 	email := "login@example.com"
 	pass := "correct-password"
 	hash, err := (&models.UserCredentials{Email: email, Password: pass}).HashPassword()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	userRow := models.UserInfo{ID: 77, Email: email, PasswordHash: hash}
 
 	tests := []struct {
@@ -195,14 +185,12 @@ func TestUseCase_LoginUser(t *testing.T) {
 			uc := New(discardLogger(), repo, jh)
 			out, err := uc.LoginUser(ctx, tt.creds)
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err, "expected error")
 				return
 			}
-			if err != nil || out.User.ID != userRow.ID || out.TokenPair.AccessToken.Token == "" {
-				t.Fatalf("%+v %v", out, err)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, userRow.ID, out.User.ID)
+			assert.NotEmpty(t, out.TokenPair.AccessToken.Token)
 		})
 	}
 }
@@ -263,17 +251,13 @@ func TestUseCase_RotateToken(t *testing.T) {
 			uc := New(discardLogger(), repo, jh)
 			pair, err := uc.RotateToken(ctx, rawRefresh)
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err, "expected error")
 				return
 			}
-			if err != nil || pair.AccessToken.Token == "" || pair.RefreshToken.Token == "" {
-				t.Fatalf("%+v %v", pair, err)
-			}
-			if pair.RefreshToken.Token == rawRefresh {
-				t.Fatal("expected new refresh token")
-			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, pair.AccessToken.Token)
+			assert.NotEmpty(t, pair.RefreshToken.Token)
+			assert.NotEqual(t, rawRefresh, pair.RefreshToken.Token, "expected new refresh token")
 		})
 	}
 }
@@ -324,13 +308,10 @@ func TestUseCase_RotateToken_SingleFlight(t *testing.T) {
 		_, err1 = uc.RotateToken(ctx, rawRefresh)
 	}()
 	wg.Wait()
-	if err0 != nil || err1 != nil {
-		t.Fatalf("errs %v %v", err0, err1)
-	}
+	require.NoError(t, err0)
+	require.NoError(t, err1)
 	repo.mu.Lock()
 	n := repo.calls
 	repo.mu.Unlock()
-	if n != 1 {
-		t.Fatalf("RotateRefreshToken calls = %d, want 1", n)
-	}
+	assert.Equal(t, 1, n, "RotateRefreshToken calls")
 }

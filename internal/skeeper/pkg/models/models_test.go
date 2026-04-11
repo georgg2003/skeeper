@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/georgg2003/skeeper/api"
@@ -25,24 +27,19 @@ func TestEntryProtoRoundTrip(t *testing.T) {
 	}
 	p := e.ToProto()
 	got, err := NewEntryFromProto(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.UUID != e.UUID || got.Type != e.Type || got.Version != e.Version || got.IsDeleted != e.IsDeleted {
-		t.Fatalf("mismatch %+v vs %+v", got, e)
-	}
-	if !got.UpdatedAt.Equal(ts) {
-		t.Fatal("time mismatch")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, e.UUID, got.UUID)
+	assert.Equal(t, e.Type, got.Type)
+	assert.Equal(t, e.Version, got.Version)
+	assert.Equal(t, e.IsDeleted, got.IsDeleted)
+	assert.True(t, got.UpdatedAt.Equal(ts), "time mismatch")
 }
 
 func TestNewEntryFromProto_InvalidUUID(t *testing.T) {
 	p := (&Entry{UUID: uuid.New(), UpdatedAt: time.Now()}).ToProto()
 	p.SetUuid("bad")
 	_, err := NewEntryFromProto(p)
-	if err == nil {
-		t.Fatal("expected validation error")
-	}
+	require.Error(t, err, "expected validation error")
 }
 
 func TestNewSyncRequestFromProto(t *testing.T) {
@@ -54,12 +51,9 @@ func TestNewSyncRequestFromProto(t *testing.T) {
 		Updates:    []*api.Entry{e.ToProto()},
 	}.Build()
 	got, err := NewSyncRequestFromProto(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.LastSyncAt.Equal(ts) || len(got.Updates) != 1 {
-		t.Fatalf("%+v", got)
-	}
+	require.NoError(t, err)
+	assert.True(t, got.LastSyncAt.Equal(ts))
+	assert.Len(t, got.Updates, 1)
 }
 
 func TestSyncResponse_ToProto(t *testing.T) {
@@ -73,11 +67,9 @@ func TestSyncResponse_ToProto(t *testing.T) {
 		},
 	}
 	p := s.ToProto()
-	if p.GetCurrentSyncAt() == nil || len(p.GetUpdates()) != 1 {
-		t.Fatal("bad proto")
-	}
+	require.NotNil(t, p.GetCurrentSyncAt())
+	assert.Len(t, p.GetUpdates(), 1)
 	ap := p.GetAppliedUpdateUuids()
-	if len(ap) != 1 || ap[0] != id.String() {
-		t.Fatalf("applied uuids %+v", ap)
-	}
+	require.Len(t, ap, 1)
+	assert.Equal(t, id.String(), ap[0])
 }

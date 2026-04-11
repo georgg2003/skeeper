@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/georgg2003/skeeper/pkg/errors"
 )
@@ -57,7 +59,5 @@ func TestTokenUseCase_GetValidToken_ReturnsErrorWhenSaveFails(t *testing.T) {
 	}
 	uc := NewTokenUseCase(store, stubRefresh{out: &newSess}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	_, err := uc.GetValidToken(ctx)
-	if err == nil {
-		t.Fatal("expected error when SaveSession fails after refresh")
-	}
+	require.Error(t, err, "expected error when SaveSession fails after refresh")
 }

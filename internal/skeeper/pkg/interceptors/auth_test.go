@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -21,51 +23,38 @@ import (
 func testJWTHelper(t *testing.T) *jwthelper.JWTHelper {
 	t.Helper()
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	privPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
 	h, err := jwthelper.New(privPEM, pubPEM, time.Minute, time.Hour, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return h
 }
 
 func TestAuthInterceptor_ValidBearerSetsUserID(t *testing.T) {
 	h := testJWTHelper(t)
 	pair, err := h.NewTokenPair(42)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ic := NewAuthInterceptor(h)
 	md := metadata.Pairs("authorization", "Bearer "+pair.AccessToken.Token)
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 	_, err = ic(ctx, nil, &grpc.UnaryServerInfo{},
 		func(c context.Context, _ any) (any, error) {
 			uid, ok := contextlib.GetUserID(c)
-			if !ok || uid != 42 {
-				t.Fatalf("user id %d ok=%v", uid, ok)
-			}
+			require.True(t, ok)
+			assert.Equal(t, int64(42), uid)
 			return nil, nil
 		})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	ic := NewAuthInterceptor(testJWTHelper(t))
 	_, err := ic(context.Background(), nil, &grpc.UnaryServerInfo{},
 		func(context.Context, any) (any, error) { return nil, nil })
-	if status.Code(err) != codes.Unauthenticated {
-		t.Fatalf("got %v", err)
-	}
+	assert.Equal(t, codes.Unauthenticated, status.Code(err))
 }
 
 func TestAuthInterceptor_InvalidBearerFormat(t *testing.T) {
@@ -74,17 +63,13 @@ func TestAuthInterceptor_InvalidBearerFormat(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 	_, err := ic(ctx, nil, &grpc.UnaryServerInfo{},
 		func(context.Context, any) (any, error) { return nil, nil })
-	if status.Code(err) != codes.Unauthenticated {
-		t.Fatalf("got %v", err)
-	}
+	assert.Equal(t, codes.Unauthenticated, status.Code(err))
 }
 
 func TestStreamAuthInterceptor_ValidBearer(t *testing.T) {
 	h := testJWTHelper(t)
 	pair, err := h.NewTokenPair(7)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ic := NewStreamAuthInterceptor(h)
 	md := metadata.Pairs("authorization", "Bearer "+pair.AccessToken.Token)
 	ctx := metadata.NewIncomingContext(context.Background(), md)
@@ -92,14 +77,11 @@ func TestStreamAuthInterceptor_ValidBearer(t *testing.T) {
 	err = ic(nil, ss, &grpc.StreamServerInfo{},
 		func(_ any, stream grpc.ServerStream) error {
 			uid, ok := contextlib.GetUserID(stream.Context())
-			if !ok || uid != 7 {
-				t.Fatalf("uid %d ok=%v", uid, ok)
-			}
+			require.True(t, ok)
+			assert.Equal(t, int64(7), uid)
 			return nil
 		})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 type wrappedStreamStub struct {

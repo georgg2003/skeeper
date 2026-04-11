@@ -3,6 +3,9 @@ package crypto
 import (
 	"bytes"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMasterKeyVerifier_Deterministic(t *testing.T) {
@@ -12,22 +15,17 @@ func TestMasterKeyVerifier_Deterministic(t *testing.T) {
 	}
 	v1 := MasterKeyVerifier(key)
 	v2 := MasterKeyVerifier(key)
-	if !bytes.Equal(v1, v2) || len(v1) != 32 {
-		t.Fatalf("verifier %+v", v1)
-	}
+	assert.True(t, bytes.Equal(v1, v2))
+	assert.Len(t, v1, 32)
 }
 
 func TestDeriveMasterKey_Deterministic(t *testing.T) {
 	salt := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	k1 := DeriveMasterKey("same-password", salt)
 	k2 := DeriveMasterKey("same-password", salt)
-	if !bytes.Equal(k1, k2) {
-		t.Fatal("derived keys differ for same input")
-	}
+	assert.True(t, bytes.Equal(k1, k2), "derived keys differ for same input")
 	k3 := DeriveMasterKey("other-password", salt)
-	if bytes.Equal(k1, k3) {
-		t.Fatal("different passwords should not yield same key")
-	}
+	assert.False(t, bytes.Equal(k1, k3), "different passwords should not yield same key")
 }
 
 func TestEncryptDecryptAESGCM_RoundTrip(t *testing.T) {
@@ -38,16 +36,10 @@ func TestEncryptDecryptAESGCM_RoundTrip(t *testing.T) {
 	plain := []byte("hello skeeper")
 
 	ct, err := EncryptAESGCM(plain, key)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	got, err := DecryptAESGCM(ct, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(got, plain) {
-		t.Fatalf("got %q want %q", got, plain)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, plain, got)
 }
 
 func TestDecryptAESGCM_WrongKey(t *testing.T) {
@@ -56,13 +48,9 @@ func TestDecryptAESGCM_WrongKey(t *testing.T) {
 		key[i] = 7
 	}
 	ct, err := EncryptAESGCM([]byte("x"), key)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	wrong := make([]byte, KeyLength)
 	wrong[0] = 1
 	_, err = DecryptAESGCM(ct, wrong)
-	if err == nil {
-		t.Fatal("expected error decrypting with wrong key")
-	}
+	require.Error(t, err, "expected error decrypting with wrong key")
 }

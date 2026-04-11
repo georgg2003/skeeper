@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
 
@@ -20,9 +21,7 @@ func TestNew_TLSEnabledMissingCertFiles(t *testing.T) {
 		GracefulTimeout: time.Millisecond * 50,
 		TLS:             TLSConfig{Enabled: true},
 	}, testServerLog(), func(*grpc.Server) {})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, err, "expected error")
 }
 
 func TestNew_ServeStopsOnCancel(t *testing.T) {
@@ -30,9 +29,7 @@ func TestNew_ServeStopsOnCancel(t *testing.T) {
 		ListenAddr:      "127.0.0.1:0",
 		GracefulTimeout: time.Millisecond * 100,
 	}, testServerLog(), func(*grpc.Server) {})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
@@ -44,6 +41,6 @@ func TestNew_ServeStopsOnCancel(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(3 * time.Second):
-		t.Fatal("server did not stop")
+		require.Fail(t, "server did not stop")
 	}
 }

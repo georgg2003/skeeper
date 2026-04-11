@@ -10,30 +10,25 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDialOptions_InsecureWhenAllowed(t *testing.T) {
 	opts, err := DialOptions(TLSConfig{Enabled: false})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(opts) != 1 {
-		t.Fatalf("got %d options", len(opts))
-	}
+	require.NoError(t, err)
+	assert.Len(t, opts, 1)
 }
 
 func TestDialOptions_TLSMissingCA(t *testing.T) {
 	_, err := DialOptions(TLSConfig{Enabled: true, CAFile: ""})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, err, "expected error")
 }
 
 func TestDialOptions_TLSWithPEMFile(t *testing.T) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tpl := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		NotBefore:             time.Now().Add(-time.Hour),
@@ -44,20 +39,12 @@ func TestDialOptions_TLSWithPEMFile(t *testing.T) {
 		DNSNames:              []string{"localhost"},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &priv.PublicKey, priv)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	pemData := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ca.pem")
-	if err := os.WriteFile(path, pemData, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(path, pemData, 0o600))
 	opts, err := DialOptions(TLSConfig{Enabled: true, CAFile: path})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(opts) != 1 {
-		t.Fatalf("got %d opts", len(opts))
-	}
+	require.NoError(t, err)
+	assert.Len(t, opts, 1)
 }

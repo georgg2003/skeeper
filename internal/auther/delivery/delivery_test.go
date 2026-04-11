@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -89,18 +91,14 @@ func TestAutherServer_CreateUser(t *testing.T) {
 				Email: &tt.email, Password: &tt.password,
 			}.Build())
 			if tt.wantOK {
-				if err != nil {
-					t.Fatal(err)
-				}
-				if resp.GetUser().GetId() != tt.wantID || resp.GetUser().GetEmail() != emailOK {
-					t.Fatalf("user %+v", resp.GetUser())
-				}
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantID, resp.GetUser().GetId())
+				assert.Equal(t, emailOK, resp.GetUser().GetEmail())
 				return
 			}
 			st, ok := status.FromError(err)
-			if !ok || st.Code() != tt.wantCode {
-				t.Fatalf("got %v", err)
-			}
+			require.True(t, ok)
+			assert.Equal(t, tt.wantCode, st.Code())
 		})
 	}
 }
@@ -172,18 +170,13 @@ func TestAutherServer_Login(t *testing.T) {
 			}
 			out, err := srv.Login(context.Background(), api.LoginRequest_builder{Email: &em, Password: &pw}.Build())
 			if tt.wantOK {
-				if err != nil {
-					t.Fatal(err)
-				}
-				if out.GetUser().GetId() != 9 || out.GetAccessToken().GetToken() != "access-jwt" {
-					t.Fatalf("%+v", out)
-				}
+				require.NoError(t, err)
+				assert.Equal(t, int64(9), out.GetUser().GetId())
+				assert.Equal(t, "access-jwt", out.GetAccessToken().GetToken())
 				return
 			}
 			st, _ := status.FromError(err)
-			if st.Code() != tt.wantCode {
-				t.Fatalf("got %v", err)
-			}
+			assert.Equal(t, tt.wantCode, st.Code())
 		})
 	}
 }
@@ -238,18 +231,12 @@ func TestAutherServer_ExchangeToken(t *testing.T) {
 			tok := tt.in
 			out, err := srv.ExchangeToken(context.Background(), api.ExchangeTokenRequest_builder{RefreshToken: &tok}.Build())
 			if tt.wantOK {
-				if err != nil {
-					t.Fatal(err)
-				}
-				if out.GetAccessToken().GetToken() != "new-access" {
-					t.Fatal(out.GetAccessToken())
-				}
+				require.NoError(t, err)
+				assert.Equal(t, "new-access", out.GetAccessToken().GetToken())
 				return
 			}
 			st, _ := status.FromError(err)
-			if st.Code() != tt.wantCode {
-				t.Fatalf("got %v", err)
-			}
+			assert.Equal(t, tt.wantCode, st.Code())
 		})
 	}
 }

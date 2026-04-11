@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
@@ -15,28 +17,19 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.db")
 	r, err := New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer func() { _ = r.Close() }()
 
 	ctx := context.Background()
-	if err := r.RunMigrations(ctx); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.RunMigrations(ctx))
 
 	uid := int64(1)
 	s1, _, err := r.EnsureLocalVaultCrypto(ctx, uid)
-	if err != nil || len(s1) != kdfSaltSize {
-		t.Fatalf("salt %+v err %v", s1, err)
-	}
+	require.NoError(t, err)
+	require.Len(t, s1, kdfSaltSize, "salt %+v", s1)
 	s2, _, err := r.EnsureLocalVaultCrypto(ctx, uid)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(s1) != string(s2) {
-		t.Fatal("salt changed")
-	}
+	require.NoError(t, err)
+	assert.Equal(t, string(s1), string(s2), "salt changed")
 
 	id := uuid.New()
 	e := models.Entry{
@@ -49,46 +42,31 @@ func TestRepository_KDFSaltAndEntry(t *testing.T) {
 		UpdatedAt:    time.Now().Truncate(time.Second),
 		UserID:       &uid,
 	}
-	if err := r.SaveEntry(ctx, e, true); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.SaveEntry(ctx, e, true))
 	dirty, err := r.GetDirtyEntries(ctx, &uid)
-	if err != nil || len(dirty) != 1 {
-		t.Fatalf("dirty %+v err %v", dirty, err)
-	}
+	require.NoError(t, err)
+	require.Len(t, dirty, 1)
 	got, err := r.GetEntry(ctx, id, &uid)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.UUID != id || !got.IsDirty {
-		t.Fatalf("%+v", got)
-	}
-	if err := r.MarkAsSynced(ctx, id, uid); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, id, got.UUID)
+	assert.True(t, got.IsDirty)
+	require.NoError(t, r.MarkAsSynced(ctx, id, uid))
 	dirty, _ = r.GetDirtyEntries(ctx, &uid)
-	if len(dirty) != 0 {
-		t.Fatal("expected no dirty")
-	}
+	assert.Empty(t, dirty, "expected no dirty")
 	list, err := r.ListEntries(ctx, &uid)
-	if err != nil || len(list) != 1 {
-		t.Fatalf("list %+v", list)
-	}
+	require.NoError(t, err)
+	require.Len(t, list, 1)
 }
 
 func TestRepository_SessionEncryptRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "vault.db")
 	r, err := New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer func() { _ = r.Close() }()
 
 	ctx := context.Background()
-	if err := r.RunMigrations(ctx); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.RunMigrations(ctx))
 	uid := int64(9)
 	sess := models.Session{
 		AccessToken:      "eyJhbGciOiJSUzI1NiJ9.access.sig",
@@ -97,17 +75,11 @@ func TestRepository_SessionEncryptRoundTrip(t *testing.T) {
 		RefreshExpiresAt: time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second),
 		UserID:           &uid,
 	}
-	if err := r.SaveSession(ctx, sess); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.SaveSession(ctx, sess))
 	got, err := r.GetSession(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.AccessToken != sess.AccessToken || got.RefreshToken != sess.RefreshToken {
-		t.Fatalf("tokens mismatch: %+v", got)
-	}
-	if got.UserID == nil || *got.UserID != uid {
-		t.Fatalf("user id %+v", got.UserID)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, sess.AccessToken, got.AccessToken)
+	assert.Equal(t, sess.RefreshToken, got.RefreshToken)
+	require.NotNil(t, got.UserID)
+	assert.Equal(t, uid, *got.UserID)
 }

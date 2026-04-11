@@ -3,6 +3,8 @@ package cli
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
@@ -18,8 +20,6 @@ func TestDisplayType(t *testing.T) {
 		{"CUSTOM", "CUSTOM"},
 	}
 	for _, tt := range tests {
-		if got := displayType(tt.in); got != tt.want {
-			t.Fatalf("displayType(%q)=%q want %q", tt.in, got, tt.want)
-		}
+		assert.Equal(t, tt.want, displayType(tt.in), "displayType(%q)", tt.in)
 	}
 }

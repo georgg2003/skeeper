@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
@@ -125,18 +127,12 @@ func TestSyncUseCase_Sync_MergesRemote(t *testing.T) {
 	rem := &memRemote{local: loc}
 	uc := NewSyncUseCase(loc, rem, sessionReaderWithUser{uid: 1}, testSyncLogger())
 
-	if err := uc.Sync(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(loc.saved) != 1 {
-		t.Fatalf("saved %d", len(loc.saved))
-	}
-	if loc.saved[0].UserID == nil || *loc.saved[0].UserID != 1 {
-		t.Fatalf("remote entry should get session user id, got %+v", loc.saved[0].UserID)
-	}
-	if len(loc.marked) != 1 || loc.marked[0] != id {
-		t.Fatalf("marked %+v", loc.marked)
-	}
+	require.NoError(t, uc.Sync(context.Background()))
+	require.Len(t, loc.saved, 1)
+	require.NotNil(t, loc.saved[0].UserID)
+	assert.Equal(t, int64(1), *loc.saved[0].UserID)
+	require.Len(t, loc.marked, 1)
+	assert.Equal(t, id, loc.marked[0])
 }
 
 func TestSyncUseCase_Sync_RemoteError(t *testing.T) {
@@ -146,18 +142,14 @@ func TestSyncUseCase_Sync_RemoteError(t *testing.T) {
 	}
 	rem := &memRemote{local: loc}
 	uc := NewSyncUseCase(loc, rem, sessionReaderWithUser{uid: 1}, testSyncLogger())
-	if err := uc.Sync(context.Background()); err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, uc.Sync(context.Background()), "expected error")
 }
 
 func TestSyncUseCase_Sync_NoSession(t *testing.T) {
 	loc := &memLocal{dirty: []models.Entry{{UUID: uuid.New()}}}
 	rem := &memRemote{local: loc}
 	uc := NewSyncUseCase(loc, rem, noopSessionReaderForTests{}, testSyncLogger())
-	if err := uc.Sync(context.Background()); err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, uc.Sync(context.Background()), "expected error")
 }
 
 func TestSyncUseCase_Sync_UnappliedLocalStaysDirty(t *testing.T) {
@@ -169,10 +161,6 @@ func TestSyncUseCase_Sync_UnappliedLocalStaysDirty(t *testing.T) {
 	}
 	rem := &memRemote{local: loc}
 	uc := NewSyncUseCase(loc, rem, sessionReaderWithUser{uid: 2}, testSyncLogger())
-	if err := uc.Sync(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if len(loc.marked) != 0 {
-		t.Fatalf("expected no mark-as-synced, got %+v", loc.marked)
-	}
+	require.NoError(t, uc.Sync(context.Background()))
+	assert.Empty(t, loc.marked, "expected no mark-as-synced")
 }

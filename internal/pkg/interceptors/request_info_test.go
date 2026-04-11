@@ -7,6 +7,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
@@ -23,14 +25,12 @@ func TestRequestInfoInterceptor_SetsRequestIDFromMetadata(t *testing.T) {
 	_, err := ic(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/svc/M"},
 		func(c context.Context, _ any) (any, error) {
 			ri, ok := contextlib.GetRequestInfo(c)
-			if !ok || ri.RequestID != "req-123" || ri.UserAgent != "test-agent" {
-				t.Fatalf("request info %+v", ri)
-			}
+			require.True(t, ok)
+			assert.Equal(t, "req-123", ri.RequestID)
+			assert.Equal(t, "test-agent", ri.UserAgent)
 			return nil, nil
 		})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestStreamRequestInfoInterceptor(t *testing.T) {
@@ -42,12 +42,9 @@ func TestStreamRequestInfoInterceptor(t *testing.T) {
 	err := ic(nil, ss, &grpc.StreamServerInfo{FullMethod: "/svc/S"},
 		func(_ any, stream grpc.ServerStream) error {
 			ri, ok := contextlib.GetRequestInfo(stream.Context())
-			if !ok || ri.Host != "example.com" {
-				t.Fatalf("request info %+v", ri)
-			}
+			require.True(t, ok)
+			assert.Equal(t, "example.com", ri.Host)
 			return nil
 		})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }

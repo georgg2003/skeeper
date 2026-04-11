@@ -9,18 +9,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
 	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
 )
 
 type stubRepo struct {
-	upserted       [][]models.Entry
-	upsertApplied  [][]uuid.UUID
-	lastSeen       time.Time
-	ret            []models.Entry
-	upsertErr      error
-	getErr         error
+	upserted      [][]models.Entry
+	upsertApplied [][]uuid.UUID
+	lastSeen      time.Time
+	ret           []models.Entry
+	upsertErr     error
+	getErr        error
 }
 
 func (s *stubRepo) GetVaultCrypto(context.Context, int64) ([]byte, []byte, error) {
@@ -79,15 +81,11 @@ func TestUseCase_Sync(t *testing.T) {
 			},
 			userID: 42,
 			check: func(t *testing.T, repo *stubRepo, out models.SyncResponse) {
-				if len(repo.upserted) != 1 || len(repo.upserted[0]) != 1 {
-					t.Fatalf("upsert %+v", repo.upserted)
-				}
-				if !repo.lastSeen.Equal(baseLast) {
-					t.Fatalf("last sync %v vs %v", repo.lastSeen, baseLast)
-				}
-				if len(out.Updates) != 1 || out.Updates[0].UUID != id {
-					t.Fatalf("response %+v", out.Updates)
-				}
+				require.Len(t, repo.upserted, 1)
+				require.Len(t, repo.upserted[0], 1)
+				assert.True(t, repo.lastSeen.Equal(baseLast), "last sync %v vs %v", repo.lastSeen, baseLast)
+				require.Len(t, out.Updates, 1)
+				assert.Equal(t, id, out.Updates[0].UUID)
 			},
 		},
 		{
@@ -96,12 +94,8 @@ func TestUseCase_Sync(t *testing.T) {
 			req:    models.SyncRequest{LastSyncAt: time.Unix(1, 0).UTC()},
 			userID: 1,
 			check: func(t *testing.T, repo *stubRepo, out models.SyncResponse) {
-				if len(repo.upserted) != 0 {
-					t.Fatal("unexpected upsert")
-				}
-				if len(out.Updates) != 0 {
-					t.Fatalf("expected no updates, got %d", len(out.Updates))
-				}
+				assert.Empty(t, repo.upserted, "unexpected upsert")
+				assert.Empty(t, out.Updates, "expected no updates")
 			},
 		},
 		{
@@ -136,17 +130,13 @@ func TestUseCase_Sync(t *testing.T) {
 			}
 			out, err := uc.Sync(ctx, tt.req)
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-				if tt.name == "missing_user_in_context" && !errors.Is(err, ErrUnauthenticated) {
-					t.Fatalf("expected ErrUnauthenticated, got %v", err)
+				require.Error(t, err, "expected error")
+				if tt.name == "missing_user_in_context" {
+					assert.True(t, errors.Is(err, ErrUnauthenticated), "expected ErrUnauthenticated, got %v", err)
 				}
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			if tt.check != nil {
 				tt.check(t, tt.repo, out)
 			}

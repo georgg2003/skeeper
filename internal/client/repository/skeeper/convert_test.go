@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
@@ -24,15 +26,11 @@ func TestClientEntryProtoRoundTrip(t *testing.T) {
 	}
 	p := clientEntryToProto(&e)
 	got, err := protoToClientEntry(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.UUID != e.UUID || got.Type != e.Type || got.Version != e.Version {
-		t.Fatalf("mismatch: %+v vs %+v", got, e)
-	}
-	if !got.UpdatedAt.Equal(ts) {
-		t.Fatalf("time %v vs %v", got.UpdatedAt, ts)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, e.UUID, got.UUID)
+	assert.Equal(t, e.Type, got.Type)
+	assert.Equal(t, e.Version, got.Version)
+	assert.True(t, got.UpdatedAt.Equal(ts), "time %v vs %v", got.UpdatedAt, ts)
 }
 
 func TestProtoToClientEntry_InvalidUUID(t *testing.T) {
@@ -43,9 +41,7 @@ func TestProtoToClientEntry_InvalidUUID(t *testing.T) {
 	})
 	p.SetUuid("not-a-uuid")
 	_, err := protoToClientEntry(p)
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, err, "expected error")
 }
 
 func TestClientEntryToProto_SetsTimestamp(t *testing.T) {
@@ -54,7 +50,6 @@ func TestClientEntryToProto_SetsTimestamp(t *testing.T) {
 	p := clientEntryToProto(&models.Entry{
 		UUID: id, Type: "T", UpdatedAt: ts,
 	})
-	if p.GetUpdatedAt() == nil || !p.GetUpdatedAt().AsTime().Equal(ts) {
-		t.Fatal("timestamp not set")
-	}
+	require.NotNil(t, p.GetUpdatedAt())
+	assert.True(t, p.GetUpdatedAt().AsTime().Equal(ts), "timestamp not set")
 }

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
@@ -87,30 +89,17 @@ func TestSecretUseCase_PasswordRoundTrip(t *testing.T) {
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "svc", Notes: "n"}
-	if err := uc.SetPassword(ctx, meta, "secret-pw", "master!!"); err != nil {
-		t.Fatal(err)
-	}
-	if len(st.entries) != 1 {
-		t.Fatal("not saved")
-	}
+	require.NoError(t, uc.SetPassword(ctx, meta, "secret-pw", "master!!"))
+	require.Len(t, st.entries, 1, "not saved")
 	id := st.entries[0].UUID
 	raw, err := uc.GetLocalEntry(ctx, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if raw.Type != models.EntryTypePassword {
-		t.Fatal(raw.Type)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, models.EntryTypePassword, raw.Type)
 	payload, gotMeta, orig, err := uc.GetDecryptedEntry(ctx, id, "master!!")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if orig != "" {
-		t.Fatalf("unexpected orig name %q", orig)
-	}
-	if string(payload) != "secret-pw" || gotMeta.Name != "svc" {
-		t.Fatalf("%q %+v", payload, gotMeta)
-	}
+	require.NoError(t, err)
+	assert.Empty(t, orig, "unexpected orig name")
+	assert.Equal(t, "secret-pw", string(payload))
+	assert.Equal(t, "svc", gotMeta.Name)
 }
 
 func TestSecretUseCase_FileRoundTrip(t *testing.T) {
@@ -120,32 +109,17 @@ func TestSecretUseCase_FileRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "doc", Notes: "n"}
 	content := []byte("hello skeeper")
-	if err := uc.SetFile(ctx, meta, "notes.txt", content, "master!!"); err != nil {
-		t.Fatal(err)
-	}
-	if len(st.entries) != 1 {
-		t.Fatal("not saved")
-	}
+	require.NoError(t, uc.SetFile(ctx, meta, "notes.txt", content, "master!!"))
+	require.Len(t, st.entries, 1, "not saved")
 	id := st.entries[0].UUID
-	if st.entries[0].Type != models.EntryTypeFile {
-		t.Fatalf("type %s", st.entries[0].Type)
-	}
-	if len(st.entries[0].Payload) < 16 {
-		t.Fatalf("expected ciphertext in payload, got len %d", len(st.entries[0].Payload))
-	}
+	assert.Equal(t, models.EntryTypeFile, st.entries[0].Type)
+	assert.GreaterOrEqual(t, len(st.entries[0].Payload), 16, "expected ciphertext in payload")
 	payload, gotMeta, orig, err := uc.GetDecryptedEntry(ctx, id, "master!!")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if orig != "notes.txt" {
-		t.Fatalf("orig %q", orig)
-	}
-	if gotMeta.OriginalFilename != "notes.txt" {
-		t.Fatalf("meta original_filename %q", gotMeta.OriginalFilename)
-	}
-	if string(payload) != string(content) || gotMeta.Name != "doc" {
-		t.Fatalf("%q %+v", payload, gotMeta)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "notes.txt", orig)
+	assert.Equal(t, "notes.txt", gotMeta.OriginalFilename)
+	assert.Equal(t, string(content), string(payload))
+	assert.Equal(t, "doc", gotMeta.Name)
 }
 
 func TestSecretUseCase_FileTooLarge(t *testing.T) {
@@ -154,9 +128,7 @@ func TestSecretUseCase_FileTooLarge(t *testing.T) {
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, 4)
 	ctx := context.Background()
 	err := uc.SetFile(ctx, EntryMetadata{Name: "x"}, "a.bin", []byte("12345"), "m")
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, err, "expected error")
 }
 
 func TestSecretUseCase_RejectsOtherMasterPasswordAfterFirstEntry(t *testing.T) {
@@ -165,14 +137,10 @@ func TestSecretUseCase_RejectsOtherMasterPasswordAfterFirstEntry(t *testing.T) {
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
 	meta := EntryMetadata{Name: "a"}
-	if err := uc.SetPassword(ctx, meta, "pw", "master-one"); err != nil {
-		t.Fatal(err)
-	}
-	if err := uc.SetPassword(ctx, EntryMetadata{Name: "b"}, "pw2", "master-two"); err == nil {
-		t.Fatal("expected wrong master password")
-	} else if !errors.Is(err, ErrWrongMasterPassword) {
-		t.Fatalf("want ErrWrongMasterPassword, got %v", err)
-	}
+	require.NoError(t, uc.SetPassword(ctx, meta, "pw", "master-one"))
+	err := uc.SetPassword(ctx, EntryMetadata{Name: "b"}, "pw2", "master-two")
+	require.Error(t, err, "expected wrong master password")
+	assert.True(t, errors.Is(err, ErrWrongMasterPassword))
 }
 
 func TestSecretUseCase_UpdatePassword_BumpsVersion(t *testing.T) {
@@ -180,29 +148,16 @@ func TestSecretUseCase_UpdatePassword_BumpsVersion(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
-	if err := uc.SetPassword(ctx, EntryMetadata{Name: "n"}, "pw1", "master!!"); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, uc.SetPassword(ctx, EntryMetadata{Name: "n"}, "pw1", "master!!"))
 	id := st.entries[0].UUID
-	if st.entries[0].Version != 1 {
-		t.Fatalf("version %d", st.entries[0].Version)
-	}
-	if err := uc.UpdatePassword(ctx, id, EntryMetadata{Name: "n2"}, "pw2", "master!!"); err != nil {
-		t.Fatal(err)
-	}
-	if len(st.entries) != 1 {
-		t.Fatalf("entries %d", len(st.entries))
-	}
-	if st.entries[0].Version != 2 {
-		t.Fatalf("version %d", st.entries[0].Version)
-	}
+	assert.Equal(t, int64(1), st.entries[0].Version)
+	require.NoError(t, uc.UpdatePassword(ctx, id, EntryMetadata{Name: "n2"}, "pw2", "master!!"))
+	require.Len(t, st.entries, 1)
+	assert.Equal(t, int64(2), st.entries[0].Version)
 	payload, meta, _, err := uc.GetDecryptedEntry(ctx, id, "master!!")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(payload) != "pw2" || meta.Name != "n2" {
-		t.Fatalf("%q %+v", payload, meta)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "pw2", string(payload))
+	assert.Equal(t, "n2", meta.Name)
 }
 
 func TestSecretUseCase_DeleteSoft(t *testing.T) {
@@ -210,19 +165,13 @@ func TestSecretUseCase_DeleteSoft(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
-	if err := uc.SetPassword(ctx, EntryMetadata{Name: "x"}, "pw", "master!!"); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, uc.SetPassword(ctx, EntryMetadata{Name: "x"}, "pw", "master!!"))
 	id := st.entries[0].UUID
-	if err := uc.DeleteEntry(ctx, id, "master!!"); err != nil {
-		t.Fatal(err)
-	}
-	if !st.entries[0].IsDeleted || st.entries[0].Version != 2 {
-		t.Fatalf("%+v", st.entries[0])
-	}
-	if _, _, _, err := uc.GetDecryptedEntry(ctx, id, "master!!"); !errors.Is(err, ErrEntryDeleted) {
-		t.Fatalf("got %v", err)
-	}
+	require.NoError(t, uc.DeleteEntry(ctx, id, "master!!"))
+	assert.True(t, st.entries[0].IsDeleted)
+	assert.Equal(t, int64(2), st.entries[0].Version)
+	_, _, _, err := uc.GetDecryptedEntry(ctx, id, "master!!")
+	assert.True(t, errors.Is(err, ErrEntryDeleted))
 }
 
 func TestSecretUseCase_UpdateFile_MetaOnly(t *testing.T) {
@@ -231,23 +180,15 @@ func TestSecretUseCase_UpdateFile_MetaOnly(t *testing.T) {
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, 1<<20)
 	ctx := context.Background()
 	content := []byte("payload-bytes")
-	if err := uc.SetFile(ctx, EntryMetadata{Name: "doc"}, "a.txt", content, "master!!"); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, uc.SetFile(ctx, EntryMetadata{Name: "doc"}, "a.txt", content, "master!!"))
 	id := st.entries[0].UUID
-	if err := uc.UpdateFile(ctx, id, EntryMetadata{Name: "doc2"}, "master!!", false, nil, ""); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, uc.UpdateFile(ctx, id, EntryMetadata{Name: "doc2"}, "master!!", false, nil, ""))
 	pl, meta, orig, err := uc.GetDecryptedEntry(ctx, id, "master!!")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(pl) != string(content) || meta.Name != "doc2" || orig != "a.txt" {
-		t.Fatalf("%q %+v %q", pl, meta, orig)
-	}
-	if st.entries[0].Version != 2 {
-		t.Fatalf("version %d", st.entries[0].Version)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, string(content), string(pl))
+	assert.Equal(t, "doc2", meta.Name)
+	assert.Equal(t, "a.txt", orig)
+	assert.Equal(t, int64(2), st.entries[0].Version)
 }
 
 func TestSecretUseCase_UpdateWrongEntryType(t *testing.T) {
@@ -255,12 +196,8 @@ func TestSecretUseCase_UpdateWrongEntryType(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	uc := NewSecretUseCase(st, sessionReaderWithUser{uid: 1}, nil, log, DefaultMaxFileBytes)
 	ctx := context.Background()
-	if err := uc.SetPassword(ctx, EntryMetadata{Name: "p"}, "pw", "master!!"); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, uc.SetPassword(ctx, EntryMetadata{Name: "p"}, "pw", "master!!"))
 	id := st.entries[0].UUID
 	err := uc.UpdateText(ctx, id, EntryMetadata{Name: "t"}, "hello", "master!!")
-	if !errors.Is(err, ErrWrongEntryType) {
-		t.Fatalf("got %v", err)
-	}
+	assert.True(t, errors.Is(err, ErrWrongEntryType))
 }

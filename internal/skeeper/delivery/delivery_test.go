@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -95,9 +97,8 @@ func TestSkeeperServer_Sync(t *testing.T) {
 				mockUC.EXPECT().
 					Sync(gomock.Any(), gomock.AssignableToTypeOf(models.SyncRequest{})).
 					DoAndReturn(func(_ context.Context, got models.SyncRequest) (models.SyncResponse, error) {
-						if len(got.Updates) != 1 || got.Updates[0].UUID != entryID {
-							t.Fatalf("unexpected request: %+v", got)
-						}
+						require.Len(t, got.Updates, 1)
+						require.Equal(t, entryID, got.Updates[0].UUID)
 						return models.SyncResponse{
 							CurrentSyncAt:      syncAt,
 							Updates:            []models.Entry{{UUID: entryID, Type: "TEXT", Version: 2, UpdatedAt: syncAt}},
@@ -128,25 +129,18 @@ func TestSkeeperServer_Sync(t *testing.T) {
 			srv := New(testLogger(), mockUC)
 			resp, err := srv.Sync(context.Background(), tt.req)
 			if tt.wantOK {
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !resp.GetCurrentSyncAt().AsTime().Equal(syncAt) {
-					t.Fatal("current_sync_at")
-				}
-				if len(resp.GetUpdates()) != 1 || resp.GetUpdates()[0].GetUuid() != entryID.String() {
-					t.Fatalf("updates %+v", resp.GetUpdates())
-				}
+				require.NoError(t, err)
+				assert.True(t, resp.GetCurrentSyncAt().AsTime().Equal(syncAt), "current_sync_at")
+				require.Len(t, resp.GetUpdates(), 1)
+				assert.Equal(t, entryID.String(), resp.GetUpdates()[0].GetUuid())
 				applied := resp.GetAppliedUpdateUuids()
-				if len(applied) != 1 || applied[0] != entryID.String() {
-					t.Fatalf("applied_update_uuids %+v", applied)
-				}
+				require.Len(t, applied, 1)
+				assert.Equal(t, entryID.String(), applied[0])
 				return
 			}
 			st, ok := status.FromError(err)
-			if !ok || st.Code() != tt.wantCode {
-				t.Fatalf("got %v", err)
-			}
+			require.True(t, ok)
+			assert.Equal(t, tt.wantCode, st.Code())
 		})
 	}
 }
@@ -192,18 +186,12 @@ func TestSkeeperServer_GetVaultCrypto(t *testing.T) {
 			srv := New(testLogger(), mockUC)
 			resp, err := srv.GetVaultCrypto(context.Background(), api.GetVaultCryptoRequest_builder{}.Build())
 			if tt.wantOK {
-				if err != nil {
-					t.Fatal(err)
-				}
-				if string(resp.GetVault().GetKdfSalt()) != string(salt) {
-					t.Fatal("salt mismatch")
-				}
+				require.NoError(t, err)
+				assert.Equal(t, string(salt), string(resp.GetVault().GetKdfSalt()), "salt mismatch")
 				return
 			}
 			st, _ := status.FromError(err)
-			if st.Code() != tt.wantCode {
-				t.Fatalf("got %v", err)
-			}
+			assert.Equal(t, tt.wantCode, st.Code())
 		})
 	}
 }
@@ -271,15 +259,11 @@ func TestSkeeperServer_PutVaultCrypto(t *testing.T) {
 			srv := New(testLogger(), mockUC)
 			_, err := srv.PutVaultCrypto(context.Background(), tt.req)
 			if tt.wantOK {
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 				return
 			}
 			st, _ := status.FromError(err)
-			if st.Code() != tt.wantCode {
-				t.Fatalf("got %v", err)
-			}
+			assert.Equal(t, tt.wantCode, st.Code())
 		})
 	}
 }

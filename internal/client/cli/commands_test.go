@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
@@ -73,17 +75,11 @@ func TestCLI_Register(t *testing.T) {
 			sync := NewMockSyncCommands(ctrl)
 			out, _, err := runCLITest(t, auth, secret, sync, tt.stdin, "register")
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(out, tt.wantSub) {
-				t.Fatalf("stdout %q", out)
-			}
+			require.NoError(t, err)
+			assert.Contains(t, out, tt.wantSub)
 		})
 	}
 }
@@ -132,17 +128,11 @@ func TestCLI_List(t *testing.T) {
 			tt.setup(secret)
 			out, _, err := runCLITest(t, auth, secret, sync, "", "list")
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(out, tt.wantSub) {
-				t.Fatalf("stdout %q", out)
-			}
+			require.NoError(t, err)
+			assert.Contains(t, out, tt.wantSub)
 		})
 	}
 }
@@ -178,17 +168,11 @@ func TestCLI_Sync(t *testing.T) {
 			tt.setup(sync)
 			out, _, err := runCLITest(t, auth, secret, sync, "", "sync")
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(out, tt.wantSub) {
-				t.Fatalf("stdout %q", out)
-			}
+			require.NoError(t, err)
+			assert.Contains(t, out, tt.wantSub)
 		})
 	}
 }
@@ -201,12 +185,8 @@ func TestCLI_LoginLogout(t *testing.T) {
 		secret := NewMockSecretCommands(ctrl)
 		sync := NewMockSyncCommands(ctrl)
 		out, _, err := runCLITest(t, auth, secret, sync, "u@x.y\npw\n", "login")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(out, "Successfully logged in.") {
-			t.Fatalf("stdout %q", out)
-		}
+		require.NoError(t, err)
+		assert.Contains(t, out, "Successfully logged in.")
 	})
 	t.Run("login_err", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -215,9 +195,7 @@ func TestCLI_LoginLogout(t *testing.T) {
 		secret := NewMockSecretCommands(ctrl)
 		sync := NewMockSyncCommands(ctrl)
 		_, _, err := runCLITest(t, auth, secret, sync, "u@x.y\npw\n", "login")
-		if err == nil {
-			t.Fatal("expected error")
-		}
+		require.Error(t, err)
 	})
 	t.Run("logout_ok", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -226,12 +204,8 @@ func TestCLI_LoginLogout(t *testing.T) {
 		secret := NewMockSecretCommands(ctrl)
 		sync := NewMockSyncCommands(ctrl)
 		out, _, err := runCLITest(t, auth, secret, sync, "", "logout")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(out, "Logged out.") {
-			t.Fatalf("stdout %q", out)
-		}
+		require.NoError(t, err)
+		assert.Contains(t, out, "Logged out.")
 	})
 }
 
@@ -274,17 +248,11 @@ func TestCLI_Get(t *testing.T) {
 			tt.setup(secret)
 			out, _, err := runCLITest(t, auth, secret, sync, tt.stdin, tt.args...)
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(out, tt.wantSub) {
-				t.Fatalf("stdout %q", out)
-			}
+			require.NoError(t, err)
+			assert.Contains(t, out, tt.wantSub)
 		})
 	}
 }
@@ -324,17 +292,11 @@ func TestCLI_AddPassword(t *testing.T) {
 			tt.setup(secret)
 			out, _, err := runCLITest(t, auth, secret, sync, tt.stdin, "add-password")
 			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error")
-				}
+				require.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(out, tt.wantSub) {
-				t.Fatalf("stdout %q", out)
-			}
+			require.NoError(t, err)
+			assert.Contains(t, out, tt.wantSub)
 		})
 	}
 }
@@ -342,20 +304,14 @@ func TestCLI_AddPassword(t *testing.T) {
 func TestCLI_AddBinary(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "blob.bin")
-	if err := os.WriteFile(path, []byte{1, 2, 3}, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(path, []byte{1, 2, 3}, 0o600))
 	meta := usecase.EntryMetadata{Name: "bin", Notes: ""}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().SetFile(gomock.Any(), meta, "blob.bin", []byte{1, 2, 3}, "m").Return(nil)
 	out, _, err := runCLITest(t, NewMockAuthCommands(ctrl), secret, NewMockSyncCommands(ctrl), "bin\n\nm\n", "add-file", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "Encrypted file saved") {
-		t.Fatalf("stdout %q", out)
-	}
+	require.NoError(t, err)
+	assert.Contains(t, out, "Encrypted file saved")
 }
 
 func TestCLI_AddCard(t *testing.T) {
@@ -366,12 +322,8 @@ func TestCLI_AddCard(t *testing.T) {
 	secret.EXPECT().SetCard(gomock.Any(), meta, card, "master").Return(nil)
 	stdin := "c\n\nH\n4111\n01/99\n999\nmaster\n"
 	out, _, err := runCLITest(t, NewMockAuthCommands(ctrl), secret, NewMockSyncCommands(ctrl), stdin, "add-card")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "Encrypted card saved locally") {
-		t.Fatalf("stdout %q", out)
-	}
+	require.NoError(t, err)
+	assert.Contains(t, out, "Encrypted card saved locally")
 }
 
 func TestCLI_AddText(t *testing.T) {
@@ -382,10 +334,6 @@ func TestCLI_AddText(t *testing.T) {
 	// Empty line ends the text body, then master password.
 	stdin := "t\n\nhello\n\nmp\n"
 	out, _, err := runCLITest(t, NewMockAuthCommands(ctrl), secret, NewMockSyncCommands(ctrl), stdin, "add-text")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "Encrypted text saved locally") {
-		t.Fatalf("stdout %q", out)
-	}
+	require.NoError(t, err)
+	assert.Contains(t, out, "Encrypted text saved locally")
 }

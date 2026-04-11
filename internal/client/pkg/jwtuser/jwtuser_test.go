@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUserIDFromAccessTokenUnverified_UserIDClaim(t *testing.T) {
@@ -11,13 +12,10 @@ func TestUserIDFromAccessTokenUnverified_UserIDClaim(t *testing.T) {
 		"UserID": float64(7),
 	})
 	s, err := tok.SignedString(jwt.UnsafeAllowNoneSignatureType)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	id, err := UserIDFromAccessTokenUnverified(s)
-	if err != nil || id != 7 {
-		t.Fatalf("got %d err %v", id, err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, int64(7), id)
 }
 
 func TestUserIDFromAccessTokenUnverified_snakeClaim(t *testing.T) {
@@ -25,11 +23,8 @@ func TestUserIDFromAccessTokenUnverified_snakeClaim(t *testing.T) {
 		"user_id": float64(42),
 	})
 	s, err := tok.SignedString(jwt.UnsafeAllowNoneSignatureType)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	id, err := UserIDFromAccessTokenUnverified(s)
-	if err != nil || id != 42 {
-		t.Fatalf("got %d err %v", id, err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, int64(42), id)
 }

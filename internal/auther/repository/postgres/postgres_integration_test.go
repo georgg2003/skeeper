@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
 	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
@@ -38,20 +40,15 @@ func TestIntegration_InsertUser_SelectByEmail(t *testing.T) {
 		Email:        email,
 		PasswordHash: []byte("deadbeef"),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.ID == 0 || info.Email != email {
-		t.Fatalf("%+v", info)
-	}
+	require.NoError(t, err)
+	require.NotZero(t, info.ID)
+	require.Equal(t, email, info.Email)
 
 	got, err := repo.SelectUserByEmail(ctx, email)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != info.ID || got.Email != email || string(got.PasswordHash) != "deadbeef" {
-		t.Fatalf("%+v", got)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, info.ID, got.ID)
+	assert.Equal(t, email, got.Email)
+	assert.Equal(t, "deadbeef", string(got.PasswordHash))
 }
 
 func TestIntegration_InsertUser_DuplicateEmail(t *testing.T) {
@@ -64,13 +61,10 @@ func TestIntegration_InsertUser_DuplicateEmail(t *testing.T) {
 
 	email := "dup-" + uuid.NewString() + "@example.com"
 	creds := models.DBUserCredentials{Email: email, PasswordHash: []byte("a")}
-	if _, err := repo.InsertUser(ctx, creds); err != nil {
-		t.Fatal(err)
-	}
 	_, err := repo.InsertUser(ctx, creds)
-	if !errors.Is(err, postgres.ErrUserExists) {
-		t.Fatalf("want ErrUserExists, got %v", err)
-	}
+	require.NoError(t, err)
+	_, err = repo.InsertUser(ctx, creds)
+	assert.True(t, errors.Is(err, postgres.ErrUserExists))
 }
 
 func TestIntegration_SelectUserByEmail_NotFound(t *testing.T) {
@@ -82,9 +76,7 @@ func TestIntegration_SelectUserByEmail_NotFound(t *testing.T) {
 	)
 
 	_, err := repo.SelectUserByEmail(ctx, "missing-"+uuid.NewString()+"@example.com")
-	if !errors.Is(err, postgres.ErrUserNotExist) {
-		t.Fatalf("got %v", err)
-	}
+	assert.True(t, errors.Is(err, postgres.ErrUserNotExist))
 }
 
 func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
@@ -96,32 +88,22 @@ func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
 	)
 	email := "tok-" + uuid.NewString() + "@example.com"
 	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	raw := "refresh-secret-" + uuid.NewString()
 	hash := utils.HashToken(raw)
 	exp := time.Now().Add(time.Hour).UTC()
-	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
 		Token: jwthelper.Token{Token: "opaque-refresh", ExpiresAt: exp},
 		Hash:  hash,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	}))
 
 	uid, err := repo.DeleteRefreshTokenAndReturnUser(ctx, hash)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if uid != user.ID {
-		t.Fatalf("user id %d want %d", uid, user.ID)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, uid)
 
 	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash)
-	if !errors.Is(err, postgres.ErrInvalidToken) {
-		t.Fatalf("second delete: %v", err)
-	}
+	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "second delete: %v", err)
 }
 
 func TestIntegration_InsertUser_ContextCanceled(t *testing.T) {
@@ -133,27 +115,20 @@ func TestIntegration_InsertUser_ContextCanceled(t *testing.T) {
 		Email:        "ins-" + uuid.NewString() + "@example.com",
 		PasswordHash: []byte("h"),
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.Error(t, err, "expected error")
 }
 
 func TestIntegration_SelectUserByEmail_ContextCanceled(t *testing.T) {
 	setup := context.Background()
 	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
 	email := "sel-" + uuid.NewString() + "@example.com"
-	if _, err := repo.InsertUser(setup, models.DBUserCredentials{Email: email, PasswordHash: []byte("x")}); err != nil {
-		t.Fatal(err)
-	}
+	_, err := repo.InsertUser(setup, models.DBUserCredentials{Email: email, PasswordHash: []byte("x")})
+	require.NoError(t, err)
 	canceled, cancel := context.WithCancel(setup)
 	cancel()
-	_, err := repo.SelectUserByEmail(canceled, email)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "failed to select user") {
-		t.Fatalf("unexpected: %v", err)
-	}
+	_, err = repo.SelectUserByEmail(canceled, email)
+	require.Error(t, err, "expected error")
+	assert.Contains(t, err.Error(), "failed to select user")
 }
 
 func TestIntegration_InsertRefreshToken_ContextCanceled(t *testing.T) {
@@ -161,21 +136,15 @@ func TestIntegration_InsertRefreshToken_ContextCanceled(t *testing.T) {
 	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
 	email := "rt-" + uuid.NewString() + "@example.com"
 	user, err := repo.InsertUser(setup, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	canceled, cancel := context.WithCancel(setup)
 	cancel()
 	err = repo.InsertRefreshToken(canceled, user.ID, models.RefreshTokenHashed{
 		Token: jwthelper.Token{Token: "t", ExpiresAt: time.Now().Add(time.Hour)},
 		Hash:  "deadbeef",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "failed to insert") {
-		t.Fatalf("unexpected: %v", err)
-	}
+	require.Error(t, err, "expected error")
+	assert.Contains(t, err.Error(), "failed to insert")
 }
 
 func TestIntegration_DeleteRefreshTokenAndReturnUser_ContextCanceled(t *testing.T) {
@@ -184,12 +153,8 @@ func TestIntegration_DeleteRefreshTokenAndReturnUser_ContextCanceled(t *testing.
 	canceled, cancel := context.WithCancel(setup)
 	cancel()
 	_, err := repo.DeleteRefreshTokenAndReturnUser(canceled, "any-hash")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "refresh token") {
-		t.Fatalf("unexpected: %v", err)
-	}
+	require.Error(t, err, "expected error")
+	assert.True(t, strings.Contains(err.Error(), "refresh token"))
 }
 
 func TestIntegration_RefreshTokenReuseRevokesActiveTokens(t *testing.T) {
@@ -201,39 +166,28 @@ func TestIntegration_RefreshTokenReuseRevokesActiveTokens(t *testing.T) {
 	)
 	email := "reuse-" + uuid.NewString() + "@example.com"
 	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	raw1 := "refresh-one-" + uuid.NewString()
 	hash1 := utils.HashToken(raw1)
 	raw2 := "refresh-two-" + uuid.NewString()
 	hash2 := utils.HashToken(raw2)
 	exp := time.Now().Add(time.Hour).UTC()
-	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
 		Token: jwthelper.Token{Token: "t1", ExpiresAt: exp},
 		Hash:  hash1,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	}))
 	uid, err := repo.DeleteRefreshTokenAndReturnUser(ctx, hash1)
-	if err != nil || uid != user.ID {
-		t.Fatalf("first consume: uid=%d err=%v", uid, err)
-	}
-	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, uid)
+	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
 		Token: jwthelper.Token{Token: "t2", ExpiresAt: exp},
 		Hash:  hash2,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	}))
 	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash1)
-	if !errors.Is(err, postgres.ErrInvalidToken) {
-		t.Fatalf("reuse stale token: %v", err)
-	}
+	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "reuse stale token: %v", err)
 	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash2)
-	if !errors.Is(err, postgres.ErrInvalidToken) {
-		t.Fatalf("valid token should be revoked after reuse; got %v", err)
-	}
+	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "valid token should be revoked after reuse; got %v", err)
 }
 
 func TestIntegration_RotateRefreshToken_RollsBackWhenMintFails(t *testing.T) {
@@ -241,24 +195,18 @@ func TestIntegration_RotateRefreshToken_RollsBackWhenMintFails(t *testing.T) {
 	repo := newAutherRepository(t, ctx, integrationtest.AutherTestPool(t))
 	email := "rot-" + uuid.NewString() + "@example.com"
 	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	raw := "plain-refresh-" + uuid.NewString()
 	hash := utils.HashToken(raw)
 	exp := time.Now().Add(time.Hour).UTC()
-	if err := repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
+	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
 		Token: jwthelper.Token{Token: raw, ExpiresAt: exp},
 		Hash:  hash,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	}))
 	_, err = repo.RotateRefreshToken(ctx, raw, func(int64) (jwthelper.TokenPair, error) {
 		return jwthelper.TokenPair{}, errors.New("mint fail")
 	})
-	if err == nil {
-		t.Fatal("expected mint error")
-	}
+	require.Error(t, err, "expected mint error")
 	newRT := "new-rt-" + uuid.NewString()
 	pair, err := repo.RotateRefreshToken(ctx, raw, func(int64) (jwthelper.TokenPair, error) {
 		return jwthelper.TokenPair{
@@ -266,26 +214,18 @@ func TestIntegration_RotateRefreshToken_RollsBackWhenMintFails(t *testing.T) {
 			RefreshToken: jwthelper.Token{Token: newRT, ExpiresAt: exp},
 		}, nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if pair.RefreshToken.Token != newRT {
-		t.Fatalf("got %+v", pair.RefreshToken)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, newRT, pair.RefreshToken.Token)
 	_, err = repo.RotateRefreshToken(ctx, newRT, func(int64) (jwthelper.TokenPair, error) {
 		return jwthelper.TokenPair{
 			AccessToken:  jwthelper.Token{Token: "at2", ExpiresAt: exp},
 			RefreshToken: jwthelper.Token{Token: "rt3", ExpiresAt: exp},
 		}, nil
 	})
-	if err != nil {
-		t.Fatalf("second rotation with new refresh: %v", err)
-	}
+	require.NoError(t, err, "second rotation with new refresh: %v", err)
 	// Replaying the original refresh after it was marked used revokes the whole family (reuse detection).
 	_, err = repo.RotateRefreshToken(ctx, raw, func(int64) (jwthelper.TokenPair, error) {
 		return jwthelper.TokenPair{}, errors.New("should not run")
 	})
-	if !errors.Is(err, postgres.ErrInvalidToken) {
-		t.Fatalf("stale refresh reuse: %v", err)
-	}
+	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "stale refresh reuse: %v", err)
 }
