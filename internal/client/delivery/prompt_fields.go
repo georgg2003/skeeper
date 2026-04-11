@@ -1,4 +1,4 @@
-package cli
+package delivery
 
 import (
 	"fmt"
@@ -13,27 +13,6 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
-func requireSecretUC() error {
-	if secretUC == nil {
-		return fmt.Errorf("client not initialized")
-	}
-	return nil
-}
-
-func requireSyncUC() error {
-	if syncUC == nil {
-		return fmt.Errorf("client not initialized")
-	}
-	return nil
-}
-
-func requireAuthUC() error {
-	if authUC == nil {
-		return fmt.Errorf("client not initialized")
-	}
-	return nil
-}
-
 func parseUUIDArg(s string) (uuid.UUID, error) {
 	id, err := uuid.Parse(s)
 	if err != nil {
@@ -42,7 +21,6 @@ func parseUUIDArg(s string) (uuid.UUID, error) {
 	return id, nil
 }
 
-// promptEntryMetadata asks for entry title and optional notes (shared by add-* and update *).
 func promptEntryMetadata(cmd *cobra.Command, namePrompt string) (usecase.EntryMetadata, error) {
 	if namePrompt == "" {
 		namePrompt = "Entry name: "
@@ -62,13 +40,11 @@ func promptMasterPassword(cmd *cobra.Command) (string, error) {
 	return readPasswordLine(cmd)
 }
 
-// promptPasswordValue reads one sensitive line after the given prompt (stored password, CVC, etc.).
 func promptPasswordValue(cmd *cobra.Command, prompt string) (string, error) {
 	writePrompt(cmd, "%s", prompt)
 	return readPasswordLine(cmd)
 }
 
-// promptMultilineText reads lines until an empty line; trims a single trailing newline from the result.
 func promptMultilineText(cmd *cobra.Command, banner string) (string, error) {
 	_, _ = fmt.Fprintln(cmd.OutOrStdout(), banner)
 	var b strings.Builder
@@ -88,7 +64,6 @@ func promptMultilineText(cmd *cobra.Command, banner string) (string, error) {
 	return strings.TrimSuffix(b.String(), "\n"), nil
 }
 
-// promptCard reads cardholder, number, expiry, and CVC.
 func promptCard(cmd *cobra.Command) (models.CardPayload, error) {
 	card := models.CardPayload{}
 	var err error
@@ -112,7 +87,6 @@ func promptCard(cmd *cobra.Command) (models.CardPayload, error) {
 	return card, err
 }
 
-// promptOptionalFilePath reads a path line; empty trimmed path means do not replace file content.
 func promptOptionalFilePath(cmd *cobra.Command, pathPrompt string) (data []byte, orig string, replace bool, err error) {
 	writePrompt(cmd, "%s", pathPrompt)
 	path, err := readLine(cmd)

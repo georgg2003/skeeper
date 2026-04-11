@@ -1,4 +1,4 @@
-package cli
+package delivery
 
 import (
 	"testing"
@@ -20,6 +20,6 @@ func TestDisplayType(t *testing.T) {
 		{"CUSTOM", "CUSTOM"},
 	}
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, displayType(tt.in), "displayType(%q)", tt.in)
+		assert.Equal(t, tt.want, DisplayType(tt.in), "DisplayType(%q)", tt.in)
 	}
 }

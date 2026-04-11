@@ -2,7 +2,10 @@
 package main
 
 import (
-	"github.com/georgg2003/skeeper/internal/client/cli"
+	"fmt"
+	"os"
+
+	"github.com/georgg2003/skeeper/internal/client/delivery/cli"
 )
 
 // version and buildTime are injected with: -ldflags "-X main.version=... -X main.buildTime=..."
@@ -12,7 +15,14 @@ var (
 )
 
 func main() {
-	cli.Version = version
-	cli.BuildTime = buildTime
-	cli.Execute()
+	app, err := cli.New(cli.Config{
+		Version:   version,
+		BuildTime: buildTime,
+		Wire:      BuildDelivery,
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	app.Execute()
 }

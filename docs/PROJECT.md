@@ -154,7 +154,7 @@ Typical flows:
 - **Delete:** `delete <uuid>` (soft delete; sync to propagate)
 - **Sync:** `sync`
 
-Global flags include `--config`, `--auther`, `--skeeper`, `--data-dir` (see `internal/client/cli/root.go`).
+Client settings are merged in Viper (defaults, `SKEEPERCLI_*` env, optional YAML). The only CLI flag is `--config` (path to YAML), also overridable with `SKEEPERCLI_CONFIG`; see `internal/client/pkg/config/config.go` and `internal/client/delivery/cli/app.go`. Wiring: `cmd/client/setup.go`.
 
 ---
 

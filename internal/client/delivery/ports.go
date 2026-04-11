@@ -1,6 +1,6 @@
-package cli
+package delivery
 
-//go:generate go tool mockgen -typed -destination=mock_commands_test.go -package=cli -source=usecase_ports.go AuthCommands,SecretCommands,SyncCommands
+//go:generate go tool mockgen -typed -destination=mock_ports_test.go -package=delivery -source=ports.go AuthCommands,SecretCommands,SyncCommands
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
-// AuthCommands is the subset of auth use-case operations exposed to CLI commands.
+// AuthCommands is the subset of auth use-case operations used by the delivery layer.
 type AuthCommands interface {
 	Register(ctx context.Context, email, password string) error
 	Login(ctx context.Context, login, password string) error
@@ -19,7 +19,7 @@ type AuthCommands interface {
 	GetValidToken(ctx context.Context) (string, error)
 }
 
-// SecretCommands is the vault CRUD surface used by add/update/delete/get/list commands.
+// SecretCommands is the vault CRUD surface used by delivery handlers.
 type SecretCommands interface {
 	ListLocal(ctx context.Context) ([]models.Entry, error)
 	GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error)
