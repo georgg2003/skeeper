@@ -513,7 +513,7 @@ func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, ma
 	if entry.Type == models.EntryTypeFile {
 		orig := meta.OriginalFilename
 		if orig == "" {
-			orig = "file"
+			meta.OriginalFilename = "file"
 		}
 		return models.DecryptedEntry{Payload: payload, Meta: meta, Type: entry.Type}, nil
 	}
