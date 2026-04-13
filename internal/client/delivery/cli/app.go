@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -50,11 +49,6 @@ func (a *App) buildRoot() *cobra.Command {
 		Short: "skeeper password manager CLI",
 		Long:  "Local encrypted vault with Auther (auth) and Skeeper (sync) backends.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if slices.ContainsFunc(args, func(s string) bool {
-				return s == "-h" || s == "--help" || s == "-?"
-			}) {
-				return nil
-			}
 			return a.ensureHandlers(cmd)
 		},
 	}
