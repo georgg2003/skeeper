@@ -14,7 +14,6 @@ import (
 	reflect "reflect"
 
 	models "github.com/georgg2003/skeeper/internal/client/pkg/models"
-	usecase "github.com/georgg2003/skeeper/internal/client/usecase"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -259,14 +258,12 @@ func (c *MockSecretCommandsDeleteEntryCall) DoAndReturn(f func(context.Context, 
 }
 
 // GetDecryptedEntry mocks base method.
-func (m *MockSecretCommands) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *usecase.EntryMetadata, string, error) {
+func (m *MockSecretCommands) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) (models.DecryptedEntry, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDecryptedEntry", ctx, id, masterPass)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(*usecase.EntryMetadata)
-	ret2, _ := ret[2].(string)
-	ret3, _ := ret[3].(error)
-	return ret0, ret1, ret2, ret3
+	ret0, _ := ret[0].(models.DecryptedEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetDecryptedEntry indicates an expected call of GetDecryptedEntry.
@@ -282,58 +279,19 @@ type MockSecretCommandsGetDecryptedEntryCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockSecretCommandsGetDecryptedEntryCall) Return(arg0 []byte, arg1 *usecase.EntryMetadata, arg2 string, arg3 error) *MockSecretCommandsGetDecryptedEntryCall {
-	c.Call = c.Call.Return(arg0, arg1, arg2, arg3)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsGetDecryptedEntryCall) Do(f func(context.Context, uuid.UUID, string) ([]byte, *usecase.EntryMetadata, string, error)) *MockSecretCommandsGetDecryptedEntryCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsGetDecryptedEntryCall) DoAndReturn(f func(context.Context, uuid.UUID, string) ([]byte, *usecase.EntryMetadata, string, error)) *MockSecretCommandsGetDecryptedEntryCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// GetLocalEntry mocks base method.
-func (m *MockSecretCommands) GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLocalEntry", ctx, id)
-	ret0, _ := ret[0].(models.Entry)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetLocalEntry indicates an expected call of GetLocalEntry.
-func (mr *MockSecretCommandsMockRecorder) GetLocalEntry(ctx, id any) *MockSecretCommandsGetLocalEntryCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLocalEntry", reflect.TypeOf((*MockSecretCommands)(nil).GetLocalEntry), ctx, id)
-	return &MockSecretCommandsGetLocalEntryCall{Call: call}
-}
-
-// MockSecretCommandsGetLocalEntryCall wrap *gomock.Call
-type MockSecretCommandsGetLocalEntryCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockSecretCommandsGetLocalEntryCall) Return(arg0 models.Entry, arg1 error) *MockSecretCommandsGetLocalEntryCall {
+func (c *MockSecretCommandsGetDecryptedEntryCall) Return(arg0 models.DecryptedEntry, arg1 error) *MockSecretCommandsGetDecryptedEntryCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsGetLocalEntryCall) Do(f func(context.Context, uuid.UUID) (models.Entry, error)) *MockSecretCommandsGetLocalEntryCall {
+func (c *MockSecretCommandsGetDecryptedEntryCall) Do(f func(context.Context, uuid.UUID, string) (models.DecryptedEntry, error)) *MockSecretCommandsGetDecryptedEntryCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsGetLocalEntryCall) DoAndReturn(f func(context.Context, uuid.UUID) (models.Entry, error)) *MockSecretCommandsGetLocalEntryCall {
+func (c *MockSecretCommandsGetDecryptedEntryCall) DoAndReturn(f func(context.Context, uuid.UUID, string) (models.DecryptedEntry, error)) *MockSecretCommandsGetDecryptedEntryCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -378,7 +336,7 @@ func (c *MockSecretCommandsListLocalCall) DoAndReturn(f func(context.Context) ([
 }
 
 // SetCard mocks base method.
-func (m *MockSecretCommands) SetCard(ctx context.Context, meta usecase.EntryMetadata, card models.CardPayload, masterPass string) error {
+func (m *MockSecretCommands) SetCard(ctx context.Context, meta models.EntryMetadata, card models.CardPayload, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetCard", ctx, meta, card, masterPass)
 	ret0, _ := ret[0].(error)
@@ -404,19 +362,19 @@ func (c *MockSecretCommandsSetCardCall) Return(arg0 error) *MockSecretCommandsSe
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsSetCardCall) Do(f func(context.Context, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsSetCardCall {
+func (c *MockSecretCommandsSetCardCall) Do(f func(context.Context, models.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsSetCardCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsSetCardCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsSetCardCall {
+func (c *MockSecretCommandsSetCardCall) DoAndReturn(f func(context.Context, models.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsSetCardCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // SetFile mocks base method.
-func (m *MockSecretCommands) SetFile(ctx context.Context, meta usecase.EntryMetadata, originalFilename string, data []byte, masterPass string) error {
+func (m *MockSecretCommands) SetFile(ctx context.Context, meta models.EntryMetadata, originalFilename string, data []byte, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetFile", ctx, meta, originalFilename, data, masterPass)
 	ret0, _ := ret[0].(error)
@@ -442,19 +400,19 @@ func (c *MockSecretCommandsSetFileCall) Return(arg0 error) *MockSecretCommandsSe
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsSetFileCall) Do(f func(context.Context, usecase.EntryMetadata, string, []byte, string) error) *MockSecretCommandsSetFileCall {
+func (c *MockSecretCommandsSetFileCall) Do(f func(context.Context, models.EntryMetadata, string, []byte, string) error) *MockSecretCommandsSetFileCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsSetFileCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, string, []byte, string) error) *MockSecretCommandsSetFileCall {
+func (c *MockSecretCommandsSetFileCall) DoAndReturn(f func(context.Context, models.EntryMetadata, string, []byte, string) error) *MockSecretCommandsSetFileCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // SetPassword mocks base method.
-func (m *MockSecretCommands) SetPassword(ctx context.Context, meta usecase.EntryMetadata, password, masterPass string) error {
+func (m *MockSecretCommands) SetPassword(ctx context.Context, meta models.EntryMetadata, password, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetPassword", ctx, meta, password, masterPass)
 	ret0, _ := ret[0].(error)
@@ -480,19 +438,19 @@ func (c *MockSecretCommandsSetPasswordCall) Return(arg0 error) *MockSecretComman
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsSetPasswordCall) Do(f func(context.Context, usecase.EntryMetadata, string, string) error) *MockSecretCommandsSetPasswordCall {
+func (c *MockSecretCommandsSetPasswordCall) Do(f func(context.Context, models.EntryMetadata, string, string) error) *MockSecretCommandsSetPasswordCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsSetPasswordCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, string, string) error) *MockSecretCommandsSetPasswordCall {
+func (c *MockSecretCommandsSetPasswordCall) DoAndReturn(f func(context.Context, models.EntryMetadata, string, string) error) *MockSecretCommandsSetPasswordCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // SetText mocks base method.
-func (m *MockSecretCommands) SetText(ctx context.Context, meta usecase.EntryMetadata, text, masterPass string) error {
+func (m *MockSecretCommands) SetText(ctx context.Context, meta models.EntryMetadata, text, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetText", ctx, meta, text, masterPass)
 	ret0, _ := ret[0].(error)
@@ -518,19 +476,19 @@ func (c *MockSecretCommandsSetTextCall) Return(arg0 error) *MockSecretCommandsSe
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsSetTextCall) Do(f func(context.Context, usecase.EntryMetadata, string, string) error) *MockSecretCommandsSetTextCall {
+func (c *MockSecretCommandsSetTextCall) Do(f func(context.Context, models.EntryMetadata, string, string) error) *MockSecretCommandsSetTextCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsSetTextCall) DoAndReturn(f func(context.Context, usecase.EntryMetadata, string, string) error) *MockSecretCommandsSetTextCall {
+func (c *MockSecretCommandsSetTextCall) DoAndReturn(f func(context.Context, models.EntryMetadata, string, string) error) *MockSecretCommandsSetTextCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // UpdateCard mocks base method.
-func (m *MockSecretCommands) UpdateCard(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, card models.CardPayload, masterPass string) error {
+func (m *MockSecretCommands) UpdateCard(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, card models.CardPayload, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateCard", ctx, id, meta, card, masterPass)
 	ret0, _ := ret[0].(error)
@@ -556,19 +514,19 @@ func (c *MockSecretCommandsUpdateCardCall) Return(arg0 error) *MockSecretCommand
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsUpdateCardCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsUpdateCardCall {
+func (c *MockSecretCommandsUpdateCardCall) Do(f func(context.Context, uuid.UUID, models.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsUpdateCardCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsUpdateCardCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsUpdateCardCall {
+func (c *MockSecretCommandsUpdateCardCall) DoAndReturn(f func(context.Context, uuid.UUID, models.EntryMetadata, models.CardPayload, string) error) *MockSecretCommandsUpdateCardCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // UpdateFile mocks base method.
-func (m *MockSecretCommands) UpdateFile(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, masterPass string, replacePayload bool, newFile []byte, newOrigName string) error {
+func (m *MockSecretCommands) UpdateFile(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, masterPass string, replacePayload bool, newFile []byte, newOrigName string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateFile", ctx, id, meta, masterPass, replacePayload, newFile, newOrigName)
 	ret0, _ := ret[0].(error)
@@ -594,19 +552,19 @@ func (c *MockSecretCommandsUpdateFileCall) Return(arg0 error) *MockSecretCommand
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsUpdateFileCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, bool, []byte, string) error) *MockSecretCommandsUpdateFileCall {
+func (c *MockSecretCommandsUpdateFileCall) Do(f func(context.Context, uuid.UUID, models.EntryMetadata, string, bool, []byte, string) error) *MockSecretCommandsUpdateFileCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsUpdateFileCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, bool, []byte, string) error) *MockSecretCommandsUpdateFileCall {
+func (c *MockSecretCommandsUpdateFileCall) DoAndReturn(f func(context.Context, uuid.UUID, models.EntryMetadata, string, bool, []byte, string) error) *MockSecretCommandsUpdateFileCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // UpdatePassword mocks base method.
-func (m *MockSecretCommands) UpdatePassword(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, password, masterPass string) error {
+func (m *MockSecretCommands) UpdatePassword(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, password, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePassword", ctx, id, meta, password, masterPass)
 	ret0, _ := ret[0].(error)
@@ -632,19 +590,19 @@ func (c *MockSecretCommandsUpdatePasswordCall) Return(arg0 error) *MockSecretCom
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsUpdatePasswordCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdatePasswordCall {
+func (c *MockSecretCommandsUpdatePasswordCall) Do(f func(context.Context, uuid.UUID, models.EntryMetadata, string, string) error) *MockSecretCommandsUpdatePasswordCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsUpdatePasswordCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdatePasswordCall {
+func (c *MockSecretCommandsUpdatePasswordCall) DoAndReturn(f func(context.Context, uuid.UUID, models.EntryMetadata, string, string) error) *MockSecretCommandsUpdatePasswordCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // UpdateText mocks base method.
-func (m *MockSecretCommands) UpdateText(ctx context.Context, id uuid.UUID, meta usecase.EntryMetadata, text, masterPass string) error {
+func (m *MockSecretCommands) UpdateText(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, text, masterPass string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateText", ctx, id, meta, text, masterPass)
 	ret0, _ := ret[0].(error)
@@ -670,13 +628,13 @@ func (c *MockSecretCommandsUpdateTextCall) Return(arg0 error) *MockSecretCommand
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockSecretCommandsUpdateTextCall) Do(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdateTextCall {
+func (c *MockSecretCommandsUpdateTextCall) Do(f func(context.Context, uuid.UUID, models.EntryMetadata, string, string) error) *MockSecretCommandsUpdateTextCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockSecretCommandsUpdateTextCall) DoAndReturn(f func(context.Context, uuid.UUID, usecase.EntryMetadata, string, string) error) *MockSecretCommandsUpdateTextCall {
+func (c *MockSecretCommandsUpdateTextCall) DoAndReturn(f func(context.Context, uuid.UUID, models.EntryMetadata, string, string) error) *MockSecretCommandsUpdateTextCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

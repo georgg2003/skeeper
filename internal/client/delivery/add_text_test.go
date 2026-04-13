@@ -4,15 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func TestDelivery_AddText(t *testing.T) {
-	meta := usecase.EntryMetadata{Name: "t", Notes: ""}
+	meta := models.EntryMetadata{Name: "t", Notes: ""}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().SetText(gomock.Any(), meta, "hello", "mp").Return(nil)

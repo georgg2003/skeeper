@@ -36,14 +36,6 @@ var (
 // DefaultMaxFileBytes is the FILE payload cap when config does not set a positive limit.
 const DefaultMaxFileBytes = 10 << 20
 
-// EntryMetadata is cleartext JSON encrypted with the entry DEK alongside the payload.
-type EntryMetadata struct {
-	Name             string            `json:"name"`
-	Notes            string            `json:"notes,omitempty"`
-	OriginalFilename string            `json:"original_filename,omitempty"` // FILE entries: basename for `get` output
-	ExtraTags        map[string]string `json:"tags,omitempty"`
-}
-
 // LocalSecretStore abstracts the SQLite vault: entries, dirty flags, and vault KDF salt/verifier.
 type LocalSecretStore interface {
 	GetDirtyEntries(ctx context.Context, forUserID *int64) ([]models.Entry, error)
@@ -177,7 +169,7 @@ func (uc *SecretUseCase) publishVaultCrypto(ctx context.Context, salt, masterKey
 
 // sealWithNewDEK encrypts plaintext + metadata with a fresh DEK, wraps the DEK with masterKey, writes ciphertext into s.e,
 // bumps version, and sets updated-at / user id (caller saves). For a new row, start with Version 0 so the bump yields 1.
-func (s *entrySeal) sealWithNewDEK(plaintext []byte, meta EntryMetadata, masterKey []byte, uid int64) error {
+func (s *entrySeal) sealWithNewDEK(plaintext []byte, meta models.EntryMetadata, masterKey []byte, uid int64) error {
 	dek := make([]byte, 32)
 	if _, err := rand.Read(dek); err != nil {
 		return fmt.Errorf("generate dek: %w", err)
@@ -217,8 +209,8 @@ func (s *entrySeal) verifyPayloadAndMetaWithDEK(dek []byte) error {
 	return nil
 }
 
-func (s *entrySeal) decryptMetaWithDEK(dek []byte) (EntryMetadata, error) {
-	var out EntryMetadata
+func (s *entrySeal) decryptMetaWithDEK(dek []byte) (models.EntryMetadata, error) {
+	var out models.EntryMetadata
 	metaBytes, err := crypto.DecryptAESGCM(s.e.Meta, dek)
 	if err != nil {
 		return out, fmt.Errorf("decrypt meta: %w", err)
@@ -229,7 +221,7 @@ func (s *entrySeal) decryptMetaWithDEK(dek []byte) (EntryMetadata, error) {
 	return out, nil
 }
 
-func (s *entrySeal) encryptMetaOnly(meta EntryMetadata, dek []byte, uid int64) error {
+func (s *entrySeal) encryptMetaOnly(meta models.EntryMetadata, dek []byte, uid int64) error {
 	outMeta, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("marshal meta: %w", err)
@@ -245,7 +237,7 @@ func (s *entrySeal) encryptMetaOnly(meta EntryMetadata, dek []byte, uid int64) e
 	return nil
 }
 
-func (uc *SecretUseCase) insertEncryptedEntry(ctx context.Context, typ string, meta EntryMetadata, plaintext []byte, masterPass string) error {
+func (uc *SecretUseCase) insertEncryptedEntry(ctx context.Context, typ string, meta models.EntryMetadata, plaintext []byte, masterPass string) error {
 	uid, err := uc.requireAutherUserID(ctx)
 	if err != nil {
 		return err
@@ -278,7 +270,7 @@ func (uc *SecretUseCase) insertEncryptedEntry(ctx context.Context, typ string, m
 	return uc.finalizeVaultVerifier(ctx, uid, salt, storedVerifier, masterKey)
 }
 
-func (uc *SecretUseCase) updateEntryReplaceContent(ctx context.Context, id uuid.UUID, wantType string, meta EntryMetadata, plaintext []byte, masterPass string) error {
+func (uc *SecretUseCase) updateEntryReplaceContent(ctx context.Context, id uuid.UUID, wantType string, meta models.EntryMetadata, plaintext []byte, masterPass string) error {
 	e, uid, masterKey, dek, err := uc.unlockEntry(ctx, id, masterPass)
 	if err != nil {
 		return err
@@ -297,17 +289,17 @@ func (uc *SecretUseCase) updateEntryReplaceContent(ctx context.Context, id uuid.
 }
 
 // SetPassword stores a new PASSWORD entry.
-func (uc *SecretUseCase) SetPassword(ctx context.Context, meta EntryMetadata, password string, masterPass string) error {
+func (uc *SecretUseCase) SetPassword(ctx context.Context, meta models.EntryMetadata, password string, masterPass string) error {
 	return uc.insertEncryptedEntry(ctx, models.EntryTypePassword, meta, []byte(password), masterPass)
 }
 
 // SetText stores a new TEXT entry.
-func (uc *SecretUseCase) SetText(ctx context.Context, meta EntryMetadata, text string, masterPass string) error {
+func (uc *SecretUseCase) SetText(ctx context.Context, meta models.EntryMetadata, text string, masterPass string) error {
 	return uc.insertEncryptedEntry(ctx, models.EntryTypeText, meta, []byte(text), masterPass)
 }
 
 // SetFile encrypts file bytes into entry.Payload (same as other entry types) so sync persists ciphertext in Postgres.
-func (uc *SecretUseCase) SetFile(ctx context.Context, meta EntryMetadata, originalFilename string, data []byte, masterPass string) error {
+func (uc *SecretUseCase) SetFile(ctx context.Context, meta models.EntryMetadata, originalFilename string, data []byte, masterPass string) error {
 	if uc.maxFileBytes > 0 && int64(len(data)) > uc.maxFileBytes {
 		return fmt.Errorf("file too large (%d bytes); max is %d bytes", len(data), uc.maxFileBytes)
 	}
@@ -317,7 +309,7 @@ func (uc *SecretUseCase) SetFile(ctx context.Context, meta EntryMetadata, origin
 }
 
 // SetCard stores a new CARD entry.
-func (uc *SecretUseCase) SetCard(ctx context.Context, meta EntryMetadata, card models.CardPayload, masterPass string) error {
+func (uc *SecretUseCase) SetCard(ctx context.Context, meta models.EntryMetadata, card models.CardPayload, masterPass string) error {
 	payload, err := json.Marshal(card)
 	if err != nil {
 		return fmt.Errorf("marshal card: %w", err)
@@ -342,22 +334,6 @@ func (uc *SecretUseCase) ListLocal(ctx context.Context) ([]models.Entry, error) 
 		return nil, err
 	}
 	return uc.local.ListEntries(ctx, &uid)
-}
-
-// GetLocalEntry loads one ciphertext row by UUID or returns ErrEntryNotFound.
-func (uc *SecretUseCase) GetLocalEntry(ctx context.Context, id uuid.UUID) (models.Entry, error) {
-	uid, err := uc.requireAutherUserID(ctx)
-	if err != nil {
-		return models.Entry{}, err
-	}
-	e, err := uc.local.GetEntry(ctx, id, &uid)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return models.Entry{}, ErrEntryNotFound
-		}
-		return models.Entry{}, err
-	}
-	return e, nil
 }
 
 // unlockEntry loads a non-deleted entry and unwraps its DEK using the vault master password.
@@ -423,17 +399,17 @@ func (uc *SecretUseCase) DeleteEntry(ctx context.Context, id uuid.UUID, masterPa
 }
 
 // UpdatePassword replaces the stored password and metadata; increments version for sync (last-write-wins on the server).
-func (uc *SecretUseCase) UpdatePassword(ctx context.Context, id uuid.UUID, meta EntryMetadata, password string, masterPass string) error {
+func (uc *SecretUseCase) UpdatePassword(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, password string, masterPass string) error {
 	return uc.updateEntryReplaceContent(ctx, id, models.EntryTypePassword, meta, []byte(password), masterPass)
 }
 
 // UpdateText replaces stored text and metadata.
-func (uc *SecretUseCase) UpdateText(ctx context.Context, id uuid.UUID, meta EntryMetadata, text string, masterPass string) error {
+func (uc *SecretUseCase) UpdateText(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, text string, masterPass string) error {
 	return uc.updateEntryReplaceContent(ctx, id, models.EntryTypeText, meta, []byte(text), masterPass)
 }
 
 // UpdateCard replaces card fields and metadata.
-func (uc *SecretUseCase) UpdateCard(ctx context.Context, id uuid.UUID, meta EntryMetadata, card models.CardPayload, masterPass string) error {
+func (uc *SecretUseCase) UpdateCard(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, card models.CardPayload, masterPass string) error {
 	payload, err := json.Marshal(card)
 	if err != nil {
 		return fmt.Errorf("marshal card: %w", err)
@@ -443,7 +419,7 @@ func (uc *SecretUseCase) UpdateCard(ctx context.Context, id uuid.UUID, meta Entr
 
 // UpdateFile changes metadata and optionally replaces file bytes. Conflict handling matches other types: the server keeps the
 // higher version and stores one full ciphertext blob per entry—there is no binary merge of file contents.
-func (uc *SecretUseCase) UpdateFile(ctx context.Context, id uuid.UUID, meta EntryMetadata, masterPass string, replacePayload bool, newFile []byte, newOrigName string) error {
+func (uc *SecretUseCase) UpdateFile(ctx context.Context, id uuid.UUID, meta models.EntryMetadata, masterPass string, replacePayload bool, newFile []byte, newOrigName string) error {
 	e, uid, masterKey, dek, err := uc.unlockEntry(ctx, id, masterPass)
 	if err != nil {
 		return err
@@ -483,7 +459,11 @@ func (uc *SecretUseCase) UpdateFile(ctx context.Context, id uuid.UUID, meta Entr
 }
 
 // decryptPayloadAndMeta decrypts ciphertext fields using the master password (same path for every entry type).
-func (uc *SecretUseCase) decryptPayloadAndMeta(ctx context.Context, entry models.Entry, masterPass string) (payload []byte, meta EntryMetadata, err error) {
+func (uc *SecretUseCase) decryptPayloadAndMeta(
+	ctx context.Context,
+	entry models.Entry,
+	masterPass string,
+) (payload []byte, meta models.EntryMetadata, err error) {
 	salt, storedVerifier, err := uc.materializeVaultCrypto(ctx)
 	if err != nil {
 		return nil, meta, err
@@ -511,31 +491,31 @@ func (uc *SecretUseCase) decryptPayloadAndMeta(ctx context.Context, entry models
 }
 
 // GetDecryptedEntry returns plaintext payload, decrypted metadata, and for FILE entries the original base filename.
-func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) ([]byte, *EntryMetadata, string, error) {
+func (uc *SecretUseCase) GetDecryptedEntry(ctx context.Context, id uuid.UUID, masterPass string) (models.DecryptedEntry, error) {
 	uid, err := uc.requireAutherUserID(ctx)
 	if err != nil {
-		return nil, nil, "", err
+		return models.DecryptedEntry{}, err
 	}
 	entry, err := uc.local.GetEntry(ctx, id, &uid)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, "", ErrEntryNotFound
+			return models.DecryptedEntry{}, ErrEntryNotFound
 		}
-		return nil, nil, "", err
+		return models.DecryptedEntry{}, err
 	}
 	if entry.IsDeleted {
-		return nil, nil, "", ErrEntryDeleted
+		return models.DecryptedEntry{}, ErrEntryDeleted
 	}
 	payload, meta, err := uc.decryptPayloadAndMeta(ctx, entry, masterPass)
 	if err != nil {
-		return nil, nil, "", err
+		return models.DecryptedEntry{}, err
 	}
 	if entry.Type == models.EntryTypeFile {
 		orig := meta.OriginalFilename
 		if orig == "" {
 			orig = "file"
 		}
-		return payload, &meta, orig, nil
+		return models.DecryptedEntry{Payload: payload, Meta: meta, Type: entry.Type}, nil
 	}
-	return payload, &meta, "", nil
+	return models.DecryptedEntry{Payload: payload, Meta: meta, Type: entry.Type}, nil
 }

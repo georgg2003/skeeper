@@ -4,17 +4,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func TestDelivery_UpdatePassword(t *testing.T) {
 	id := uuid.New()
-	meta := usecase.EntryMetadata{Name: "nm", Notes: "nt"}
+	meta := models.EntryMetadata{Name: "nm", Notes: "nt"}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().UpdatePassword(gomock.Any(), id, meta, "newpw", "mp").Return(nil)

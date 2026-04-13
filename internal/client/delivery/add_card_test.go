@@ -9,12 +9,11 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func TestDelivery_AddCard(t *testing.T) {
 	card := models.CardPayload{Holder: "H", Number: "4111", Expiry: "01/99", CVC: "999"}
-	meta := usecase.EntryMetadata{Name: "c", Notes: ""}
+	meta := models.EntryMetadata{Name: "c", Notes: ""}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().SetCard(gomock.Any(), meta, card, "master").Return(nil)

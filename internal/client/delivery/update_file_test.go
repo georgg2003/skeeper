@@ -11,12 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/georgg2003/skeeper/internal/client/usecase"
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 func TestDelivery_UpdateFile_metadataOnly(t *testing.T) {
 	id := uuid.New()
-	meta := usecase.EntryMetadata{Name: "nm", Notes: "nt"}
+	meta := models.EntryMetadata{Name: "nm", Notes: "nt"}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().UpdateFile(gomock.Any(), id, meta, "mp", false, nil, "").Return(nil)
@@ -29,7 +29,7 @@ func TestDelivery_UpdateFile_metadataOnly(t *testing.T) {
 
 func TestDelivery_UpdateFile_replaceBytes(t *testing.T) {
 	id := uuid.New()
-	meta := usecase.EntryMetadata{Name: "f", Notes: ""}
+	meta := models.EntryMetadata{Name: "f", Notes: ""}
 	dir := t.TempDir()
 	p := filepath.Join(dir, "x.dat")
 	require.NoError(t, os.WriteFile(p, []byte{9, 9}, 0o600))

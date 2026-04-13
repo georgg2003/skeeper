@@ -31,6 +31,20 @@ type Entry struct {
 	UserID *int64 // Owning Auther account; nil if not associated yet.
 }
 
+// EntryMetadata is cleartext JSON encrypted with the entry DEK alongside the payload.
+type EntryMetadata struct {
+	Name             string            `json:"name"`
+	Notes            string            `json:"notes,omitempty"`
+	OriginalFilename string            `json:"original_filename,omitempty"` // FILE entries: basename for `get` output
+	ExtraTags        map[string]string `json:"tags,omitempty"`
+}
+
+type DecryptedEntry struct {
+	Payload []byte
+	Meta    EntryMetadata
+	Type    string
+}
+
 // Session holds Auther tokens persisted on disk after login or refresh.
 type Session struct {
 	AccessToken      string

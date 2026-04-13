@@ -50,7 +50,7 @@ func (a *App) buildRoot() *cobra.Command {
 		Short: "skeeper password manager CLI",
 		Long:  "Local encrypted vault with Auther (auth) and Skeeper (sync) backends.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if slices.ContainsFunc(os.Args, func(s string) bool {
+			if slices.ContainsFunc(args, func(s string) bool {
 				return s == "-h" || s == "--help" || s == "-?"
 			}) {
 				return nil
@@ -184,11 +184,6 @@ func (a *App) ensureHandlers(cmd *cobra.Command) error {
 		a.handlers, a.wireErr = a.cfg.Wire(cmd)
 	})
 	return a.wireErr
-}
-
-// Execute runs the root command and exits the process on error (no cancellation on signals).
-func (a *App) Execute() {
-	a.ExecuteContext(context.Background())
 }
 
 // ExecuteContext runs the root with ctx propagated to handlers ([cobra.Command.Context]); cancel on SIGINT/SIGTERM from [main] via [signal.NotifyContext].

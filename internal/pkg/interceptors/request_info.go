@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/peer"
 
 	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
+	"github.com/georgg2003/skeeper/internal/pkg/grpcutils"
 )
 
 func getMetadataValue(md metadata.MD, keys ...string) string {
@@ -47,15 +48,6 @@ func fillRequestInfo(ctx context.Context, fullMethod string) context.Context {
 	return contextlib.SetRequestInfo(ctx, info)
 }
 
-type wrappedStream struct {
-	grpc.ServerStream
-	ctx context.Context
-}
-
-func (w *wrappedStream) Context() context.Context {
-	return w.ctx
-}
-
 // NewRequestInfoInterceptor fills request id / peer info on the context and logs start + duration.
 func NewRequestInfoInterceptor(l *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(
@@ -89,7 +81,7 @@ func NewStreamRequestInfoInterceptor(l *slog.Logger) grpc.StreamServerIntercepto
 		newCtx := fillRequestInfo(ss.Context(), info.FullMethod)
 		t0 := time.Now()
 		l.InfoContext(newCtx, "stream request started")
-		wrapped := &wrappedStream{ServerStream: ss, ctx: newCtx}
+		wrapped := grpcutils.NewWrappedStream(newCtx, ss)
 		err := handler(srv, wrapped)
 		l.InfoContext(
 			newCtx,

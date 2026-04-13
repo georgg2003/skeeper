@@ -100,7 +100,8 @@ func TestUseCase_CreateUser(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			repo := NewMockRepository(ctrl)
 			tt.setup(repo)
-			uc := New(discardLogger(), repo, testJWTHelper(t))
+			uc, err := New(discardLogger(), repo, testJWTHelper(t))
+			require.NoError(t, err)
 			info, err := uc.CreateUser(ctx, tt.creds)
 			if tt.wantErr {
 				require.Error(t, err, "expected error")
@@ -183,7 +184,8 @@ func TestUseCase_LoginUser(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			repo := NewMockRepository(ctrl)
 			tt.setup(repo)
-			uc := New(discardLogger(), repo, jh)
+			uc, err := New(discardLogger(), repo, jh)
+			require.NoError(t, err)
 			out, err := uc.LoginUser(ctx, tt.creds)
 			if tt.wantErr {
 				require.Error(t, err, "expected error")
@@ -249,7 +251,8 @@ func TestUseCase_RotateToken(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			repo := NewMockRepository(ctrl)
 			tt.setup(repo)
-			uc := New(discardLogger(), repo, jh)
+			uc, err := New(discardLogger(), repo, jh)
+			require.NoError(t, err)
 			pair, err := uc.RotateToken(ctx, rawRefresh)
 			if tt.wantErr {
 				require.Error(t, err, "expected error")
@@ -294,7 +297,8 @@ func TestUseCase_RotateToken_SingleFlight(t *testing.T) {
 	jh := testJWTHelper(t)
 	rawRefresh := "shared-refresh-token"
 	repo := &singleFlightRepoStub{}
-	uc := New(discardLogger(), repo, jh)
+	uc, err := New(discardLogger(), repo, jh)
+	require.NoError(t, err)
 
 	var wg sync.WaitGroup
 	wg.Add(2)

@@ -44,7 +44,11 @@ func main() {
 	}
 	defer repo.Close()
 
-	uc := usecase.New(l, repo, jwtHelper)
+	uc, err := usecase.New(l, repo, jwtHelper)
+	if err != nil {
+		l.Error("failed to init usecase", "err", err)
+		os.Exit(1)
+	}
 	service := delivery.New(l, uc)
 
 	srv, err := server.New(

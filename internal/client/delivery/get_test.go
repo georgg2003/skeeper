@@ -4,13 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-
-	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func TestDelivery_Get_badUUID(t *testing.T) {
@@ -23,11 +21,11 @@ func TestDelivery_Get_badUUID(t *testing.T) {
 
 func TestDelivery_Get_passwordEntry(t *testing.T) {
 	id := uuid.New()
-	meta := &usecase.EntryMetadata{Name: "svc", Notes: "n"}
+	meta := models.EntryMetadata{Name: "svc", Notes: "n"}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
-	secret.EXPECT().GetLocalEntry(gomock.Any(), id).Return(models.Entry{Type: models.EntryTypePassword}, nil)
-	secret.EXPECT().GetDecryptedEntry(gomock.Any(), id, "master").Return([]byte("secret"), meta, "", nil)
+	secret.EXPECT().GetDecryptedEntry(gomock.Any(), id, "master").
+		Return(models.DecryptedEntry{Payload: []byte("secret"), Meta: meta, Type: models.EntryTypePassword}, nil)
 	d, err := New(NewMockAuthCommands(ctrl), secret, NewMockSyncCommands(ctrl))
 	require.NoError(t, err)
 	cmd, out := testCmd(strings.NewReader("master\n"))

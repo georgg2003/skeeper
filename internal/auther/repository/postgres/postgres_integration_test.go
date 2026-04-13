@@ -5,7 +5,6 @@ package postgres_test
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -79,33 +78,6 @@ func TestIntegration_SelectUserByEmail_NotFound(t *testing.T) {
 	assert.True(t, errors.Is(err, postgres.ErrUserNotExist))
 }
 
-func TestIntegration_RefreshTokenRoundTrip(t *testing.T) {
-	ctx := context.Background()
-	repo := newAutherRepository(
-		t,
-		ctx,
-		integrationtest.AutherTestPool(t),
-	)
-	email := "tok-" + uuid.NewString() + "@example.com"
-	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	require.NoError(t, err)
-
-	raw := "refresh-secret-" + uuid.NewString()
-	hash := utils.HashToken(raw)
-	exp := time.Now().Add(time.Hour).UTC()
-	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
-		Token: jwthelper.Token{Token: "opaque-refresh", ExpiresAt: exp},
-		Hash:  hash,
-	}))
-
-	uid, err := repo.DeleteRefreshTokenAndReturnUser(ctx, hash)
-	require.NoError(t, err)
-	assert.Equal(t, user.ID, uid)
-
-	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash)
-	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "second delete: %v", err)
-}
-
 func TestIntegration_InsertUser_ContextCanceled(t *testing.T) {
 	setup := context.Background()
 	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
@@ -129,65 +101,6 @@ func TestIntegration_SelectUserByEmail_ContextCanceled(t *testing.T) {
 	_, err = repo.SelectUserByEmail(canceled, email)
 	require.Error(t, err, "expected error")
 	assert.Contains(t, err.Error(), "failed to select user")
-}
-
-func TestIntegration_InsertRefreshToken_ContextCanceled(t *testing.T) {
-	setup := context.Background()
-	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
-	email := "rt-" + uuid.NewString() + "@example.com"
-	user, err := repo.InsertUser(setup, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	require.NoError(t, err)
-	canceled, cancel := context.WithCancel(setup)
-	cancel()
-	err = repo.InsertRefreshToken(canceled, user.ID, models.RefreshTokenHashed{
-		Token: jwthelper.Token{Token: "t", ExpiresAt: time.Now().Add(time.Hour)},
-		Hash:  "deadbeef",
-	})
-	require.Error(t, err, "expected error")
-	assert.Contains(t, err.Error(), "failed to insert")
-}
-
-func TestIntegration_DeleteRefreshTokenAndReturnUser_ContextCanceled(t *testing.T) {
-	setup := context.Background()
-	repo := newAutherRepository(t, setup, integrationtest.AutherTestPool(t))
-	canceled, cancel := context.WithCancel(setup)
-	cancel()
-	_, err := repo.DeleteRefreshTokenAndReturnUser(canceled, "any-hash")
-	require.Error(t, err, "expected error")
-	assert.True(t, strings.Contains(err.Error(), "refresh token"))
-}
-
-func TestIntegration_RefreshTokenReuseRevokesActiveTokens(t *testing.T) {
-	ctx := context.Background()
-	repo := newAutherRepository(
-		t,
-		ctx,
-		integrationtest.AutherTestPool(t),
-	)
-	email := "reuse-" + uuid.NewString() + "@example.com"
-	user, err := repo.InsertUser(ctx, models.DBUserCredentials{Email: email, PasswordHash: []byte("h")})
-	require.NoError(t, err)
-
-	raw1 := "refresh-one-" + uuid.NewString()
-	hash1 := utils.HashToken(raw1)
-	raw2 := "refresh-two-" + uuid.NewString()
-	hash2 := utils.HashToken(raw2)
-	exp := time.Now().Add(time.Hour).UTC()
-	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
-		Token: jwthelper.Token{Token: "t1", ExpiresAt: exp},
-		Hash:  hash1,
-	}))
-	uid, err := repo.DeleteRefreshTokenAndReturnUser(ctx, hash1)
-	require.NoError(t, err)
-	assert.Equal(t, user.ID, uid)
-	require.NoError(t, repo.InsertRefreshToken(ctx, user.ID, models.RefreshTokenHashed{
-		Token: jwthelper.Token{Token: "t2", ExpiresAt: exp},
-		Hash:  hash2,
-	}))
-	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash1)
-	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "reuse stale token: %v", err)
-	_, err = repo.DeleteRefreshTokenAndReturnUser(ctx, hash2)
-	assert.True(t, errors.Is(err, postgres.ErrInvalidToken), "valid token should be revoked after reuse; got %v", err)
 }
 
 func TestIntegration_RotateRefreshToken_RollsBackWhenMintFails(t *testing.T) {

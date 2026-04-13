@@ -14,6 +14,7 @@ import (
 	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
 	"github.com/georgg2003/skeeper/pkg/errors"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
+	"github.com/georgg2003/skeeper/pkg/utils"
 )
 
 // ErrUserNotExist is returned for failed login or unknown email paths.
@@ -24,9 +25,6 @@ var ErrInvalidToken = errors.New("refresh token is invalid")
 
 // ErrUserExists is returned when registration hits a duplicate email.
 var ErrUserExists = errors.New("user already exists")
-
-// bcryptDummyHash is a valid bcrypt hash used only to normalize login timing when the email is unknown.
-var bcryptDummyHash = []byte("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy")
 
 // Repository persists users and refresh tokens for the Auther service.
 type Repository interface {
@@ -39,10 +37,11 @@ type Repository interface {
 
 // UseCase implements registration, login, and refresh-token rotation.
 type UseCase struct {
-	repository Repository
-	jwtHelper  *jwthelper.JWTHelper
-	l          *slog.Logger
-	refreshSF  singleflight.Group
+	repository      Repository
+	jwtHelper       *jwthelper.JWTHelper
+	l               *slog.Logger
+	refreshSF       singleflight.Group
+	bcryptDummyHash []byte
 }
 
 // CreateUser validates credentials, bcrypt-hashes the password, and inserts the user row.
@@ -72,7 +71,7 @@ func (uc *UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) 
 	}
 
 	user, selErr := uc.repository.SelectUserByEmail(ctx, creds.Email)
-	hash := bcryptDummyHash
+	hash := uc.bcryptDummyHash
 	if selErr == nil {
 		hash = user.PasswordHash
 	} else if !errors.Is(selErr, postgres.ErrUserNotExist) {
@@ -119,10 +118,15 @@ func New(
 	l *slog.Logger,
 	repo Repository,
 	jwtHelper *jwthelper.JWTHelper,
-) *UseCase {
-	return &UseCase{
-		l:          l,
-		repository: repo,
-		jwtHelper:  jwtHelper,
+) (*UseCase, error) {
+	hash, err := utils.NewDummyBcryptHash()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create dummy bcrypt hash")
 	}
+	return &UseCase{
+		l:               l,
+		repository:      repo,
+		jwtHelper:       jwtHelper,
+		bcryptDummyHash: hash,
+	}, nil
 }

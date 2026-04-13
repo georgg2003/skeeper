@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/georgg2003/skeeper/internal/client/usecase"
+	"github.com/georgg2003/skeeper/internal/client/pkg/models"
 )
 
 func TestDelivery_AddPassword_success(t *testing.T) {
-	meta := usecase.EntryMetadata{Name: "svc", Notes: "n"}
+	meta := models.EntryMetadata{Name: "svc", Notes: "n"}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().SetPassword(gomock.Any(), meta, "sec", "master").Return(nil)
@@ -25,7 +25,7 @@ func TestDelivery_AddPassword_success(t *testing.T) {
 }
 
 func TestDelivery_AddPassword_usecaseError(t *testing.T) {
-	meta := usecase.EntryMetadata{Name: "svc", Notes: "n"}
+	meta := models.EntryMetadata{Name: "svc", Notes: "n"}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)
 	secret.EXPECT().SetPassword(gomock.Any(), meta, "sec", "master").Return(context.Canceled)

@@ -18,6 +18,7 @@ import (
 	skeeperremote "github.com/georgg2003/skeeper/internal/client/repository/skeeper"
 	"github.com/georgg2003/skeeper/internal/client/usecase"
 	"github.com/georgg2003/skeeper/internal/pkg/grpcclient"
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 func expandPath(p string) (string, error) {
@@ -75,7 +76,7 @@ func newClientLogger(cmd *cobra.Command, logCfg clientcfg.ClientLogging) (*slog.
 func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 	fileCfg, err := clientcfg.Load(cmd)
 	if err != nil {
-		return nil, fmt.Errorf("client config: %w", err)
+		return nil, errors.Wrap(err, "failed to load client config")
 	}
 
 	dir, err := expandPath(fileCfg.DataDir)
@@ -83,7 +84,7 @@ func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 		return nil, err
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, fmt.Errorf("data dir: %w", err)
+		return nil, errors.Wrap(err, "data dir")
 	}
 
 	maxFileBytes := fileCfg.MaxFileBytes
@@ -101,10 +102,16 @@ func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			if repoErr := dbRepo.Close(); repoErr != nil {
+				l.Error("failed to close db", "err", repoErr)
+			}
+		}
+	}()
 
-	if err := dbRepo.RunMigrations(cmd.Context()); err != nil {
-		_ = dbRepo.Close()
-		return nil, fmt.Errorf("migrations: %w", err)
+	if err = dbRepo.RunMigrations(cmd.Context()); err != nil {
+		return nil, errors.Wrap(err, "migrations")
 	}
 
 	dialOpts, err := grpcclient.DialOptions(grpcclient.TLSConfig{
@@ -112,26 +119,31 @@ func BuildDelivery(cmd *cobra.Command) (cli.Handlers, error) {
 		CAFile:  fileCfg.GRPCTLS.CAFile,
 	})
 	if err != nil {
-		_ = dbRepo.Close()
-		return nil, fmt.Errorf("grpc dial options: %w", err)
+		return nil, errors.Wrap(err, "grpc dial options")
 	}
 
 	autherCLI, err := auther.NewAutherClient(fileCfg.AutherAddr, dialOpts...)
 	if err != nil {
-		_ = dbRepo.Close()
-		return nil, fmt.Errorf("auther client: %w", err)
+		return nil, errors.Wrap(err, "auther client")
 	}
 
 	authUC := usecase.NewAuthUseCase(dbRepo, autherCLI, l)
 
 	skeeperCLI, err := skeeperremote.NewSkeeperClient(fileCfg.SkeeperAddr, authUC, dialOpts...)
 	if err != nil {
-		_ = dbRepo.Close()
-		return nil, fmt.Errorf("skeeper client: %w", err)
+		return nil, errors.Wrap(err, "skeeper client")
 	}
+	defer func() {
+		if err != nil {
+			if skeeperErr := skeeperCLI.Close(cmd.Context()); skeeperErr != nil {
+				l.Error("failed to skeeper client", "err", skeeperErr)
+			}
+		}
+	}()
 
 	secretUC := usecase.NewSecretUseCase(dbRepo, dbRepo, skeeperCLI, l, maxFileBytes)
 	syncUC := usecase.NewSyncUseCase(dbRepo, skeeperCLI, dbRepo, l)
 
-	return delivery.New(authUC, secretUC, syncUC)
+	delivery, err := delivery.New(authUC, secretUC, syncUC)
+	return delivery, err
 }

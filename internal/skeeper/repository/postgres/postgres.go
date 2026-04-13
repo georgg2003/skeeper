@@ -156,11 +156,17 @@ func (r *Repository) PutVaultCrypto(ctx context.Context, userID int64, salt, ver
 	).Scan(&existingSalt, &existingVer)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		if _, insErr := r.pool.Exec(ctx,
-			`INSERT INTO vault_crypto (user_id, kdf_salt, master_verifier) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO NOTHING`,
+		err = r.pool.QueryRow(ctx,
+			`INSERT INTO vault_crypto (user_id, kdf_salt, master_verifier) VALUES ($1, $2, $3)
+			ON CONFLICT (user_id) DO NOTHING
+			RETURNING kdf_salt, master_verifier`,
 			userID, salt, verifier,
-		); insErr != nil {
-			return insErr
+		).Scan(&existingSalt, &existingVer)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
 		}
 		err = r.pool.QueryRow(ctx,
 			`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,

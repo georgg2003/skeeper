@@ -10,6 +10,7 @@ import (
 	"time"
 
 	clientmigrate "github.com/georgg2003/skeeper/migrations/client"
+	"github.com/georgg2003/skeeper/pkg/errors"
 
 	"github.com/google/uuid"
 	"github.com/pressly/goose/v3"
@@ -127,17 +128,20 @@ func (r *Repository) GetDirtyEntries(ctx context.Context, forUserID *int64) ([]m
 		var userID sql.NullInt64
 		err := rows.Scan(&uStr, &e.Type, &e.EncryptedDek, &e.Payload, &e.Meta, &e.Version, &e.IsDeleted, &e.UpdatedAt, &userID)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "entries scan error")
 		}
 		e.UUID, err = uuid.Parse(uStr)
 		if err != nil {
-			return nil, fmt.Errorf("entries uuid %q: %w", uStr, err)
+			return nil, errors.Wrapf(err, "entries uuid %q parse error", uStr)
 		}
 		if userID.Valid {
 			v := userID.Int64
 			e.UserID = &v
 		}
 		entries = append(entries, e)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, errors.Wrap(err, "entries rows error")
 	}
 	return entries, nil
 }

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/georgg2003/skeeper/internal/pkg/contextlib"
+	"github.com/georgg2003/skeeper/internal/pkg/grpcutils"
 	"github.com/georgg2003/skeeper/pkg/jwthelper"
 )
 
@@ -37,15 +38,6 @@ func authorize(ctx context.Context, jwt *jwthelper.JWTHelper) (context.Context, 
 	}
 
 	return contextlib.SetUserID(ctx, claims.UserID), nil
-}
-
-type wrappedStream struct {
-	grpc.ServerStream
-	ctx context.Context
-}
-
-func (w *wrappedStream) Context() context.Context {
-	return w.ctx
 }
 
 // NewAuthInterceptor requires a valid Bearer JWT and puts UserID on the context.
@@ -78,7 +70,7 @@ func NewStreamAuthInterceptor(jwt *jwthelper.JWTHelper) grpc.StreamServerInterce
 			return err
 		}
 
-		wrapped := &wrappedStream{ServerStream: ss, ctx: newCtx}
+		wrapped := grpcutils.NewWrappedStream(newCtx, ss)
 		return handler(srv, wrapped)
 	}
 }

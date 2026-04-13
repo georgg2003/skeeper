@@ -10,12 +10,11 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func TestDelivery_UpdateCard(t *testing.T) {
 	id := uuid.New()
-	meta := usecase.EntryMetadata{Name: "nm", Notes: "nt"}
+	meta := models.EntryMetadata{Name: "nm", Notes: "nt"}
 	card := models.CardPayload{Holder: "H", Number: "4111", Expiry: "01/99", CVC: "999"}
 	ctrl := gomock.NewController(t)
 	secret := NewMockSecretCommands(ctrl)

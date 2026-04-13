@@ -3,7 +3,6 @@ package skeeper
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 
 	"github.com/georgg2003/skeeper/api"
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
+	"github.com/georgg2003/skeeper/pkg/errors"
 )
 
 // ErrVaultCryptoNotFound is returned when the server has no vault row for this user yet.
@@ -164,4 +164,8 @@ func (c *SkeeperClient) PutVaultCrypto(ctx context.Context, kdfSalt, masterVerif
 		}.Build(),
 	}.Build())
 	return err
+}
+
+func (c *SkeeperClient) Close(ctx context.Context) error {
+	return c.conn.Close()
 }

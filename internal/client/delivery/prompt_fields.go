@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/georgg2003/skeeper/internal/client/pkg/models"
-	"github.com/georgg2003/skeeper/internal/client/usecase"
 )
 
 func parseUUIDArg(s string) (uuid.UUID, error) {
@@ -21,18 +20,18 @@ func parseUUIDArg(s string) (uuid.UUID, error) {
 	return id, nil
 }
 
-func promptEntryMetadata(cmd *cobra.Command, namePrompt string) (usecase.EntryMetadata, error) {
+func promptEntryMetadata(cmd *cobra.Command, namePrompt string) (models.EntryMetadata, error) {
 	if namePrompt == "" {
 		namePrompt = "Entry name: "
 	}
 	writePrompt(cmd, "%s", namePrompt)
 	name, err := readLine(cmd)
 	if err != nil {
-		return usecase.EntryMetadata{}, err
+		return models.EntryMetadata{}, err
 	}
 	writePrompt(cmd, "Notes (optional): ")
 	notes, _ := readLine(cmd)
-	return usecase.EntryMetadata{Name: name, Notes: notes}, nil
+	return models.EntryMetadata{Name: name, Notes: notes}, nil
 }
 
 func promptMasterPassword(cmd *cobra.Command) (string, error) {
