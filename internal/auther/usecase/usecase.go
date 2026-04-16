@@ -1,0 +1,132 @@
+// Package usecase implements signup, login, and refresh-token rotation on top of Postgres + JWT.
+package usecase
+
+//go:generate go tool mockgen -typed -destination=mock_repository_test.go -package=usecase -source=usecase.go Repository
+
+import (
+	"context"
+	"log/slog"
+
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/sync/singleflight"
+
+	"github.com/georgg2003/skeeper/internal/auther/pkg/models"
+	"github.com/georgg2003/skeeper/internal/auther/repository/postgres"
+	"github.com/georgg2003/skeeper/pkg/errors"
+	"github.com/georgg2003/skeeper/pkg/jwthelper"
+	"github.com/georgg2003/skeeper/pkg/utils"
+)
+
+// ErrUserNotExist is returned for failed login or unknown email paths.
+var ErrUserNotExist = errors.New("user not exists")
+
+// ErrInvalidToken is returned when refresh rotation does not match stored state.
+var ErrInvalidToken = errors.New("refresh token is invalid")
+
+// ErrUserExists is returned when registration hits a duplicate email.
+var ErrUserExists = errors.New("user already exists")
+
+// Repository persists users and refresh tokens for the Auther service.
+type Repository interface {
+	InsertUser(context.Context, models.DBUserCredentials) (models.UserInfo, error)
+	ReplaceUserRefreshTokens(ctx context.Context, userID int64, pair jwthelper.TokenPair) error
+	RotateRefreshToken(ctx context.Context, refreshPlain string, mint func(int64) (jwthelper.TokenPair, error)) (jwthelper.TokenPair, error)
+	SelectUserByEmail(context.Context, string) (models.UserInfo, error)
+	Close()
+}
+
+// UseCase implements registration, login, and refresh-token rotation.
+type UseCase struct {
+	repository      Repository
+	jwtHelper       *jwthelper.JWTHelper
+	l               *slog.Logger
+	refreshSF       singleflight.Group
+	bcryptDummyHash []byte
+}
+
+// CreateUser validates credentials, bcrypt-hashes the password, and inserts the user row.
+func (uc *UseCase) CreateUser(ctx context.Context, creds models.UserCredentials) (models.UserInfo, error) {
+	if err := creds.Validate(); err != nil {
+		return models.UserInfo{}, errors.Wrap(err, "user credentials are invalid")
+	}
+	hash, err := creds.HashPassword()
+	if err != nil {
+		return models.UserInfo{}, errors.Wrap(err, "failed to hash password")
+	}
+
+	info, err := uc.repository.InsertUser(ctx, models.DBUserCredentials{
+		Email:        creds.Email,
+		PasswordHash: hash,
+	})
+	if errors.Is(err, postgres.ErrUserExists) {
+		return models.UserInfo{}, ErrUserExists
+	}
+	return info, err
+}
+
+// LoginUser verifies the password, mints JWTs, and stores the refresh token server-side.
+func (uc *UseCase) LoginUser(ctx context.Context, creds models.UserCredentials) (models.LoginResponse, error) {
+	if err := creds.ValidateForLogin(); err != nil {
+		return models.LoginResponse{}, errors.Wrap(err, "user credentials are invalid")
+	}
+
+	user, selErr := uc.repository.SelectUserByEmail(ctx, creds.Email)
+	hash := uc.bcryptDummyHash
+	if selErr == nil {
+		hash = user.PasswordHash
+	} else if !errors.Is(selErr, postgres.ErrUserNotExist) {
+		return models.LoginResponse{}, selErr
+	}
+	if err := bcrypt.CompareHashAndPassword(hash, []byte(creds.Password)); err != nil {
+		return models.LoginResponse{}, ErrUserNotExist
+	}
+	if errors.Is(selErr, postgres.ErrUserNotExist) {
+		return models.LoginResponse{}, ErrUserNotExist
+	}
+
+	tokenPair, err := uc.jwtHelper.NewTokenPair(user.ID)
+	if err != nil {
+		return models.LoginResponse{}, errors.Wrap(err, "failed to create a new token pair")
+	}
+	if err := uc.repository.ReplaceUserRefreshTokens(ctx, user.ID, tokenPair); err != nil {
+		return models.LoginResponse{}, errors.Wrap(err, "failed to persist refresh token")
+	}
+
+	return models.LoginResponse{
+		User:      user,
+		TokenPair: tokenPair,
+	}, nil
+}
+
+// RotateToken validates the refresh token and issues a new access/refresh pair (singleflight deduped).
+func (uc *UseCase) RotateToken(ctx context.Context, refreshToken string) (jwthelper.TokenPair, error) {
+	v, err, _ := uc.refreshSF.Do(refreshToken, func() (interface{}, error) {
+		pair, rotErr := uc.repository.RotateRefreshToken(ctx, refreshToken, uc.jwtHelper.NewTokenPair)
+		if errors.Is(rotErr, postgres.ErrInvalidToken) {
+			return nil, ErrInvalidToken
+		}
+		return pair, rotErr
+	})
+	if err != nil {
+		return jwthelper.TokenPair{}, err
+	}
+	return v.(jwthelper.TokenPair), nil
+}
+
+// New constructs the Auther business layer.
+func New(
+	l *slog.Logger,
+	repo Repository,
+	jwtHelper *jwthelper.JWTHelper,
+) (*UseCase, error) {
+	hash, err := utils.NewDummyBcryptHash()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create dummy bcrypt hash")
+	}
+	return &UseCase{
+		l:               l,
+		repository:      repo,
+		jwtHelper:       jwtHelper,
+		bcryptDummyHash: hash,
+	}, nil
+}

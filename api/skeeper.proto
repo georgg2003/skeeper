@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package skeeper;
+option go_package = "github.com/georgg2003/skeeper/api";
+
+import "google/protobuf/timestamp.proto";
+
+message Entry {
+    string uuid = 1;         // UUID (генерится клиентом для оффлайн-работы)
+    string type = 2;         // "credentials", "card", ...
+    bytes encrypted_dek = 3; // DEK, зашифрованный мастер-ключом пользователя
+    bytes payload = 4;       // Зашифрованные данные (логин:пароль, текст и т.д.)
+    bytes meta = 5;         // Зашифрованный JSON с метаданными (название, теги)
+    
+    int64 version = 6;       // Инкремент при каждом изменении
+    bool is_deleted = 7;     // Мягкое удаление для синхронизации
+    
+    google.protobuf.Timestamp updated_at = 8;
+}
+
+message SyncRequest {
+    repeated Entry updates = 1;
+    google.protobuf.Timestamp last_sync_at = 2;
+}
+
+message SyncResponse {
+    repeated Entry updates = 1;
+    google.protobuf.Timestamp current_sync_at = 2;
+    // UUIDs of client updates that were inserted or version-upgraded on this call.
+    // Omitted entries were not applied (e.g. stale version). Empty when no updates were sent.
+    repeated string applied_update_uuids = 3;
+}
+
+// VaultCrypto carries Argon2id KDF salt and a verifier so all devices derive the same master key
+// and only one master password can wrap new data (verifier = SHA-256(derived master key)).
+message VaultCrypto {
+    bytes kdf_salt = 1;
+    bytes master_verifier = 2;
+}
+
+message GetVaultCryptoRequest {}
+
+message GetVaultCryptoResponse {
+    VaultCrypto vault = 1;
+}
+
+message PutVaultCryptoRequest {
+    VaultCrypto vault = 1;
+}
+
+message PutVaultCryptoResponse {}
+
+message FileMetadata {
+    string entry_id = 1;
+    string filename = 2;
+    int64 size = 3;
+    string checksum = 4;
+}
+
+message UploadFileRequest {
+    oneof data {
+        FileMetadata info = 1;
+        bytes chunk = 2;
+    }
+}
+
+message DownloadFileRequest {
+    string entry_id = 1;
+}
+
+message FileChunk {
+    bytes chunk = 1;
+}
+
+service Skeeper {
+    rpc Sync(SyncRequest) returns (SyncResponse);
+    rpc GetVaultCrypto(GetVaultCryptoRequest) returns (GetVaultCryptoResponse);
+    rpc PutVaultCrypto(PutVaultCryptoRequest) returns (PutVaultCryptoResponse);
+
+    // Потенциально можно добавить потоковый синк,
+    // но для этого надо прикручивать редис для реализации pub/sub между клиентами, времени нет
+    // rpc SyncStream(stream SyncRequest) returns (stream SyncResponse);
+
+    // Для работы с файлами больше 1МБ
+    // rpc UploadFile(stream UploadFileRequest) returns (google.protobuf.Timestamp);
+    // rpc DownloadFile(DownloadFileRequest) returns (stream FileChunk);
+}

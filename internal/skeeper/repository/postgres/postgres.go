@@ -1,0 +1,215 @@
+// Package postgres is the Skeeper Postgres repo: entries sync and vault_crypto rows.
+package postgres
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	ippostgres "github.com/georgg2003/skeeper/internal/pkg/postgres"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/models"
+	"github.com/georgg2003/skeeper/internal/skeeper/pkg/vaulterror"
+)
+
+type Repository struct {
+	pool *pgxpool.Pool
+}
+
+func (r *Repository) UpsertEntries(ctx context.Context, userID int64, entries []models.Entry) ([]uuid.UUID, error) {
+	if len(entries) == 0 {
+		return nil, nil
+	}
+
+	uuids := make([]uuid.UUID, len(entries))
+	types := make([]string, len(entries))
+	deks := make([][]byte, len(entries))
+	payloads := make([][]byte, len(entries))
+	metas := make([][]byte, len(entries))
+	versions := make([]int64, len(entries))
+	deleted := make([]bool, len(entries))
+	updatedAt := make([]time.Time, len(entries))
+
+	for i, e := range entries {
+		uuids[i] = e.UUID
+		types[i] = e.Type
+		deks[i] = e.EncryptedDek
+		payloads[i] = e.Payload
+		metas[i] = e.Meta
+		versions[i] = e.Version
+		deleted[i] = e.IsDeleted
+		updatedAt[i] = e.UpdatedAt
+	}
+
+	query := `
+		INSERT INTO entries (uuid, user_id, type, encrypted_dek, payload, meta, version, is_deleted, updated_at)
+		SELECT * FROM UNNEST($1::uuid[], $2::int8[], $3::varchar[], $4::bytea[], $5::bytea[], $6::bytea[], $7::int8[], $8::boolean[], $9::timestamptz[])
+		ON CONFLICT (user_id, uuid) DO UPDATE SET
+			type = EXCLUDED.type,
+			encrypted_dek = EXCLUDED.encrypted_dek,
+			payload = EXCLUDED.payload,
+			meta = EXCLUDED.meta,
+			version = EXCLUDED.version,
+			is_deleted = EXCLUDED.is_deleted,
+			updated_at = EXCLUDED.updated_at
+		WHERE entries.user_id = EXCLUDED.user_id AND entries.version < EXCLUDED.version
+		RETURNING uuid;
+	`
+
+	userIDs := make([]int64, len(entries))
+	for i := range userIDs {
+		userIDs[i] = userID
+	}
+
+	rows, err := r.pool.Query(
+		ctx,
+		query,
+		uuids,
+		userIDs,
+		types,
+		deks,
+		payloads,
+		metas,
+		versions,
+		deleted,
+		updatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var applied []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		applied = append(applied, id)
+	}
+	return applied, rows.Err()
+}
+
+func (r *Repository) GetUpdatedAfter(ctx context.Context, userID int64, lastSync time.Time) ([]models.Entry, error) {
+	query := `
+		SELECT
+			uuid,
+			user_id,
+			type,
+			encrypted_dek,
+			payload,
+			meta,
+			version,
+			is_deleted,
+			updated_at
+		FROM entries
+		WHERE user_id = $1 AND updated_at > $2
+		ORDER BY updated_at ASC;
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, lastSync)
+	if err != nil {
+		return nil, err
+	}
+
+	dbEntries, err := pgx.CollectRows(rows, pgx.RowToStructByName[entryDB])
+	if err != nil {
+		return nil, err
+	}
+	result := make([]models.Entry, len(dbEntries))
+	for i, v := range dbEntries {
+		result[i] = v.toDomain()
+	}
+
+	return result, nil
+}
+
+const (
+	vaultKDFSaltBytes = 16
+	vaultVerifierSize = 32
+)
+
+func (r *Repository) GetVaultCrypto(ctx context.Context, userID int64) (salt, verifier []byte, err error) {
+	err = r.pool.QueryRow(ctx,
+		`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
+		userID,
+	).Scan(&salt, &verifier)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, vaulterror.ErrNotFound
+	}
+	return salt, verifier, err
+}
+
+func (r *Repository) PutVaultCrypto(ctx context.Context, userID int64, salt, verifier []byte) error {
+	if len(salt) != vaultKDFSaltBytes || len(verifier) != vaultVerifierSize {
+		return fmt.Errorf("invalid vault crypto payload sizes")
+	}
+	var existingSalt, existingVer []byte
+	err := r.pool.QueryRow(ctx,
+		`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
+		userID,
+	).Scan(&existingSalt, &existingVer)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		err = r.pool.QueryRow(ctx,
+			`INSERT INTO vault_crypto (user_id, kdf_salt, master_verifier) VALUES ($1, $2, $3)
+			ON CONFLICT (user_id) DO NOTHING
+			RETURNING kdf_salt, master_verifier`,
+			userID, salt, verifier,
+		).Scan(&existingSalt, &existingVer)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		err = r.pool.QueryRow(ctx,
+			`SELECT kdf_salt, master_verifier FROM vault_crypto WHERE user_id = $1`,
+			userID,
+		).Scan(&existingSalt, &existingVer)
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(existingSalt, salt) && bytes.Equal(existingVer, verifier) {
+			return nil
+		}
+		return vaulterror.ErrConflict
+	case err != nil:
+		return err
+	case bytes.Equal(existingSalt, salt) && bytes.Equal(existingVer, verifier):
+		return nil
+	default:
+		return vaulterror.ErrConflict
+	}
+}
+
+func (r *Repository) Close() {
+	r.pool.Close()
+}
+
+type PostgresConfig = ippostgres.Config
+
+func NewFromPool(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
+}
+
+func NewFromString(ctx context.Context, connStr string) (*Repository, error) {
+	pool, err := ippostgres.NewPoolFromConnString(ctx, connStr)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromPool(pool), nil
+}
+
+func New(ctx context.Context, cfg PostgresConfig) (*Repository, error) {
+	pool, err := ippostgres.NewPool(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return NewFromPool(pool), nil
+}

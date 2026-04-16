@@ -1,0 +1,52 @@
+edition = "2023";
+
+package auther;
+
+option go_package = "github.com/georgg2003/skeeper/api";
+
+import "google/protobuf/timestamp.proto";
+
+message User {
+  int64 id = 1;
+  string email = 2;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message Token {
+  string token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message LoginResponse {
+  Token refresh_token = 1;
+  Token access_token = 2;
+  User user = 3;
+}
+
+message ExchangeTokenRequest {
+  string refresh_token = 1;
+}
+
+message ExchangeTokenResponse {
+  Token refresh_token = 1;
+  Token access_token = 2;
+}
+
+service Auther {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse);
+}

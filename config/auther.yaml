@@ -1,0 +1,27 @@
+# Auther gRPC service (auth). Override with env AUTHER_* (e.g. AUTHER_POSTGRES_HOST).
+# Generate JWT keys once, e.g.: openssl genrsa -out config/keys/jwt_private.pem 2048
+#   && openssl rsa -in config/keys/jwt_private.pem -pubout -out config/keys/jwt_public.pem
+
+service:
+  listen_addr: "0.0.0.0:50051"
+  graceful_timeout: 30s
+  reflection_enabled: true
+  tls:
+    enabled: false
+    cert_file: "config/keys/grpc_server.crt"
+    key_file: "config/keys/grpc_server.key"
+
+# Dev-only credentials; use secrets management in real deployments.
+postgres:
+  host: "127.0.0.1"
+  port: 5431
+  user: "auther_user"
+  password: "auther_password"
+  database: "auther_db"
+
+jwt:
+  private_key_file: "config/keys/jwt_private.pem"
+  public_key_file: "config/keys/jwt_public.pem"
+  access_token_lifetime: 15m
+  refresh_token_lifetime: 720h
+  audience: "skeeper-api"

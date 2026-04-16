@@ -1,0 +1,16 @@
+erDiagram
+    USERS {
+        int id PK
+        string email
+        string password_hash "bcrypt"
+        timestamp created_at
+        timestamp last_login_at
+    }
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK
+        string token_hash
+        timestamp expires_at
+        timestamp created_at
+    }
+

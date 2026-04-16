@@ -13,12 +13,16 @@
 
 # Code coverage profiles and other test artifacts
 *.out
-coverage.*
+coverage.html
+coverage.xml
+coverage.txt
+coverage.json
+coverage.dat
 *.coverprofile
 profile.cov
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
 # Go workspace file
 go.work
@@ -27,6 +31,9 @@ go.work.sum
 # env file
 .env
 
+# Local JWT keys (see config/auther.yaml)
+config/keys/*.pem
+
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
